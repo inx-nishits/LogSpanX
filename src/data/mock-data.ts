@@ -1,4 +1,4 @@
-import { User, Workspace, Project, Client, TimeEntry, Tag, Task, Report, Notification } from '@/lib/types'
+import { User, Workspace, Project, Client, TimeEntry, Task, Report, Notification } from '@/lib/types'
 
 export const mockUsers: User[] = [
   { id: 'user_1', email: 'nishit@inheritx.com', name: 'Nishit Sangani', role: 'owner', workspaceId: 'workspace_1' },
@@ -26,10 +26,6 @@ export const mockProjects: Project[] = [
   { id: 'project_7', name: 'Internal Project', color: '#94a3b8', billable: false, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() }
 ]
 
-export const mockTags: Tag[] = [
-  { id: 'tag_1', name: 'Development', color: '#3B82F6', workspaceId: 'workspace_1' },
-  { id: 'tag_2', name: 'Meeting', color: '#10B981', workspaceId: 'workspace_1' }
-]
 
 export const mockTasks: Task[] = [
   // _INX-Company website revamp: 1 Task
@@ -77,7 +73,6 @@ const generate8HourDay = (dateStr: string, userId: string): TimeEntry[] => {
       id: `entry_${dateStr}_1`,
       description: 'Morning Development Session',
       projectId: 'project_1',
-      tagIds: ['tag_1'],
       billable: true,
       userId,
       workspaceId: 'workspace_1',
@@ -91,7 +86,6 @@ const generate8HourDay = (dateStr: string, userId: string): TimeEntry[] => {
       id: `entry_${dateStr}_2`,
       description: 'Afternoon Feature Implementation',
       projectId: 'project_2',
-      tagIds: ['tag_1'],
       billable: true,
       userId,
       workspaceId: 'workspace_1',

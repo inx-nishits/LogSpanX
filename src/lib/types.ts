@@ -59,7 +59,6 @@ export interface TimeEntry {
   projectId?: string
   clientId?: string
   taskId?: string
-  tagIds: string[]
   billable: boolean
   userId: string
   workspaceId: string
@@ -70,12 +69,6 @@ export interface TimeEntry {
   updatedAt: Date
 }
 
-export interface Tag {
-  id: string
-  name: string
-  color: string
-  workspaceId: string
-}
 
 export interface Task {
   id: string
@@ -103,7 +96,6 @@ export interface ReportFilters {
   projectIds?: string[]
   clientIds?: string[]
   userIds?: string[]
-  tagIds?: string[]
   billable?: boolean
   archived?: boolean
 }

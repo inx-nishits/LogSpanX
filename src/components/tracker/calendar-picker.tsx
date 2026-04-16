@@ -3,6 +3,11 @@
 import React, { useState } from 'react'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface CalendarPickerProps {
   date: Date
@@ -32,72 +37,72 @@ export function CalendarPicker({ date, onChange, triggerContent }: CalendarPicke
   const days = getDaysInMonth()
 
   return (
-    <div className="relative flex items-center justify-center">
-      <div 
-        className="cursor-pointer flex items-center justify-center" 
-        onClick={() => setIsOpen(!isOpen)}
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <div className="cursor-pointer flex items-center justify-center">
+          {triggerContent || <CalendarIcon className="h-4 w-4 text-gray-400 hover:text-[#03a9f4] stroke-[1.5px] transition-colors" />}
+        </div>
+      </DropdownMenuTrigger>
+      
+      <DropdownMenuContent 
+        align="center" 
+        sideOffset={8}
+        className="bg-white rounded-md shadow-[0_4px_16px_rgba(0,0,0,0.15)] border border-gray-200 p-2 w-[220px] z-[100] animate-in fade-in slide-in-from-top-1 duration-150 overflow-visible"
       >
-        {triggerContent || <CalendarIcon className="h-4 w-4 text-gray-400 hover:text-[#03a9f4] stroke-[1.5px] transition-colors" />}
-      </div>
+        <div className="relative bg-white z-10 w-full">
+          {/* Triangular arrow on top - Manual implementation to match existing design */}
+          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-gray-200 rotate-45 transform z-0" />
+          
+          <div className="relative bg-white z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between px-1 py-1 mb-2">
+              <button className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer text-gray-800 border-none bg-transparent">
+                <ChevronLeft className="w-4 h-4 stroke-[2.5px]" />
+              </button>
+              <div className="text-[13px] font-bold text-gray-800">
+                Apr 2026
+              </div>
+              <button className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer text-gray-800 border-none bg-transparent">
+                <ChevronRight className="w-4 h-4 stroke-[2.5px]" />
+              </button>
+            </div>
 
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-white rounded-md shadow-[0_4px_16px_rgba(0,0,0,0.15)] border border-gray-200 p-2 w-[220px] z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-            {/* Triangular arrow on top */}
-            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-gray-200 rotate-45 transform" />
-            
-            <div className="relative bg-white z-10 w-full">
-              {/* Header */}
-              <div className="flex items-center justify-between px-1 py-1 mb-2">
-                <button className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer text-gray-800">
-                  <ChevronLeft className="w-4 h-4 stroke-[2.5px]" />
-                </button>
-                <div className="text-[13px] font-bold text-gray-800">
-                  Apr 2026
+            {/* Days Header */}
+            <div className="grid grid-cols-7 gap-0 mb-1">
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                <div key={day} className="text-center text-[12px] font-bold text-gray-800 py-1">
+                  {day}
                 </div>
-                <button className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer text-gray-800">
-                  <ChevronRight className="w-4 h-4 stroke-[2.5px]" />
-                </button>
-              </div>
+              ))}
+            </div>
 
-              {/* Days Header */}
-              <div className="grid grid-cols-7 gap-0 mb-1">
-                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                  <div key={day} className="text-center text-[12px] font-bold text-gray-800 py-1">
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              {/* Days Grid */}
-              <div className="grid grid-cols-7 gap-y-1 gap-x-0">
-                {days.map((item, i) => (
-                  <div 
-                    key={i} 
-                    onClick={() => {
-                        if (!item.out) {
-                           setIsOpen(false)
-                        }
-                    }}
-                    className="flex justify-center"
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 gap-y-1 gap-x-0">
+              {days.map((item, i) => (
+                <div 
+                  key={i} 
+                  onClick={() => {
+                      if (!item.out) {
+                         setIsOpen(false)
+                      }
+                  }}
+                  className="flex justify-center"
+                >
+                  <button 
+                    className={cn(
+                      "w-7 h-7 text-[12px] flex items-center justify-center font-medium rounded-sm transition-colors border-none bg-transparent",
+                      item.selected ? "bg-[#3f88c5] text-white" : 
+                      item.out ? "text-gray-300 pointer-events-none" : "text-gray-600 hover:bg-gray-100 cursor-pointer"
+                    )}
                   >
-                    <button 
-                      className={cn(
-                        "w-7 h-7 text-[12px] flex items-center justify-center font-medium rounded-sm transition-colors",
-                        item.selected ? "bg-[#3f88c5] text-white" : 
-                        item.out ? "text-gray-300 pointer-events-none" : "text-gray-600 hover:bg-gray-100 cursor-pointer"
-                      )}
-                    >
-                      {item.d}
-                    </button>
-                  </div>
-                ))}
-              </div>
+                    {item.d}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
-        </>
-      )}
-    </div>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
