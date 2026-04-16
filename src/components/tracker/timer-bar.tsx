@@ -16,6 +16,7 @@ export function TimerBar() {
 
   const [description, setDescription] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState('')
+  const [selectedTaskId, setSelectedTaskId] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [isBillable, setIsBillable] = useState(false)
 
@@ -47,8 +48,15 @@ export function TimerBar() {
         <div className="h-full px-2 flex items-center cursor-pointer">
           <ProjectPicker 
             selectedProjectId={selectedProjectId}
-            onSelect={setSelectedProjectId}
-            onClear={() => setSelectedProjectId('')}
+            selectedTaskId={selectedTaskId}
+            onSelect={(projectId, taskId) => {
+              setSelectedProjectId(projectId)
+              setSelectedTaskId(taskId || '')
+            }}
+            onClear={() => {
+              setSelectedProjectId('')
+              setSelectedTaskId('')
+            }}
           />
         </div>
 

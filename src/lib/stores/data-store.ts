@@ -103,6 +103,6 @@ export const useDataStore = create<DataStore>()(
         set((state) => ({ projects: [...state.projects, newProject] }))
       }
     }),
-    { name: 'logspanx-storage-v1' } // Versioned storage to force data refresh
+    { name: 'logspanx-storage-v2' } // Force refresh for updated leads/tasks
   )
 )
