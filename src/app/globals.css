@@ -1,26 +1,64 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-background: #f2f6f8;
+  --color-foreground: #333333;
+  --color-primary: #03a9f4;
+  --color-border-custom: #e4eaee;
+  --color-sidebar-active: #f2f9ff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5; /* Ensure enough height for descenders */
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Custom Scrollbar to match LogSpanX */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Antigravity Design Tokens */
+.logspanx-shadow {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.dotted-separator {
+  border-left: 1px dotted #e5e7eb;
+}
+
+/* Global utility to prevent text cropping */
+.no-crop {
+  padding-top: 1px;
+  padding-bottom: 1px;
+  line-height: normal;
+}
+
+/* Make table structures swipable without ugly scrollbars */
+.hidden-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hidden-scrollbar::-webkit-scrollbar {
+  display: none;
 }
