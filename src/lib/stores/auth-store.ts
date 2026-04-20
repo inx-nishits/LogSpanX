@@ -11,6 +11,8 @@ interface AuthState {
   logout: () => void
   updateUser: (user: Partial<User>) => void
   updateWorkspace: (workspace: Partial<Workspace>) => void
+  setRole: (role: User['role']) => void
+  inviteUser: (email: string, role: User['role']) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -58,6 +60,21 @@ export const useAuthStore = create<AuthState>()(
             workspace: { ...currentWorkspace, ...workspaceData }
           })
         }
+      },
+
+      setRole: (role) => {
+        const currentUser = get().user
+        if (currentUser) {
+          set({
+            user: { ...currentUser, role }
+          })
+        }
+      },
+
+      inviteUser: async (email, role) => {
+        // Mock API call delay
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        console.log(`[Mock] Invitation sent to ${email} with role ${role}`)
       }
     }),
     {
