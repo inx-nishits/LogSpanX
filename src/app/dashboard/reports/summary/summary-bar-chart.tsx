@@ -76,7 +76,7 @@ export function SummaryBarChart({ data }: { data: BarDay[] }) {
               dataKey="totalLabel"
               position="top"
               style={{ fill: '#555', fontSize: 12 }}
-              formatter={(v: string) => v || ''}
+              formatter={(v: any) => v || ''}
               offset={6}
             />
           </Bar>
