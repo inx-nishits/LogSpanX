@@ -31,6 +31,7 @@ interface DateRange {
 interface DateRangePickerProps {
     initialRange: DateRange
     onRangeChange: (range: DateRange) => void
+    label?: string
 }
 
 const PRESETS = [
@@ -45,12 +46,25 @@ const PRESETS = [
     { label: 'Last year', getValue: () => ({ from: startOfYear(subMonths(new Date(), 12)), to: endOfYear(subMonths(new Date(), 12)) }) },
 ]
 
-export function DateRangePicker({ initialRange, onRangeChange }: DateRangePickerProps) {
+export function DateRangePicker({ initialRange, onRangeChange, label }: DateRangePickerProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [range, setRange] = useState<DateRange>(initialRange)
     const [viewDate, setViewDate] = useState(startOfMonth(initialRange.from))
     const [activePreset, setActivePreset] = useState('This week')
     const containerRef = useRef<HTMLDivElement>(null)
+
+    // Update internal range when external range changes (from arrow buttons)
+    useEffect(() => {
+        setRange(initialRange)
+        
+        // Update active preset based on the new range
+        const matchingPreset = PRESETS.find(preset => {
+            const presetRange = preset.getValue()
+            return isSameDay(presetRange.from, initialRange.from) && isSameDay(presetRange.to, initialRange.to)
+        })
+        
+        setActivePreset(matchingPreset?.label || '')
+    }, [initialRange])
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -133,22 +147,65 @@ export function DateRangePicker({ initialRange, onRangeChange }: DateRangePicker
         )
     }
 
-    const rangeDisplay = `${format(range.from, 'dd/MM/yyyy')} - ${format(range.to, 'dd/MM/yyyy')}`
+    // Smart date display logic
+    const getDateDisplay = () => {
+        if (label) return label
+        
+        const isSingleDay = isSameDay(range.from, range.to)
+        
+        if (isSingleDay) {
+            // Single day selected - show just the date
+            const today = new Date()
+            const yesterday = subDays(today, 1)
+            
+            if (isSameDay(range.from, today)) {
+                return 'Today'
+            } else if (isSameDay(range.from, yesterday)) {
+                return 'Yesterday'
+            } else {
+                return format(range.from, 'dd/MM/yyyy')
+            }
+        } else {
+            // Week or range selected - show date range
+            const daysDiff = Math.abs((range.to.getTime() - range.from.getTime()) / (1000 * 60 * 60 * 24))
+            
+            // Check if it's a week range (7 days)
+            if (daysDiff === 6) {
+                const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+                const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 })
+                const lastWeekStart = startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 })
+                const lastWeekEnd = endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 })
+                
+                if (isSameDay(range.from, weekStart) && isSameDay(range.to, weekEnd)) {
+                    return 'This week'
+                } else if (isSameDay(range.from, lastWeekStart) && isSameDay(range.to, lastWeekEnd)) {
+                    return 'Last week'
+                } else {
+                    return `${format(range.from, 'dd/MM')} - ${format(range.to, 'dd/MM/yyyy')}`
+                }
+            } else {
+                // Custom range
+                return `${format(range.from, 'dd/MM/yyyy')} - ${format(range.to, 'dd/MM/yyyy')}`
+            }
+        }
+    }
+
+    const rangeDisplay = getDateDisplay()
 
     return (
         <div className="relative" ref={containerRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "flex items-center bg-white border border-[#d0d8de] rounded-sm h-[28px] px-3 gap-3 cursor-pointer transition-colors hover:border-[#4285f4]",
+                    "flex items-center bg-white border border-[#d0d8de] h-[36px] px-3 gap-3 cursor-pointer transition-colors hover:border-[#4285f4]",
                     isOpen && "border-[#4285f4]"
                 )}
             >
-                <CalendarDays className="h-4 w-4 text-[#999]" />
-                <span className="text-[14px] font-normal text-[#333] whitespace-nowrap min-w-[170px] text-left">
+                <CalendarDays className="h-[16px] w-[16px] text-[#999]" />
+                <span className="text-[15px] font-normal text-[#333] whitespace-nowrap min-w-[170px] text-left">
                     {rangeDisplay}
                 </span>
-                <ChevronDown className="h-4 w-4 text-[#999]" />
+                <ChevronDown className="h-[15px] w-[15px] text-[#999]" />
             </button>
 
             {isOpen && (

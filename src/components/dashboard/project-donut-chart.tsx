@@ -39,7 +39,10 @@ export function ProjectDonutChart({ data, totalTime, isTaskView }: ProjectDonutC
                                 paddingAngle={0}
                                 dataKey="value"
                                 strokeWidth={0}
-                                isAnimationActive={false}
+                                isAnimationActive={true}
+                                animationBegin={0}
+                                animationDuration={900}
+                                animationEasing="ease-out"
                             >
                                 {data.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />

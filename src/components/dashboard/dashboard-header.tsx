@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { User } from '@/lib/types'
 import { useState, useRef, useEffect } from 'react'
-import { addDays } from 'date-fns'
+import { addDays, addWeeks, isSameDay } from 'date-fns'
 import { DateRangePicker } from './date-range-picker'
 
 interface DateRange {
@@ -116,34 +116,44 @@ export function DashboardHeader({ role, filters, onFilterChange, currentRange, o
                 />
 
                 <div className="flex items-center gap-0 ml-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-[38px] w-8 text-[#999] hover:bg-[#f0f4f8] rounded-sm rounded-r-none border border-[#d0d8de] border-r-0 bg-white"
+                        onClick={() => {
+                            const isSingleDay = isSameDay(currentRange.from, currentRange.to)
+                            if (isSingleDay) {
+                                const newDate = addDays(currentRange.from, -1)
+                                onRangeChange({ from: newDate, to: newDate })
+                            } else {
+                                const newRange = { from: addWeeks(currentRange.from, -1), to: addWeeks(currentRange.to, -1) }
+                                onRangeChange(newRange)
+                            }
+                        }}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
                     <DateRangePicker
                         initialRange={currentRange}
                         onRangeChange={onRangeChange}
                     />
-                    <div className="flex items-center bg-white border border-[#d0d8de] border-l-0 rounded-sm rounded-l-none h-[38px] overflow-hidden">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-[38px] w-8 text-[#999] hover:bg-[#f0f4f8] rounded-none border-r border-[#e4eaee]"
-                            onClick={() => {
-                                const newRange = { from: addDays(currentRange.from, -1), to: addDays(currentRange.to, -1) }
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-[38px] w-8 text-[#999] hover:bg-[#f0f4f8] rounded-sm rounded-l-none border border-[#d0d8de] border-l-0 bg-white"
+                        onClick={() => {
+                            const isSingleDay = isSameDay(currentRange.from, currentRange.to)
+                            if (isSingleDay) {
+                                const newDate = addDays(currentRange.from, 1)
+                                onRangeChange({ from: newDate, to: newDate })
+                            } else {
+                                const newRange = { from: addWeeks(currentRange.from, 1), to: addWeeks(currentRange.to, 1) }
                                 onRangeChange(newRange)
-                            }}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-[38px] w-8 text-[#999] hover:bg-[#f0f4f8] rounded-none"
-                            onClick={() => {
-                                const newRange = { from: addDays(currentRange.from, 1), to: addDays(currentRange.to, 1) }
-                                onRangeChange(newRange)
-                            }}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
+                            }
+                        }}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
                 </div>
             </div>
         </div>

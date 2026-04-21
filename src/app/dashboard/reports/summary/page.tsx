@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, ChevronDown, Filter, Printer, Share2, Search, X, Check } from 'lucide-react'
 import { startOfWeek, endOfWeek, startOfDay, endOfDay, eachDayOfInterval, format, isSameDay, addDays } from 'date-fns'
 import { useDataStore } from '@/lib/stores/data-store'
@@ -216,10 +216,57 @@ function SimpleDropdown({ value, options, onChange }: { value: string; options: 
   )
 }
 
+// ─── Billability dropdown ───────────────────────────────────────────────────
+
+const BILLABILITY_OPTIONS = ['Billability', 'Project']
+
+function BillabilityDropdown({ mode, onChange }: { mode: 'billability' | 'project'; onChange: (m: 'billability' | 'project') => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = mode === 'project' ? 'Project' : 'Billability'
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 px-3 h-[28px] text-[13px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer"
+      >
+        {selected} <ChevronDown className="h-3 w-3 text-[#aaa]" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-0.5 bg-white border border-[#ddd] shadow-lg z-50 min-w-[130px] py-0.5">
+          {BILLABILITY_OPTIONS.map(opt => (
+            <button
+              key={opt}
+              onClick={() => { onChange(opt === 'Project' ? 'project' : 'billability'); setOpen(false) }}
+              className={cn(
+                'w-full text-left px-3 py-2 text-[13px] transition-colors cursor-pointer flex items-center justify-between',
+                selected === opt ? 'bg-[#f0f4f8] text-[#333] font-medium' : 'text-[#555] hover:bg-[#f5f5f5]'
+              )}
+            >
+              {opt}
+              {selected === opt && <Check className="h-3.5 w-3.5 text-[#03a9f4]" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SummaryReportPage() {
   const pathname = usePathname()
+  const router = useRouter()
   const { timeEntries, projects, users } = useDataStore()
 
   const [dateRange, setDateRange] = useState({
@@ -228,6 +275,7 @@ export default function SummaryReportPage() {
   })
   const [groupBy, setGroupBy] = useState('User')
   const [subGroupBy, setSubGroupBy] = useState('Description')
+  const [billabilityMode, setBillabilityMode] = useState<'billability' | 'project'>('billability')
 
   const [selTeam, setSelTeam] = useState<string[]>([])
   const [selLead, setSelLead] = useState<string[]>([])
@@ -335,86 +383,177 @@ export default function SummaryReportPage() {
   const billableSecs = useMemo(() => filtered.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
 
   const barData = useMemo(() => {
-    // Bar chart always shows time per day — groupBy affects the table, not the bar
-    // But the bar color segments change based on groupBy
     const days = eachDayOfInterval({ start: from, end: to })
 
-    if (groupBy === 'Project') {
-      // Stacked by project color
-      return days.map(date => {
-        const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
-        const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-        const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-        return { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
+    const buildDay = (date: Date) => {
+      const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
+      const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+      const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+      const base = { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
+      // always inject per-project hours so project mode works
+      const perProject: Record<string, number> = {}
+      projects.forEach(p => {
+        const hrs = day.filter(e => e.projectId === p.id).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+        perProject[p.id] = Number(hrs.toFixed(2))
       })
-    }
-
-    if (groupBy === 'User') {
-      return days.map(date => {
-        const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
-        const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-        const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-        return { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
-      })
-    }
-
-    if (groupBy === 'Tag') {
-      return days.map(date => {
-        const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
-        const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-        const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-        return { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
-      })
+      return { ...base, ...perProject }
     }
 
     if (groupBy === 'Month') {
-      // Group by month
-      const monthMap: Record<string, { b: number; nb: number }> = {}
+      const monthMap: Record<string, { b: number; nb: number; [k: string]: number }> = {}
       filtered.forEach(e => {
         const key = format(new Date(e.startTime), 'MMM yyyy')
-        if (!monthMap[key]) monthMap[key] = { b: 0, nb: 0 }
+        if (!monthMap[key]) { monthMap[key] = { b: 0, nb: 0 }; projects.forEach(p => { monthMap[key][p.id] = 0 }) }
         const hrs = (e.duration ?? 0) / 3600
-        if (e.billable) monthMap[key].b += hrs
-        else monthMap[key].nb += hrs
+        if (e.billable) monthMap[key].b += hrs; else monthMap[key].nb += hrs
+        if (e.projectId) monthMap[key][e.projectId] = (monthMap[key][e.projectId] || 0) + hrs
       })
       return Object.entries(monthMap).map(([name, v]) => ({
-        name, billable: Number(v.b.toFixed(2)), nonBillable: Number(v.nb.toFixed(2)), totalLabel: fmtH((v.b + v.nb) * 3600)
+        name, billable: Number(v.b.toFixed(2)), nonBillable: Number(v.nb.toFixed(2)),
+        totalLabel: fmtH((v.b + v.nb) * 3600),
+        ...Object.fromEntries(projects.map(p => [p.id, Number((v[p.id] || 0).toFixed(2))]))
       }))
     }
 
     if (groupBy === 'Week') {
-      const weekMap: Record<string, { b: number; nb: number }> = {}
+      const weekMap: Record<string, { b: number; nb: number; [k: string]: number }> = {}
       filtered.forEach(e => {
         const key = `Week of ${format(new Date(e.startTime), 'MMM d')}`
-        if (!weekMap[key]) weekMap[key] = { b: 0, nb: 0 }
+        if (!weekMap[key]) { weekMap[key] = { b: 0, nb: 0 }; projects.forEach(p => { weekMap[key][p.id] = 0 }) }
         const hrs = (e.duration ?? 0) / 3600
-        if (e.billable) weekMap[key].b += hrs
-        else weekMap[key].nb += hrs
+        if (e.billable) weekMap[key].b += hrs; else weekMap[key].nb += hrs
+        if (e.projectId) weekMap[key][e.projectId] = (weekMap[key][e.projectId] || 0) + hrs
       })
       return Object.entries(weekMap).map(([name, v]) => ({
-        name, billable: Number(v.b.toFixed(2)), nonBillable: Number(v.nb.toFixed(2)), totalLabel: fmtH((v.b + v.nb) * 3600)
+        name, billable: Number(v.b.toFixed(2)), nonBillable: Number(v.nb.toFixed(2)),
+        totalLabel: fmtH((v.b + v.nb) * 3600),
+        ...Object.fromEntries(projects.map(p => [p.id, Number((v[p.id] || 0).toFixed(2))]))
       }))
     }
 
-    // Default: by day
-    return days.map(date => {
-      const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
-      const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-      const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-      return { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
-    })
-  }, [filtered, from, to, groupBy])
+    return days.map(buildDay)
+  }, [filtered, from, to, groupBy, projects])
 
   const donutData = useMemo(() => {
-    const map: Record<string, number> = {}
-    filtered.forEach(e => { if (e.projectId) map[e.projectId] = (map[e.projectId] || 0) + (e.duration ?? 0) })
-    return Object.entries(map).map(([pid, secs]) => {
-      const p = projects.find(pr => pr.id === pid)
-      return { name: p?.name || 'Unknown', value: secs, color: p?.color || '#ccc' }
-    }).sort((a, b) => b.value - a.value)
-  }, [filtered, projects])
+    if (billabilityMode === 'project') {
+      const map: Record<string, number> = {}
+      filtered.forEach(e => { if (e.projectId) map[e.projectId] = (map[e.projectId] || 0) + (e.duration ?? 0) })
+      return Object.entries(map).map(([pid, secs]) => {
+        const p = projects.find(pr => pr.id === pid)
+        return { name: p?.name || 'Unknown', value: secs, color: p?.color || '#ccc' }
+      }).sort((a, b) => b.value - a.value)
+    }
+    // billability mode
+    const billable = filtered.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0)
+    const nonBillable = filtered.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0)
+    return [
+      { name: 'Billable', value: billable, color: '#6aaa1e' },
+      { name: 'Non-billable', value: nonBillable, color: '#8bc34a' },
+    ].filter(d => d.value > 0)
+  }, [filtered, projects, billabilityMode])
 
   const tableRows = useMemo((): SummaryRow[] => {
+    // ── sub-group children builder ──────────────────────────────────────────
+    const buildChildren = (entries: typeof filtered, parentId: string): SummaryRow[] => {
+      if (subGroupBy === '(None)') return []
+
+      if (subGroupBy === 'Project') {
+        const map: Record<string, { duration: number; count: number }> = {}
+        entries.forEach(e => {
+          const pid = e.projectId || '__none__'
+          if (!map[pid]) map[pid] = { duration: 0, count: 0 }
+          map[pid].duration += e.duration ?? 0
+          map[pid].count++
+        })
+        return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([pid, d]) => {
+          const p = projects.find(pr => pr.id === pid)
+          return { id: `${parentId}-${pid}`, title: p?.name || '(Without Project)', color: p?.color || '#ccc', entryCount: d.count, duration: d.duration, billable: p?.billable ?? false }
+        })
+      }
+
+      if (subGroupBy === 'Task') {
+        const map: Record<string, { duration: number; count: number; name: string }> = {}
+        entries.forEach(e => {
+          const key = e.taskId || '__none__'
+          if (!map[key]) map[key] = { duration: 0, count: 0, name: '(Without Task)' }
+          map[key].duration += e.duration ?? 0
+          map[key].count++
+        })
+        return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([tid, d]) => ({
+          id: `${parentId}-${tid}`, title: d.name, color: '#9e9e9e', entryCount: d.count, duration: d.duration, billable: false
+        }))
+      }
+
+      if (subGroupBy === 'Project Lead') {
+        const map: Record<string, { duration: number; count: number; name: string }> = {}
+        entries.forEach(e => {
+          const proj = projects.find(p => p.id === e.projectId)
+          const leadId = proj?.leadId || '__none__'
+          const leadName = users.find(u => u.id === leadId)?.name || '(No Lead)'
+          if (!map[leadId]) map[leadId] = { duration: 0, count: 0, name: leadName }
+          map[leadId].duration += e.duration ?? 0
+          map[leadId].count++
+        })
+        return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([lid, d]) => ({
+          id: `${parentId}-${lid}`, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+        }))
+      }
+
+      if (subGroupBy === 'Tag' || subGroupBy === 'Description') {
+        const map: Record<string, { duration: number; count: number }> = {}
+        entries.forEach(e => {
+          const key = e.description?.trim() || '(no description)'
+          if (!map[key]) map[key] = { duration: 0, count: 0 }
+          map[key].duration += e.duration ?? 0
+          map[key].count++
+        })
+        return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([title, d]) => ({
+          id: `${parentId}-${title}`, title, color: '#f9a825', entryCount: d.count, duration: d.duration, billable: false
+        }))
+      }
+
+      if (subGroupBy === 'Month') {
+        const map: Record<string, { duration: number; count: number }> = {}
+        entries.forEach(e => {
+          const key = format(new Date(e.startTime), 'MMMM yyyy')
+          if (!map[key]) map[key] = { duration: 0, count: 0 }
+          map[key].duration += e.duration ?? 0
+          map[key].count++
+        })
+        return Object.entries(map).map(([title, d]) => ({
+          id: `${parentId}-${title}`, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+        }))
+      }
+
+      if (subGroupBy === 'Week') {
+        const map: Record<string, { duration: number; count: number }> = {}
+        entries.forEach(e => {
+          const key = `Week of ${format(new Date(e.startTime), 'MMM d, yyyy')}`
+          if (!map[key]) map[key] = { duration: 0, count: 0 }
+          map[key].duration += e.duration ?? 0
+          map[key].count++
+        })
+        return Object.entries(map).map(([title, d]) => ({
+          id: `${parentId}-${title}`, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+        }))
+      }
+
+      if (subGroupBy === 'Date') {
+        const map: Record<string, { duration: number; count: number }> = {}
+        entries.forEach(e => {
+          const key = format(new Date(e.startTime), 'EEE, MMM d yyyy')
+          if (!map[key]) map[key] = { duration: 0, count: 0 }
+          map[key].duration += e.duration ?? 0
+          map[key].count++
+        })
+        return Object.entries(map).map(([title, d]) => ({
+          id: `${parentId}-${title}`, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+        }))
+      }
+
+      return []
+    }
+    // ────────────────────────────────────────────────────────────────────────
     if (groupBy === 'User') {
       return users.map(u => {
         const ue = filtered.filter(e => e.userId === u.id)
@@ -431,10 +570,8 @@ export default function SummaryReportPage() {
           entryCount: ue.length,
           duration: ue.reduce((a, e) => a + (e.duration ?? 0), 0),
           billable: false,
-          children: Object.entries(projMap).sort((a, b) => b[1].duration - a[1].duration).map(([pid, d]) => ({
-            id: `${u.id}-${pid}`, title: d.project?.name || '(Without Project)',
-            color: d.project?.color || '#ccc', entryCount: d.count, duration: d.duration, billable: d.project?.billable ?? false,
-          })),
+          filterType: 'user' as const, filterId: u.id,
+          children: buildChildren(ue, u.id),
         }
       }).filter(Boolean) as SummaryRow[]
     }
@@ -443,84 +580,105 @@ export default function SummaryReportPage() {
       return projects.map(p => {
         const pe = filtered.filter(e => e.projectId === p.id)
         if (!pe.length) return null
-        return { id: p.id, title: p.name, color: p.color, entryCount: pe.length, duration: pe.reduce((a, e) => a + (e.duration ?? 0), 0), billable: p.billable }
+        // children: users who tracked on this project
+        const userMap: Record<string, { duration: number; count: number }> = {}
+        pe.forEach(e => {
+          if (!userMap[e.userId]) userMap[e.userId] = { duration: 0, count: 0 }
+          userMap[e.userId].duration += e.duration ?? 0
+          userMap[e.userId].count++
+        })
+        return { id: p.id, title: p.name, color: p.color, entryCount: pe.length, duration: pe.reduce((a, e) => a + (e.duration ?? 0), 0), billable: p.billable, filterType: 'project' as const, filterId: p.id, children: buildChildren(pe, p.id) }
       }).filter(Boolean) as SummaryRow[]
     }
 
     if (groupBy === 'Project Lead') {
-      const leadMap: Record<string, { duration: number; count: number; name: string }> = {}
+      const leadMap: Record<string, { duration: number; count: number; name: string; projects: Record<string, { duration: number; count: number }> }> = {}
       filtered.forEach(e => {
         const proj = projects.find(p => p.id === e.projectId)
         const leadId = proj?.leadId || '__none__'
         const leadName = users.find(u => u.id === leadId)?.name || '(No Lead)'
-        if (!leadMap[leadId]) leadMap[leadId] = { duration: 0, count: 0, name: leadName }
+        if (!leadMap[leadId]) leadMap[leadId] = { duration: 0, count: 0, name: leadName, projects: {} }
         leadMap[leadId].duration += e.duration ?? 0
         leadMap[leadId].count++
+        const pid = e.projectId || '__none__'
+        if (!leadMap[leadId].projects[pid]) leadMap[leadId].projects[pid] = { duration: 0, count: 0 }
+        leadMap[leadId].projects[pid].duration += e.duration ?? 0
+        leadMap[leadId].projects[pid].count++
       })
       return Object.entries(leadMap).sort((a, b) => b[1].duration - a[1].duration).map(([id, d]) => ({
-        id, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+        id, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false, filterType: 'lead' as const, filterId: id,
+        children: buildChildren(filtered.filter(e => {
+          const proj = projects.find(p => p.id === e.projectId)
+          return (proj?.leadId || '__none__') === id
+        }), id)
       }))
     }
 
     if (groupBy === 'Group') {
-      // Group by workspace team groups — show all users as flat list
       return users.map(u => {
         const ue = filtered.filter(e => e.userId === u.id)
         if (!ue.length) return null
-        return { id: u.id, title: u.name, color: '#8e24aa', entryCount: ue.length, duration: ue.reduce((a, e) => a + (e.duration ?? 0), 0), billable: false }
+        return { id: u.id, title: u.name, color: '#8e24aa', entryCount: ue.length, duration: ue.reduce((a, e) => a + (e.duration ?? 0), 0), billable: false, filterType: 'user' as const, filterId: u.id, children: buildChildren(ue, u.id) }
       }).filter(Boolean) as SummaryRow[]
     }
 
     if (groupBy === 'Tag') {
-      // No tags on entries yet — show flat list by description
-      const tagMap: Record<string, { duration: number; count: number }> = {}
+      const tagMap: Record<string, { duration: number; count: number; entries: typeof filtered }> = {}
       filtered.forEach(e => {
         const key = e.description || '(no description)'
-        if (!tagMap[key]) tagMap[key] = { duration: 0, count: 0 }
+        if (!tagMap[key]) tagMap[key] = { duration: 0, count: 0, entries: [] }
         tagMap[key].duration += e.duration ?? 0
         tagMap[key].count++
+        tagMap[key].entries.push(e)
       })
       return Object.entries(tagMap).sort((a, b) => b[1].duration - a[1].duration).map(([title, d]) => ({
-        id: title, title, color: '#f9a825', entryCount: d.count, duration: d.duration, billable: false
+        id: title, title, color: '#f9a825', entryCount: d.count, duration: d.duration, billable: false,
+        children: buildChildren(d.entries, title)
       }))
     }
 
     if (groupBy === 'Month') {
-      const monthMap: Record<string, { duration: number; count: number }> = {}
+      const monthMap: Record<string, { duration: number; count: number; entries: typeof filtered }> = {}
       filtered.forEach(e => {
         const key = format(new Date(e.startTime), 'MMMM yyyy')
-        if (!monthMap[key]) monthMap[key] = { duration: 0, count: 0 }
+        if (!monthMap[key]) monthMap[key] = { duration: 0, count: 0, entries: [] }
         monthMap[key].duration += e.duration ?? 0
         monthMap[key].count++
+        monthMap[key].entries.push(e)
       })
       return Object.entries(monthMap).map(([title, d]) => ({
-        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false,
+        children: buildChildren(d.entries, title)
       }))
     }
 
     if (groupBy === 'Week') {
-      const weekMap: Record<string, { duration: number; count: number }> = {}
+      const weekMap: Record<string, { duration: number; count: number; entries: typeof filtered }> = {}
       filtered.forEach(e => {
         const key = `Week of ${format(new Date(e.startTime), 'MMM d, yyyy')}`
-        if (!weekMap[key]) weekMap[key] = { duration: 0, count: 0 }
+        if (!weekMap[key]) weekMap[key] = { duration: 0, count: 0, entries: [] }
         weekMap[key].duration += e.duration ?? 0
         weekMap[key].count++
+        weekMap[key].entries.push(e)
       })
       return Object.entries(weekMap).map(([title, d]) => ({
-        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false,
+        children: buildChildren(d.entries, title)
       }))
     }
 
     if (groupBy === 'Date') {
-      const dateMap: Record<string, { duration: number; count: number }> = {}
+      const dateMap: Record<string, { duration: number; count: number; entries: typeof filtered }> = {}
       filtered.forEach(e => {
         const key = format(new Date(e.startTime), 'EEE, MMM d yyyy')
-        if (!dateMap[key]) dateMap[key] = { duration: 0, count: 0 }
+        if (!dateMap[key]) dateMap[key] = { duration: 0, count: 0, entries: [] }
         dateMap[key].duration += e.duration ?? 0
         dateMap[key].count++
+        dateMap[key].entries.push(e)
       })
       return Object.entries(dateMap).map(([title, d]) => ({
-        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false,
+        children: buildChildren(d.entries, title)
       }))
     }
 
@@ -529,7 +687,7 @@ export default function SummaryReportPage() {
       const proj = projects.find(p => p.id === e.projectId)
       return { id: e.id, title: e.description || '(no description)', color: proj?.color || '#ccc', entryCount: 1, duration: e.duration ?? 0, billable: e.billable }
     })
-  }, [filtered, groupBy, users, projects])
+  }, [filtered, groupBy, subGroupBy, users, projects])
 
   return (
     <div className="flex flex-col h-full bg-[#f2f6f8] overflow-hidden">
@@ -616,11 +774,9 @@ export default function SummaryReportPage() {
         {/* Billability + Bar chart */}
         <div className="px-6 pt-5 pb-6 bg-white border-b border-[#e4eaee]">
           <div className="mb-4">
-            <button className="flex items-center gap-1.5 px-3 h-[28px] text-[13px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
-              Billability <ChevronDown className="h-3 w-3 text-[#aaa]" />
-            </button>
+            <BillabilityDropdown mode={billabilityMode} onChange={setBillabilityMode} />
           </div>
-          <SummaryBarChart data={barData} />
+          <SummaryBarChart data={barData} mode={billabilityMode} projects={projects} />
         </div>
 
         {/* Group by row */}
@@ -633,7 +789,13 @@ export default function SummaryReportPage() {
         {/* Table + Donut side by side */}
         <div className="flex items-start">
           <div className="w-[60%] flex-shrink-0 border-r border-[#e4eaee]">
-            <SummaryTable rows={tableRows} />
+            <SummaryTable rows={tableRows} onRowClick={(row) => {
+              if (!row.filterType || !row.filterId) return
+              const from = dateRange.from.toISOString()
+              const to = dateRange.to.toISOString()
+              const params = new URLSearchParams({ from, to, filterType: row.filterType, filterId: row.filterId, filterLabel: row.title })
+              router.push(`/dashboard/reports/detailed?${params.toString()}`)
+            }} />
           </div>
           <div className="flex-1 flex items-center justify-center py-10">
             <SummaryDonut data={donutData} totalLabel={fmtSecs(totalSecs)} />

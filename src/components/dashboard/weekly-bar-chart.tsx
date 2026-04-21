@@ -81,7 +81,10 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                                 stackId="a"
                                 fill={proj.color}
                                 radius={[0, 0, 0, 0]}
-                                isAnimationActive={false}
+                                isAnimationActive={true}
+                                animationBegin={0}
+                                animationDuration={800}
+                                animationEasing="ease-out"
                             >
                                 {index === projects.length - 1 && (
                                     <LabelList

@@ -61,7 +61,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
   return (
     <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
       <DropdownMenuTrigger asChild>
-        <button className={cn(
+        <div role="button" className={cn(
           "flex items-center space-x-2 text-sm transition-colors w-full text-left cursor-pointer group",
           (selectedProject || selectedTask) ? "text-gray-900" : "text-[#03a9f4] hover:text-[#0288d1]"
         )}>
@@ -78,7 +78,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
               <span className="font-normal text-[13px]">Project</span>
             </div>
           )}
-        </button>
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[360px] p-0 shadow-2xl bg-white border border-gray-100 rounded-sm mt-1 z-[100] max-h-[85vh] flex flex-col">
         <div className="p-3 border-b border-gray-100">

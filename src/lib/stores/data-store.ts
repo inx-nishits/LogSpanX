@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { TimeEntry, Project, Client, Task, User } from '@/lib/types'
+import { TimeEntry, Project, Client, Task, User, Tag } from '@/lib/types'
 import {
   mockTimeEntries,
   mockProjects,
   mockClients,
   mockTasks,
-  mockUsers
+  mockUsers,
+  mockTags
 } from '@/data/mock-data'
 import { generateId } from '@/lib/utils'
 
@@ -16,6 +17,7 @@ interface DataStore {
   clients: Client[]
   tasks: Task[]
   users: User[]
+  tags: Tag[]
 
   // Undo state
   lastDeletedEntries: TimeEntry[]
@@ -42,6 +44,7 @@ export const useDataStore = create<DataStore>()(
       clients: mockClients,
       tasks: mockTasks,
       users: mockUsers,
+      tags: mockTags,
       lastDeletedEntries: [],
 
       addTimeEntry: (entry) => {
@@ -101,7 +104,7 @@ export const useDataStore = create<DataStore>()(
       }
     }),
     {
-      name: 'logspanx-storage-v4',  // Bumped to clear old 2024 mock data, now uses current dates
+      name: 'logspanx-storage-v6',  // Bumped to clear old 2024 mock data, now uses current dates
     }
   )
 )

@@ -1,69 +1,129 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import { useDataStore } from '@/lib/stores/data-store'
+import { startOfDay, endOfDay } from 'date-fns'
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 
 const AVATAR_COLORS = ['#e91e63', '#9c27b0', '#03a9f4', '#4caf50', '#ff9800', '#795548']
 
-const NAMES: Record<string, string> = {
-    'user_1': 'Nishit Sangani',
-    'user_2': 'Aiyub Munshi',
-    'user_3': 'Jaydeep Vegad',
-    'user_4': 'Sonu Gupta',
-    'user_5': 'Vrutik Patel',
-    'user_6': 'Ram Jangid',
+interface TeamActivitiesProps {
+    dateRange?: { from: Date; to: Date }
 }
 
-export function TeamActivities() {
-    const { timeEntries, projects } = useDataStore()
+type MemberSort = 'none' | 'asc' | 'desc'
+type ActivitySort = 'none' | 'no-desc-first' | 'no-activity-first'
 
-    const userMap: Record<string, typeof timeEntries> = {}
-    timeEntries.forEach(e => {
-        if (!userMap[e.userId]) userMap[e.userId] = []
-        userMap[e.userId].push(e)
-    })
+export function TeamActivities({ dateRange }: TeamActivitiesProps) {
+    const { timeEntries, projects, users } = useDataStore()
+    const [memberSort, setMemberSort] = useState<MemberSort>('none')
+    const [activitySort, setActivitySort] = useState<ActivitySort>('none')
 
-    const members = Object.entries(userMap).map(([userId, entries]) => {
-        const totalSec = entries.reduce((a, c) => a + (c.duration ?? 0), 0)
-        const h = Math.floor(totalSec / 3600)
-        const m = Math.floor((totalSec % 3600) / 60)
+    const cycleMemSort = () => {
+        setActivitySort('none')
+        setMemberSort(s => s === 'none' ? 'asc' : s === 'asc' ? 'desc' : 'none')
+    }
+    const cycleActSort = () => {
+        setMemberSort('none')
+        setActivitySort(s => s === 'none' ? 'no-desc-first' : s === 'no-desc-first' ? 'no-activity-first' : 'none')
+    }
 
-        const sorted = [...entries].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-        const latest = sorted[0]
-        const latestProject = projects.find(p => p.id === latest?.projectId)
+    const rawMembers = useMemo(() => {
+        const rangeStart = dateRange ? startOfDay(dateRange.from) : null
+        const rangeEnd = dateRange ? endOfDay(dateRange.to) : null
 
-        const projectHours: Record<string, number> = {}
-        entries.forEach(e => {
-            const pid = e.projectId ?? 'unknown'
-            projectHours[pid] = (projectHours[pid] || 0) + ((e.duration ?? 0) / 3600)
+        const filtered = rangeStart && rangeEnd
+            ? timeEntries.filter(e => {
+                const t = new Date(e.startTime)
+                return t >= rangeStart && t <= rangeEnd
+            })
+            : timeEntries
+
+        return users.map((user, i) => {
+            const entries = filtered.filter(e => e.userId === user.id)
+            const name = user.name || user.id
+
+            const totalSec = entries.reduce((a, c) => a + (c.duration ?? 0), 0)
+            const h = Math.floor(totalSec / 3600)
+            const m = Math.floor((totalSec % 3600) / 60)
+
+            const sorted = [...entries].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+            const latest = sorted[0]
+            const latestProject = projects.find(p => p.id === latest?.projectId)
+
+            const projectHours: Record<string, number> = {}
+            entries.forEach(e => {
+                const pid = e.projectId ?? 'unknown'
+                projectHours[pid] = (projectHours[pid] || 0) + ((e.duration ?? 0) / 3600)
+            })
+            const totalHours = totalSec / 3600
+
+            const barSegments = Object.entries(projectHours)
+                .sort((a, b) => b[1] - a[1])
+                .map(([pid, hrs]) => ({
+                    color: projects.find(p => p.id === pid)?.color || '#ccc',
+                    width: totalHours > 0 ? (hrs / totalHours) * 100 : 0,
+                }))
+
+            const latestDur = latest?.duration ?? 0
+            const lh = Math.floor(latestDur / 3600)
+            const lm = Math.floor((latestDur % 3600) / 60)
+            const hasActivity = entries.length > 0
+            const description = latest?.description?.trim() || ''
+
+            return {
+                id: user.id,
+                name,
+                role: user.role || 'member',
+                hasActivity,
+                description,
+                latestActivity: description || '(no description)',
+                latestProject: latestProject?.name || '(Without Project)',
+                latestProjectColor: latestProject?.color || '#ccc',
+                latestTime: `${String(lh).padStart(2, '0')}:${String(lm).padStart(2, '0')}`,
+                totalHours,
+                totalDisplay: `${h}:${String(m).padStart(2, '0')}`,
+                barSegments,
+                colorIndex: i,
+            }
         })
-        const totalHours = totalSec / 3600
+    }, [timeEntries, projects, users, dateRange])
 
-        // Each segment width is its proportion of the total — they always sum to 100%
-        const barSegments = Object.entries(projectHours)
-            .sort((a, b) => b[1] - a[1])
-            .map(([pid, hrs]) => ({
-                color: projects.find(p => p.id === pid)?.color || '#ccc',
-                width: totalHours > 0 ? (hrs / totalHours) * 100 : 0,
-            }))
+    const members = useMemo(() => {
+        const list = [...rawMembers]
 
-        const latestDur = latest?.duration ?? 0
-        const lh = Math.floor(latestDur / 3600)
-        const lm = Math.floor((latestDur % 3600) / 60)
+        if (memberSort === 'asc') return list.sort((a, b) => a.name.localeCompare(b.name))
+        if (memberSort === 'desc') return list.sort((a, b) => b.name.localeCompare(a.name))
 
-        return {
-            id: userId,
-            name: NAMES[userId] || userId,
-            latestActivity: latest?.description || '(no description)',
-            latestProject: latestProject ? `${latestProject.name}` : '(Without Project)',
-            latestTime: `${String(lh).padStart(2, '0')}:${String(lm).padStart(2, '0')}:00`,
-            status: 'In progress',
-            totalWeekHours: totalHours,
-            totalWeekDisplay: `${h}:${String(m).padStart(2, '0')}`,
-            barSegments,
+        if (activitySort === 'no-desc-first') {
+            return list.sort((a, b) => {
+                const rank = (m: typeof a) => m.hasActivity && !m.description ? 0 : 1
+                return rank(a) - rank(b)
+            })
         }
-    }).sort((a, b) => b.totalWeekHours - a.totalWeekHours)
+        if (activitySort === 'no-activity-first') {
+            return list.sort((a, b) => {
+                const rank = (m: typeof a) => !m.hasActivity ? 0 : !m.description ? 1 : 2
+                return rank(a) - rank(b)
+            })
+        }
 
-    const maxHours = members.length > 0 ? members[0].totalWeekHours : 1
+        return list.sort((a, b) => b.totalHours - a.totalHours)
+    }, [rawMembers, memberSort, activitySort])
+
+    const maxHours = useMemo(() => Math.max(...members.map(m => m.totalHours), 1), [members])
+
+    const SortIcon = ({ col }: { col: 'member' | 'activity' }) => {
+        if (col === 'member') {
+            if (memberSort === 'asc') return <ChevronUp className="h-3 w-3 text-[#03a9f4]" />
+            if (memberSort === 'desc') return <ChevronDown className="h-3 w-3 text-[#03a9f4]" />
+        }
+        if (col === 'activity') {
+            if (activitySort === 'no-desc-first') return <ChevronUp className="h-3 w-3 text-[#03a9f4]" />
+            if (activitySort === 'no-activity-first') return <ChevronDown className="h-3 w-3 text-[#03a9f4]" />
+        }
+        return <ChevronsUpDown className="h-3 w-3 text-[#ccc]" />
+    }
 
     return (
         <div className="bg-white rounded-sm border border-[#e4eaee]">
@@ -71,70 +131,81 @@ export function TeamActivities() {
                 <h3 className="text-[11px] font-bold text-[#999] uppercase tracking-wider">Team activities</h3>
             </div>
 
-            {/* Table Header */}
             <div className="grid grid-cols-12 px-6 py-2 border-b border-[#e4eaee] bg-[#fcfcfc] text-[11px] font-bold text-[#999] uppercase tracking-wider">
-                <div className="col-span-2 flex items-center gap-1 cursor-default">Team Member <span className="text-[10px]">↕</span></div>
-                <div className="col-span-4 flex items-center gap-1 cursor-default">Latest Activity <span className="text-[10px]">↕</span></div>
-                <div className="col-span-6 text-right flex items-center justify-end gap-1 cursor-default">Total Tracked (This Week) <span className="text-[10px]">↕</span></div>
+                <button
+                    onClick={cycleMemSort}
+                    className="col-span-2 flex items-center gap-1 hover:text-[#555] transition-colors cursor-pointer"
+                >
+                    Team Member <SortIcon col="member" />
+                </button>
+                <button
+                    onClick={cycleActSort}
+                    className="col-span-4 flex items-center gap-1 hover:text-[#555] transition-colors cursor-pointer"
+                >
+                    Latest Activity <SortIcon col="activity" />
+                </button>
+                <div className="col-span-6 text-right">Total Tracked</div>
             </div>
 
-            {/* Rows */}
             <div className="divide-y divide-[#efefef]">
-                {members.map((member, i) => {
-                    const initials = member.name.split(' ').map(n => n[0]).join('')
+                {members.map((member) => {
+                    const initials = member.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)
+                    const filledWidth = (member.totalHours / maxHours) * 100
 
                     return (
                         <div key={member.id} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-[#fafbfc] transition-colors">
-                            {/* Avatar + Name */}
                             <div className="col-span-2 flex items-center space-x-3">
                                 <div
                                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0"
-                                    style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                                    style={{ backgroundColor: AVATAR_COLORS[member.colorIndex % AVATAR_COLORS.length] }}
                                 >
                                     {initials}
                                 </div>
-                                <span className="text-[14px] font-normal text-[#333] truncate">{member.name}</span>
-                            </div>
-
-                            {/* Latest Activity */}
-                            <div className="col-span-6 grid grid-cols-10 items-center">
-                                <div className="col-span-6 min-w-0 pr-4">
-                                    <p className="text-[14px] text-[#333] truncate">{member.latestActivity}</p>
-                                    <p className="text-[12px] text-[#999] truncate font-normal">• {member.latestProject}</p>
-                                </div>
-                                <div className="col-span-2 text-right">
-                                    <span className="text-[14px] text-[#999] tabular-nums">{member.latestTime}</span>
-                                </div>
-                                <div className="col-span-2 text-right">
-                                    <span className="text-[14px] text-[#999] font-normal">{member.status}</span>
+                                <div className="min-w-0">
+                                    <p className="text-[13px] font-medium text-[#333] truncate">{member.name}</p>
+                                    <p className="text-[11px] text-[#999] capitalize">{member.role}</p>
                                 </div>
                             </div>
 
-                            {/* Total + Bar — all bars same full width, grey bg = remaining */}
-                            <div className="col-span-4 flex items-center justify-end space-x-6">
-                                <span className="text-[14px] font-bold text-[#333] tabular-nums w-[60px] text-right">{member.totalWeekDisplay}</span>
-                                <div className="flex-1 max-w-[240px]">
-                                    <div className="h-[14px] w-full bg-[#e4eaee] overflow-hidden flex">
-                                        {/* Colored fill — proportional to maxHours, rest stays grey */}
-                                        {member.barSegments.map((seg, si) => {
-                                            const filledWidth = (member.totalWeekHours / maxHours) * 100
-                                            return (
-                                                <div
-                                                    key={si}
-                                                    className="h-full flex-shrink-0"
-                                                    style={{
-                                                        width: `${(seg.width / 100) * filledWidth}%`,
-                                                        backgroundColor: seg.color
-                                                    }}
-                                                />
-                                            )
-                                        })}
+                            <div className="col-span-4 min-w-0 pr-4">
+                                {member.hasActivity ? (
+                                    <>
+                                        <p className="text-[13px] text-[#333] truncate">{member.latestActivity}</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: member.latestProjectColor }} />
+                                            <p className="text-[12px] text-[#999] truncate">{member.latestProject}</p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="text-[13px] text-[#ccc] italic">No activity</p>
+                                )}
+                            </div>
+
+                            <div className="col-span-6 flex items-center justify-end space-x-4">
+                                <span className="text-[14px] font-bold text-[#333] tabular-nums w-[52px] text-right flex-shrink-0">
+                                    {member.totalDisplay}
+                                </span>
+                                <div className="flex-1 max-w-[200px]">
+                                    <div className="h-[12px] w-full bg-[#e4eaee] overflow-hidden flex">
+                                        {member.barSegments.map((seg, si) => (
+                                            <div
+                                                key={si}
+                                                className="h-full flex-shrink-0"
+                                                style={{
+                                                    width: `${(seg.width / 100) * filledWidth}%`,
+                                                    backgroundColor: seg.color,
+                                                }}
+                                            />
+                                        ))}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )
                 })}
+                {members.length === 0 && (
+                    <div className="px-6 py-8 text-center text-[13px] text-[#bbb]">No team activity in this period</div>
+                )}
             </div>
         </div>
     )

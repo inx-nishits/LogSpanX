@@ -4,56 +4,31 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  BarChart3,
-  LayoutGrid,
-  Clock,
-  Calendar,
-  Users,
-  Briefcase,
-  UserCircle,
-  Tag,
-  ChevronDown,
-  ChevronUp,
-  ChevronRight,
-  ClipboardList,
-  Grid3X3,
-  CalendarRange,
-  Receipt,
-  TimerOff,
-  Activity,
-  CheckSquare,
-  FileText,
-  Menu,
-  X,
+  BarChart3, LayoutGrid, Clock, Calendar, Users, Briefcase,
+  UserCircle, Tag, ChevronDown, ChevronUp, ChevronRight,
+  ClipboardList, Grid3X3, CalendarRange, Receipt, TimerOff,
+  Activity, CheckSquare, FileText, Menu, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/lib/stores/sidebar-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { User } from '@/lib/types'
 
+/* ── Reports flyout ─────────────────────────────────────────── */
 const REPORTS_FLYOUT = [
-  {
-    section: 'Time',
-    items: [
-      { label: 'Summary', href: '/dashboard/reports/summary' },
-      { label: 'Detailed', href: '/dashboard/reports/detailed' },
-      { label: 'Weekly', href: '/dashboard/reports/weekly' },
-      { label: 'Shared', href: '/dashboard/reports/shared' },
-    ],
-  },
-  {
-    section: 'Team',
-    items: [
-      { label: 'Attendance', href: '/dashboard/reports/attendance' },
-      { label: 'Assignments', href: '/dashboard/reports/assignments' },
-    ],
-  },
-  {
-    section: 'Expense',
-    items: [
-      { label: 'Detailed', href: '/dashboard/reports/expense' },
-    ],
-  },
+  { section: 'Time', items: [
+    { label: 'Summary',  href: '/dashboard/reports/summary'  },
+    { label: 'Detailed', href: '/dashboard/reports/detailed' },
+    { label: 'Weekly',   href: '/dashboard/reports/weekly'   },
+    { label: 'Shared',   href: '/dashboard/reports/shared'   },
+  ]},
+  { section: 'Team', items: [
+    { label: 'Attendance',  href: '/dashboard/reports/attendance'  },
+    { label: 'Assignments', href: '/dashboard/reports/assignments' },
+  ]},
+  { section: 'Expense', items: [
+    { label: 'Detailed', href: '/dashboard/reports/expense' },
+  ]},
 ]
 
 function ReportsFlyout({ visible, top }: { visible: boolean; top: number }) {
@@ -61,21 +36,21 @@ function ReportsFlyout({ visible, top }: { visible: boolean; top: number }) {
   if (!visible) return null
   return (
     <div
-      className="fixed z-[200] bg-white border border-[#e4eaee] shadow-xl rounded-sm py-2 w-[180px]"
-      style={{ left: '208px', top }}
+      className="fixed z-[200] bg-white border border-[#ddd] shadow-md rounded py-1 w-[176px]"
+      style={{ left: 200, top }}
     >
-      {REPORTS_FLYOUT.map(group => (
-        <div key={group.section}>
-          <div className="px-4 pt-3 pb-1 text-[11px] font-bold text-[#999] uppercase tracking-wider">
-            {group.section}
-          </div>
-          {group.items.map(item => (
+      {REPORTS_FLYOUT.map(g => (
+        <div key={g.section}>
+          <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-[#aaa] uppercase tracking-wider">
+            {g.section}
+          </p>
+          {g.items.map(item => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'block px-4 py-2 text-[14px] transition-colors hover:bg-[#f0f7fb] hover:text-[#03a9f4]',
-                pathname === item.href ? 'text-[#03a9f4] bg-[#f0f7fb]' : 'text-[#333]'
+                'block px-4 py-[9px] text-[15px] uppercase tracking-wide hover:bg-[#f0f0f0]',
+                pathname.startsWith(item.href) ? 'bg-[#f0f0f0] text-[#333]' : 'text-[#555]'
               )}
             >
               {item.label}
@@ -87,246 +62,186 @@ function ReportsFlyout({ visible, top }: { visible: boolean; top: number }) {
   )
 }
 
-interface MenuItem {
-  label: string
-  icon: any
-  href: string
-  section?: string
-  expandable?: boolean
-}
+/* ── Menu data ──────────────────────────────────────────────── */
+interface MenuItem { label: string; icon: any; href: string; chevron?: boolean }
 
 const getMenuItems = (role: User['role']) => {
   const dashHref = role === 'owner' ? '/dashboard/pm' : role === 'admin' ? '/dashboard/tl' : '/dashboard/member'
 
   const topItems: MenuItem[] = [
-    { label: 'Time Tracker', icon: Clock, href: '/dashboard/tracker' },
-    { label: 'Calendar', icon: Calendar, href: '/dashboard/calendar' },
+    { label: 'Time Tracker', icon: Clock,    href: '/dashboard/tracker'  },
+    { label: 'Calendar',     icon: Calendar, href: '/dashboard/calendar' },
   ]
-
   const analyzeItems: MenuItem[] = [
-    { label: 'Dashboard', icon: LayoutGrid, href: dashHref, section: 'Analyze' },
-    { label: 'Reports', icon: BarChart3, href: '/dashboard/reports', expandable: true },
+    { label: 'Dashboard', icon: LayoutGrid, href: dashHref },
+    { label: 'Reports',   icon: BarChart3,  href: '/dashboard/reports', chevron: true },
   ]
-
   const manageItems: MenuItem[] = [
-    { label: 'Projects', icon: Briefcase, href: '/dashboard/projects', section: 'Manage' },
-    { label: 'Team', icon: Users, href: '/dashboard/team' },
+    { label: 'Projects',     icon: Briefcase,  href: '/dashboard/projects'     },
+    { label: 'Team',         icon: Users,      href: '/dashboard/team'         },
     { label: 'Project Lead', icon: UserCircle, href: '/dashboard/project-lead' },
-    { label: 'Tags', icon: Tag, href: '/dashboard/tags' },
+    { label: 'Tags',         icon: Tag,        href: '/dashboard/tags'         },
   ]
-
   const extraItems: MenuItem[] = [
     { label: 'Timesheet', icon: ClipboardList, href: '/dashboard/timesheet' },
-    { label: 'Kiosks', icon: Grid3X3, href: '/dashboard/kiosks' },
-    { label: 'Schedule', icon: CalendarRange, href: '/dashboard/schedule' },
-    { label: 'Expenses', icon: Receipt, href: '/dashboard/expenses' },
-    { label: 'Time Off', icon: TimerOff, href: '/dashboard/time-off' },
-    { label: 'Activity', icon: Activity, href: '/dashboard/activity', expandable: true },
-    { label: 'Approvals', icon: CheckSquare, href: '/dashboard/approvals' },
-    { label: 'Invoices', icon: FileText, href: '/dashboard/invoices' },
+    { label: 'Kiosks',    icon: Grid3X3,       href: '/dashboard/kiosks'    },
+    { label: 'Schedule',  icon: CalendarRange, href: '/dashboard/schedule'  },
+    { label: 'Expenses',  icon: Receipt,       href: '/dashboard/expenses'  },
+    { label: 'Time Off',  icon: TimerOff,      href: '/dashboard/time-off'  },
+    { label: 'Activity',  icon: Activity,      href: '/dashboard/activity', chevron: true },
+    { label: 'Approvals', icon: CheckSquare,   href: '/dashboard/approvals' },
+    { label: 'Invoices',  icon: FileText,      href: '/dashboard/invoices'  },
   ]
 
-  // Role-based filtering
-  if (role === 'member' || role === 'viewer') {
-    return {
-      topItems,
-      analyzeItems,
-      manageItems: manageItems.filter(i => !['Team', 'Project Lead'].includes(i.label)),
-      extraItems,
-    }
-  }
+  const filteredManage = (role === 'member' || role === 'viewer')
+    ? manageItems.filter(i => !['Team', 'Project Lead'].includes(i.label))
+    : manageItems
 
-  return { topItems, analyzeItems, manageItems, extraItems }
+  return { topItems, analyzeItems, manageItems: filteredManage, extraItems }
 }
 
+/* ── Sidebar ────────────────────────────────────────────────── */
 export function Sidebar() {
-  const pathname = usePathname()
-  const { user } = useAuthStore()
+  const pathname  = usePathname()
+  const { user }  = useAuthStore()
   const { isCollapsed, isMobileOpen, toggle, toggleMobile, setMobileOpen } = useSidebarStore()
-  const [showMore, setShowMore] = useState(false)
-  const [reportsHovered, setReportsHovered] = useState(false)
-  const [flyoutTop, setFlyoutTop] = useState(0)
+  const [showMore, setShowMore]           = useState(false)
+  const [reportsOpen, setReportsOpen]     = useState(false)
+  const [flyoutTop, setFlyoutTop]         = useState(0)
   const reportsRef = useRef<HTMLDivElement>(null)
 
   const { topItems, analyzeItems, manageItems, extraItems } = getMenuItems(user?.role || 'member')
+  const col = isCollapsed && !isMobileOpen   // true when desktop-collapsed
 
-  const renderItem = (item: MenuItem) => {
-    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-    const isReports = item.label === 'Reports'
+  /* ── single nav row ── */
+  const Row = ({ item }: { item: MenuItem }) => {
+    const active   = pathname === item.href || pathname.startsWith(item.href + '/')
+    const isRep    = item.label === 'Reports'
 
-    if (isReports) {
-      return (
-        <div
-          key={item.href}
-          ref={reportsRef}
-          onMouseEnter={() => {
-            if (reportsRef.current) {
-              setFlyoutTop(reportsRef.current.getBoundingClientRect().top)
-            }
-            setReportsHovered(true)
-          }}
-          onMouseLeave={() => setReportsHovered(false)}
-          className="relative"
-        >
-          <Link
-            href={item.href}
-            onClick={() => setMobileOpen(false)}
-            className={cn(
-              'flex items-center px-5 py-2 relative group',
-              isActive
-                ? 'bg-[#f2f9ff] text-[#03a9f4] border-l-[3px] border-[#03a9f4]'
-                : 'text-[#555] hover:bg-[#f8fafb] hover:text-[#333] border-l-[3px] border-transparent',
-              isCollapsed && 'md:px-0 md:justify-center md:border-l-0'
-            )}
-          >
-            <item.icon className={cn(
-              'h-[16px] w-[16px] stroke-[1.5px]',
-              (!isCollapsed || isMobileOpen) && 'mr-3.5',
-              isActive ? 'text-[#03a9f4]' : 'text-[#8a9bae] group-hover:text-[#5a6b7b]'
-            )} />
-            {(!isCollapsed || isMobileOpen) && (
-              <span className={cn('text-[14px] font-normal whitespace-nowrap flex-1', isActive && 'text-[#03a9f4] font-medium')}>
-                {item.label}
-              </span>
-            )}
-            {(!isCollapsed || isMobileOpen) && (
-              <ChevronRight className="h-3 w-3 text-[#8a9bae]" />
-            )}
-          </Link>
-          <ReportsFlyout visible={reportsHovered} top={flyoutTop} />
-        </div>
-      )
-    }
-
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={() => setMobileOpen(false)}
-        className={cn(
-          "flex items-center px-5 py-2 relative group",
-          isActive
-            ? "bg-[#f2f9ff] text-[#03a9f4] border-l-[3px] border-[#03a9f4]"
-            : "text-[#555] hover:bg-[#f8fafb] hover:text-[#333] border-l-[3px] border-transparent",
-          isCollapsed && "md:px-0 md:justify-center md:border-l-0"
-        )}
-      >
-        {isCollapsed && isActive && (
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#03a9f4] hidden md:block" />
-        )}
-
-        <item.icon className={cn(
-          "h-[16px] w-[16px] stroke-[1.5px]",
-          (!isCollapsed || isMobileOpen) && "mr-3.5",
-          isActive ? "text-[#03a9f4]" : "text-[#8a9bae] group-hover:text-[#5a6b7b]"
-        )} />
-
-        {(!isCollapsed || isMobileOpen) && (
-          <span className={cn(
-            "text-[14px] font-normal whitespace-nowrap",
-            isActive ? "text-[#03a9f4] font-medium" : ""
-          )}>
+    const inner = (
+      <>
+        <item.icon
+          className={cn('flex-shrink-0 h-[18px] w-[18px] stroke-[1.5]', active ? 'text-[#555]' : 'text-[#888]')}
+        />
+        {!col && (
+          <span className="flex-1 text-[15px] uppercase tracking-wide text-[#333] leading-none whitespace-nowrap">
             {item.label}
           </span>
         )}
-
-        {item.expandable && item.label !== 'Reports' && (!isCollapsed || isMobileOpen) && (
-          <ChevronDown className="h-3 w-3 ml-auto text-[#8a9bae]" />
+        {!col && item.chevron && (
+          <ChevronRight className="flex-shrink-0 h-[14px] w-[14px] text-[#bbb]" />
         )}
+      </>
+    )
 
-        {/* Collapsed Tooltip */}
-        {isCollapsed && (
-          <div className="fixed left-[58px] px-2 py-0.5 bg-gray-900 text-white text-[10px] font-bold rounded-sm shadow-xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-[100] translate-x-1 group-hover:translate-x-0 hidden md:flex items-center h-6 mt-[7px]">
-            <div className="absolute -left-[3px] top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-gray-900 rotate-45" />
-            {item.label}
-          </div>
-        )}
+    const cls = cn(
+      'flex items-center w-full gap-[13px] px-[16px] py-[13px] transition-colors duration-100',
+      active ? 'bg-[#ebebeb]' : 'bg-white hover:bg-[#f5f5f5]',
+      col && 'justify-center px-0'
+    )
+
+    if (isRep) return (
+      <div
+        ref={reportsRef}
+        onMouseEnter={() => {
+          if (reportsRef.current) setFlyoutTop(reportsRef.current.getBoundingClientRect().top)
+          setReportsOpen(true)
+        }}
+        onMouseLeave={() => setReportsOpen(false)}
+      >
+        <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>{inner}</Link>
+        <ReportsFlyout visible={reportsOpen} top={flyoutTop} />
+      </div>
+    )
+
+    return (
+      <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>
+        {inner}
       </Link>
     )
   }
 
-  const renderSection = (label: string) => {
-    if (isCollapsed) return null
-    return (
-      <div className="px-5 pt-5 pb-1.5 text-[11px] font-bold text-[#999] uppercase tracking-wider whitespace-nowrap">
+  /* ── section label ── */
+  const Section = ({ label }: { label: string }) =>
+    col ? null : (
+      <p className="px-[16px] pt-[18px] pb-[7px] text-[11px] font-semibold text-[#aaa] uppercase tracking-widest">
         {label}
-      </div>
+      </p>
     )
-  }
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* mobile overlay */}
       {isMobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-[100] md:hidden transition-opacity border-none animate-in fade-in"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/40 z-[100] md:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
       <aside className={cn(
-        "bg-white border-r border-[#e4eaee] flex flex-col h-full flex-shrink-0 transition-all duration-300 z-[101]",
-        "fixed md:static inset-y-0 left-0 w-52 md:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none",
-        isMobileOpen ? "translate-x-0" : "-translate-x-full",
-        isCollapsed ? "md:w-[60px]" : "md:w-52"
+        'relative bg-white border-r border-[#e0e0e0] flex flex-col h-full flex-shrink-0 z-[101]',
+        'fixed md:static inset-y-0 left-0 transition-all duration-200 ease-in-out shadow-xl md:shadow-none',
+        isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+        col ? 'md:w-[52px]' : 'md:w-[200px]',
+        'w-[200px]'
       )}>
-        {/* Sidebar Header */}
-        <div className="h-12 flex items-center px-4 border-b border-[#e4eaee] flex-shrink-0 bg-white z-10">
-          <div className="flex items-center justify-between w-full min-w-0">
-            <div className="flex items-center min-w-0">
-              <button onClick={toggle} className="p-1 hover:bg-gray-50 rounded group transition-colors flex-shrink-0 cursor-pointer hidden md:block">
-                <Menu className="h-[16px] w-[16px] text-[#8a9bae] group-hover:text-[#5a6b7b] stroke-[1.5px]" />
-              </button>
 
-              {!isCollapsed && (
-                <div className="md:ml-2.5 flex items-center min-w-0">
-                  <span className="text-lg font-black text-[#333] tracking-tighter">LogSpan<span className="text-[#03a9f4]">X</span></span>
-                </div>
-              )}
-            </div>
-
-            <button onClick={toggleMobile} className="p-1 hover:bg-gray-50 rounded text-[#8a9bae] md:hidden">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+        {/* ── Header ── */}
+        <div className="h-[50px] flex items-center px-[14px] border-b border-[#e0e0e0] flex-shrink-0 gap-3">
+          <button
+            onClick={toggle}
+            className="hidden md:flex items-center justify-center text-[#999] hover:text-[#555] transition-colors flex-shrink-0"
+          >
+            <Menu className="h-[18px] w-[18px] stroke-[1.5]" />
+          </button>
+          {!col && (
+            <span className="text-[22px] font-black text-[#333] tracking-tight leading-none ml-2">
+              LogSpan<span className="text-[#03a9f4]">X</span>
+            </span>
+          )}
+          <button onClick={toggleMobile} className="md:hidden ml-auto text-[#999] hover:text-[#555]">
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide py-1">
-          {/* Top items (no section label) */}
-          {topItems.map(renderItem)}
+        {/* ── Nav ── */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden">
 
-          {/* Analyze section */}
-          {renderSection('Analyze')}
-          {analyzeItems.map(renderItem)}
+          {topItems.map(i => <Row key={i.href} item={i} />)}
 
-          {/* Manage section */}
-          {renderSection('Manage')}
-          {manageItems.map(renderItem)}
+          <Section label="Analyze" />
+          {analyzeItems.map(i => <Row key={i.href} item={i} />)}
 
-          {/* Show More / Show Less toggle */}
-          {(!isCollapsed || isMobileOpen) && (
+          <Section label="Manage" />
+          {manageItems.map(i => <Row key={i.href} item={i} />)}
+
+          {/* Show More */}
+          {!col && (
             <button
-              onClick={() => setShowMore(!showMore)}
-              className="flex items-center px-5 py-2 w-full text-[13px] font-normal text-[#999] hover:text-[#555] transition-colors cursor-pointer"
+              onClick={() => setShowMore(v => !v)}
+              className="flex items-center gap-[13px] w-full px-[16px] py-[13px] bg-white hover:bg-[#f5f5f5] transition-colors"
             >
-              {showMore ? (
-                <>
-                  <ChevronUp className="h-3 w-3 mr-2.5" />
-                  Show Less
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-3 w-3 mr-2.5" />
-                  Show More
-                </>
-              )}
+              {showMore
+                ? <ChevronUp   className="h-[14px] w-[14px] text-[#bbb]" />
+                : <ChevronDown className="h-[14px] w-[14px] text-[#bbb]" />}
+              <span className="text-[15px] uppercase tracking-wide text-[#aaa]">
+                {showMore ? 'Show Less' : 'Show More'}
+              </span>
             </button>
           )}
 
-          {/* Extra items (shown when expanded) */}
-          {showMore && extraItems.map(renderItem)}
-        </div>
+          {showMore && extraItems.map(i => <Row key={i.href} item={i} />)}
+        </nav>
+
+        {/* ── Clockify «» collapse button ── */}
+        <button
+          onClick={toggle}
+          className="hidden md:flex items-center justify-center absolute -right-[13px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-white border border-[#ddd] shadow-sm hover:bg-[#f5f5f5] transition-colors z-10 text-[#999]"
+          title={col ? 'Expand' : 'Collapse'}
+        >
+          {col
+            ? <span className="text-[11px] font-bold leading-none">{'>>'}</span>
+            : <span className="text-[11px] font-bold leading-none">{'<<'}</span>}
+        </button>
+
       </aside>
     </>
   )

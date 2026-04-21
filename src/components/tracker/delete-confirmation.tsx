@@ -22,6 +22,7 @@ export function DeleteConfirmation({ isOpen, onClose, onConfirm, count }: Delete
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-2xl bg-white">
+        <DialogTitle className="sr-only">Delete time entry</DialogTitle>
         <div className="p-6">
           <div className="flex items-start space-x-4">
             <div className="p-2 bg-red-50 rounded-full">

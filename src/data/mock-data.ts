@@ -93,47 +93,31 @@ function generateWeekSchedules(): Record<string, DaySchedule[]> {
       { projectId: 'project_2', duration: 5400, description: 'Nexaan API endpoint development', billable: true }
     )
     
-    // Add varied projects based on day
+    // Max 3 tasks per day — pick varied projects
     if (dayOfWeek === 1) { // Monday
       daySchedules.push(
-        { projectId: 'project_3', duration: 3600, description: 'Kavia AI model training scripts', billable: true },
-        { projectId: 'project_5', duration: 3600, description: 'Ecosmob VoIP configuration', billable: true },
-        { projectId: 'project_6', duration: 2700, description: 'Nurvia dashboard wireframes', billable: true },
-        { projectId: 'project_9', duration: 3600, description: 'Inhouse Clokify - Complete remaining APIs', billable: true },
-        { projectId: 'project_4', duration: 2700, description: 'Internal learning - React 19 workshop', billable: false }
+        { projectId: 'project_9', duration: 9000, description: 'Inhouse Clokify - Complete remaining APIs', billable: true },
+        { projectId: 'project_3', duration: 7200, description: 'Kavia AI model training scripts', billable: true }
       )
     } else if (dayOfWeek === 2) { // Tuesday
       daySchedules.push(
-        { projectId: 'project_7', duration: 3600, description: 'Lifeguru backend performance optimization', billable: true },
-        { projectId: 'project_8', duration: 2700, description: 'Pocket Sergeant maintenance patch', billable: true },
-        { projectId: 'project_10', duration: 3600, description: 'Culturify payment gateway integration', billable: true },
-        { projectId: 'project_14', duration: 2700, description: 'HealthSync FHIR endpoint mapping', billable: true },
-        { projectId: 'project_9', duration: 3600, description: 'Inhouse Clokify - Went through frontend frameworks', billable: true }
+        { projectId: 'project_9', duration: 9000, description: 'Inhouse Clokify - Went through frontend frameworks', billable: true },
+        { projectId: 'project_7', duration: 5400, description: 'Lifeguru backend performance optimization', billable: true }
       )
     } else if (dayOfWeek === 3) { // Wednesday
       daySchedules.push(
-        { projectId: 'project_3', duration: 5400, description: 'Kavia AI data pipeline setup', billable: true },
-        { projectId: 'project_5', duration: 3600, description: 'Ecosmob dedicated support', billable: true },
-        { projectId: 'project_11', duration: 2700, description: 'DycoVue real-time sync module', billable: true },
-        { projectId: 'project_12', duration: 3600, description: 'Ceremonia landing page design', billable: true },
-        { projectId: 'project_9', duration: 3600, description: 'Inhouse Clokify - Created test cases for all APIs', billable: true },
-        { projectId: 'project_4', duration: 2700, description: 'Internal - Node.js best practices session', billable: false }
+        { projectId: 'project_9', duration: 9000, description: 'Inhouse Clokify - Created test cases for all APIs', billable: true },
+        { projectId: 'project_5', duration: 5400, description: 'Ecosmob dedicated support', billable: true }
       )
     } else if (dayOfWeek === 4) { // Thursday
       daySchedules.push(
-        { projectId: 'project_6', duration: 3600, description: 'Nurvia fixed-cost milestone delivery', billable: true },
-        { projectId: 'project_7', duration: 2700, description: 'Lifeguru caching layer implementation', billable: true },
-        { projectId: 'project_8', duration: 3600, description: 'Pocket Sergeant hotfix deployment', billable: true },
-        { projectId: 'project_13', duration: 2700, description: 'Company website SEO improvements', billable: false },
-        { projectId: 'project_9', duration: 3600, description: 'Inhouse Clokify - Started working on LogSpanX', billable: true }
+        { projectId: 'project_9', duration: 9000, description: 'Inhouse Clokify - Started working on LogSpanX', billable: true },
+        { projectId: 'project_6', duration: 5400, description: 'Nurvia fixed-cost milestone delivery', billable: true }
       )
     } else if (dayOfWeek === 5) { // Friday
       daySchedules.push(
-        { projectId: 'project_3', duration: 3600, description: 'Kavia AI model evaluation', billable: true },
-        { projectId: 'project_10', duration: 2700, description: 'Culturify bug fixes', billable: true },
-        { projectId: 'project_14', duration: 2700, description: 'HealthSync patient dashboard', billable: true },
-        { projectId: 'project_9', duration: 3600, description: 'Inhouse Clokify - Developed APIs', billable: true },
-        { projectId: 'project_4', duration: 5400, description: 'Internal - Documentation & knowledge sharing', billable: false }
+        { projectId: 'project_9', duration: 9000, description: 'Inhouse Clokify - Developed APIs', billable: true },
+        { projectId: 'project_3', duration: 5400, description: 'Kavia AI model evaluation', billable: true }
       )
     }
     
@@ -153,15 +137,28 @@ function generateAllEntries(): TimeEntry[] {
   let counter = 0
 
   for (const [dateStr, schedules] of Object.entries(weekSchedules)) {
+    // Track per-user current time cursor so entries are sequential (no overlaps)
+    const userCursor: Record<string, number> = {} // minutes from midnight
+
     for (const sched of schedules) {
-      // Assign to multiple users to make Team view rich
       const usersForEntry = sched.projectId === 'project_9'
-        ? ['user_1'] // Inhouse Clokify only for Nishit
-        : TEAM_USERS.slice(0, 3 + Math.floor(Math.random() * 3)) // 3-6 users
+        ? ['user_1']
+        : TEAM_USERS.slice(0, 3 + Math.floor(Math.random() * 3))
 
       for (const userId of usersForEntry) {
         counter++
-        const startHour = 9 + Math.floor(Math.random() * 4)
+        // Start at 9:00 for first entry, then continue from where last ended
+        if (!userCursor[userId]) userCursor[userId] = 9 * 60
+
+        const startMin = userCursor[userId]
+        const durationMin = Math.round(sched.duration / 60)
+        const endMin = startMin + durationMin
+
+        const startH = Math.floor(startMin / 60)
+        const startM = startMin % 60
+        const endH = Math.floor(endMin / 60)
+        const endM = endMin % 60
+
         entries.push({
           id: `entry_${counter}`,
           description: sched.description,
@@ -169,12 +166,15 @@ function generateAllEntries(): TimeEntry[] {
           billable: sched.billable,
           userId,
           workspaceId: 'workspace_1',
-          startTime: new Date(`${dateStr}T${String(startHour).padStart(2, '0')}:00:00`),
-          endTime: new Date(`${dateStr}T${String(startHour + Math.floor(sched.duration / 3600)).padStart(2, '0')}:00:00`),
+          startTime: new Date(`${dateStr}T${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}:00`),
+          endTime: new Date(`${dateStr}T${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`),
           duration: sched.duration,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
+
+        // Advance cursor by duration + 0 min gap
+        userCursor[userId] = endMin
       }
     }
   }
@@ -182,6 +182,19 @@ function generateAllEntries(): TimeEntry[] {
 }
 
 export const mockTimeEntries: TimeEntry[] = generateAllEntries()
+
+export const mockTags = [
+  { id: 'tag_1', name: 'Design : HTML-CSS', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_2', name: 'Design : UI-UX', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_3', name: 'Mobile : Android', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_4', name: 'Mobile : Flutter', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_5', name: 'Mobile : iOS', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_6', name: 'Mobile : React-Native', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_7', name: 'Project Management', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_8', name: 'Backend : Node.js', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_9', name: 'Backend : Python', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'tag_10', name: 'DevOps', workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
+]
 
 export const mockReports: Report[] = []
 export const mockNotifications: Notification[] = []

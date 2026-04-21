@@ -12,7 +12,7 @@ export default function TrackerPage() {
   return (
     <div className="min-h-full flex flex-col bg-[#f2f6f8]">
       {/* Full Width Floating Manual Entry Bar */}
-      <div className="w-full px-4 pt-4 pb-2 overflow-x-auto hidden-scrollbar">
+      <div className="w-full px-4 pt-4 pb-2 overflow-visible">
         <div className="min-w-[1000px] w-full">
           <TimerBar />
         </div>

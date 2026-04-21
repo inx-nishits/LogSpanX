@@ -22,7 +22,10 @@ export function SummaryDonut({ data, totalLabel }: { data: DonutSlice[]; totalLa
             paddingAngle={0}
             dataKey="value"
             strokeWidth={0}
-            isAnimationActive={false}
+            isAnimationActive={true}
+            animationBegin={0}
+            animationDuration={900}
+            animationEasing="ease-out"
           >
             {(data.length ? data : [{ name: '', value: 1, color: '#e4eaee' }]).map((entry, i) => (
               <Cell key={i} fill={entry.color} />

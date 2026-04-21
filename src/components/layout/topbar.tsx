@@ -31,7 +31,7 @@ export function Topbar() {
   }
 
   return (
-    <header className="flex items-center justify-between px-4 h-12 bg-white border-b border-gray-200 z-[40] flex-shrink-0">
+    <header className="flex items-center justify-between px-4 h-[50px] bg-white border-b border-gray-200 z-[40] flex-shrink-0">
       {/* Left side: Mobile Toggle & Workspace Name */}
       <div className="flex items-center space-x-3">
         <button 

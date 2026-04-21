@@ -59,6 +59,7 @@ export interface TimeEntry {
   projectId?: string
   clientId?: string
   taskId?: string
+  tagIds?: string[]
   billable: boolean
   userId: string
   workspaceId: string

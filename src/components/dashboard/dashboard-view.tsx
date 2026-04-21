@@ -65,11 +65,9 @@ export function DashboardView() {
         const billableSec = sourceEntries.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0)
         const billablePercent = totalSeconds > 0 ? Math.round((billableSec / totalSeconds) * 100) + '%' : '0%'
 
-        // 3. Tasks in range — count per project
-        const tasksInRange = tasks.filter(t => {
-            const projectEntries = sourceEntries.filter(e => e.projectId === t.projectId)
-            return projectEntries.length > 0
-        })
+        // 3. Tasks in range — count unique tasks whose project has entries in range
+        const projectIdsInRange = new Set(sourceEntries.map(e => e.projectId).filter(Boolean))
+        const tasksInRange = tasks.filter(t => projectIdsInRange.has(t.projectId))
         const totalTasks = tasksInRange.length
         const completedTasks = tasksInRange.filter(t => t.completed).length
 
@@ -229,7 +227,7 @@ export function DashboardView() {
                     />
                     <WeeklyBarChart data={dashboardData.barData} projects={dashboardData.barProjects} isTaskView={dashboardData.isTaskView} />
                     <ProjectDonutChart data={dashboardData.donutData} totalTime={dashboardData.totalTime} isTaskView={dashboardData.isTaskView} />
-                    <TeamActivities />
+                    <TeamActivities dateRange={dateRange} />
                 </div>
             )}
         </div>
