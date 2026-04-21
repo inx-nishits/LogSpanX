@@ -28,7 +28,7 @@ export function ProjectDonutChart({ data, totalTime, isTaskView }: ProjectDonutC
             <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 lg:gap-8">
                 {/* Donut Chart */}
                 <div className="w-[320px] flex-shrink-0 relative h-[320px]" style={{ minWidth: 0, minHeight: 0 }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                         <PieChart>
                             <Pie
                                 data={data}

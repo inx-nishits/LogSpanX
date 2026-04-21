@@ -7,10 +7,12 @@ import { ChevronLeft, ChevronRight, ChevronDown, Filter, Printer, Share2, Search
 import { startOfWeek, endOfWeek, startOfDay, endOfDay, eachDayOfInterval, format, isSameDay, addDays } from 'date-fns'
 import { useDataStore } from '@/lib/stores/data-store'
 import { cn } from '@/lib/utils'
+import { TimeReportDropdown } from '../_components/time-report-dropdown'
 import { SummaryBarChart } from './summary-bar-chart'
 import { SummaryDonut } from './summary-donut'
 import { SummaryTable, SummaryRow } from './summary-table'
 import { FilterDropdown } from './filter-dropdown'
+import { FilterVisibilityDropdown, FilterKey, ALL_FILTER_KEYS } from '../_components/filter-visibility-dropdown'
 import { DateRangePicker } from '@/components/dashboard/date-range-picker'
 
 // ─── Static data ─────────────────────────────────────────────────────────────
@@ -22,8 +24,8 @@ const TABS = [
   { label: 'Shared', href: '/dashboard/reports/shared' },
 ]
 
-const GROUP_OPTIONS = ['User', 'Project', 'Client', 'Tag', 'Date', 'Description']
-const SUB_GROUP_OPTIONS = ['Description', 'Project', 'Tag', 'Task']
+const GROUP_OPTIONS = ['Project', 'Project Lead', 'User', 'Group', 'Tag', 'Month', 'Week', 'Date']
+const SUB_GROUP_OPTIONS = ['(None)', 'Project', 'Task', 'Project Lead', 'Tag', 'Description', 'Month', 'Week', 'Date']
 
 const TEAM_ITEMS = [
   { id: 'g1', label: 'MEAR-Front End', group: 'Groups' },
@@ -106,7 +108,7 @@ const STATUS_ITEMS = [
 function fmtSecs(s: number) {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
 function fmtH(s: number) {
@@ -125,8 +127,8 @@ function DescriptionFilter({ value, onChange }: { value: string; onChange: (v: s
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
   }, [])
 
   return (
@@ -134,39 +136,47 @@ function DescriptionFilter({ value, onChange }: { value: string; onChange: (v: s
       <button
         onClick={() => setOpen(o => !o)}
         className={cn(
-          'flex items-center gap-1 px-3 h-[30px] text-[13px] border rounded transition-colors cursor-pointer',
-          open || value ? 'border-[#03a9f4] text-[#03a9f4]' : 'border-[#d0d8de] text-[#555] hover:border-[#aaa]'
+          'flex items-center gap-1 px-4 h-[52px] text-[14px] transition-colors cursor-pointer',
+          open || value ? 'text-[#03a9f4]' : 'text-[#555] hover:text-[#333]'
         )}
       >
-        Description {value && <span className="ml-1 bg-[#03a9f4] text-white text-[10px] font-bold rounded-full w-[16px] h-[16px] flex items-center justify-center">1</span>}
+        Description
+        {value && value !== '__without__' && (
+          <span className="ml-1 bg-[#03a9f4] text-white text-[11px] font-bold rounded-full w-[16px] h-[16px] flex items-center justify-center">1</span>
+        )}
         <ChevronDown className="h-3 w-3 text-[#aaa]" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-0.5 bg-white border border-[#ddd] shadow-lg z-[300] w-[260px] p-2">
-          <div className="flex items-center border-b border-[#eee] pb-2 mb-2">
-            <Search className="h-3.5 w-3.5 text-[#bbb] flex-shrink-0 mr-1.5" />
+        <div className="absolute top-full left-0 mt-0.5 bg-white border border-[#e4eaee] shadow-lg z-[300] w-[300px] py-3 px-3">
+          {/* Search box matching screenshot */}
+          <div className="flex items-center gap-2 px-3 h-[38px] border border-[#d0d8de] rounded bg-white mb-3">
+            <Search className="h-4 w-4 text-[#bbb] flex-shrink-0" />
             <input
               autoFocus
-              value={value}
+              value={value === '__without__' ? '' : value}
               onChange={e => onChange(e.target.value)}
               placeholder="Enter description..."
-              className="flex-1 text-[13px] outline-none placeholder:text-[#bbb]"
+              className="flex-1 text-[14px] outline-none placeholder:text-[#bbb] bg-transparent"
             />
-            {value && (
-              <button onClick={() => onChange('')} className="text-[#aaa] hover:text-[#555] ml-1">
+            {value && value !== '__without__' && (
+              <button onClick={() => onChange('')} className="text-[#bbb] hover:text-[#555]">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-          <label className="flex items-center gap-2 px-1 py-1 cursor-pointer hover:bg-[#f5f7f9]">
-            <div
-              className={cn('w-[15px] h-[15px] border flex items-center justify-center flex-shrink-0', value === '__without__' ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-[#bbb]')}
-              onClick={() => onChange(value === '__without__' ? '' : '__without__')}
-            >
+          {/* Without description checkbox */}
+          <div
+            className="flex items-center gap-2.5 px-1 py-1.5 cursor-pointer hover:bg-[#f5f7f9] rounded"
+            onClick={() => onChange(value === '__without__' ? '' : '__without__')}
+          >
+            <div className={cn(
+              'w-[15px] h-[15px] border flex items-center justify-center flex-shrink-0 transition-colors',
+              value === '__without__' ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-[#bbb] bg-white'
+            )}>
               {value === '__without__' && <Check className="h-2.5 w-2.5 text-white stroke-[3px]" />}
             </div>
-            <span className="text-[13px] text-[#333]">Without description</span>
-          </label>
+            <span className="text-[14px] text-[#333]">Without description</span>
+          </div>
         </div>
       )}
     </div>
@@ -226,6 +236,7 @@ export default function SummaryReportPage() {
   const [selTag, setSelTag] = useState<string[]>([])
   const [selStatus, setSelStatus] = useState<string[]>([])
   const [descSearch, setDescSearch] = useState('')
+  const [visibleFilters, setVisibleFilters] = useState<FilterKey[]>([...ALL_FILTER_KEYS])
 
   // Applied filter state — only updates when Apply Filter is clicked
   const [appliedFilters, setAppliedFilters] = useState({
@@ -252,11 +263,15 @@ export default function SummaryReportPage() {
     [appliedFilters.team]
   )
 
-  // Map project lead IDs from lead filter — match by name to project.leadId
+  // Map project lead IDs from lead filter — match lead item labels to user names in store
   const leadUserIds = useMemo(() => {
     if (!appliedFilters.lead.length) return []
-    const leadNames = LEAD_ITEMS.filter(l => appliedFilters.lead.includes(l.id)).map(l => l.label)
-    return users.filter(u => leadNames.includes(u.name)).map(u => u.id)
+    const selectedLeadNames = LEAD_ITEMS
+      .filter(l => appliedFilters.lead.includes(l.id))
+      .map(l => l.label)
+    return users
+      .filter(u => selectedLeadNames.includes(u.name))
+      .map(u => u.id)
   }, [appliedFilters.lead, users])
 
   const filtered = useMemo(() => {
@@ -277,18 +292,24 @@ export default function SummaryReportPage() {
       if (appliedFilters.project.length > 0) {
         const wantWithout = appliedFilters.project.includes('__without__')
         const projectIds = appliedFilters.project.filter(id => id !== '__without__')
-        if (wantWithout && !e.projectId) return true
-        if (projectIds.length > 0 && !projectIds.includes(e.projectId ?? '')) return false
-        if (!wantWithout && projectIds.length === 0) return false
+        if (!e.projectId) {
+          if (!wantWithout) return false
+        } else {
+          if (projectIds.length > 0 && !projectIds.includes(e.projectId)) return false
+          if (projectIds.length === 0 && !wantWithout) return false
+        }
       }
 
       // Task filter — match by taskId
       if (appliedFilters.task.length > 0) {
         const wantWithout = appliedFilters.task.includes('__without__')
         const taskIds = appliedFilters.task.filter(id => id !== '__without__')
-        if (wantWithout && !e.taskId) return true
-        if (taskIds.length > 0 && !taskIds.includes(e.taskId ?? '')) return false
-        if (!wantWithout && taskIds.length === 0) return false
+        if (!e.taskId) {
+          if (!wantWithout) return false
+        } else {
+          if (taskIds.length > 0 && !taskIds.includes(e.taskId)) return false
+          if (taskIds.length === 0 && !wantWithout) return false
+        }
       }
 
       // Status filter — billable / non-billable
@@ -298,8 +319,12 @@ export default function SummaryReportPage() {
       }
 
       // Description filter
-      if (appliedFilters.desc.trim()) {
-        if (!e.description?.toLowerCase().includes(appliedFilters.desc.toLowerCase())) return false
+      if (appliedFilters.desc) {
+        if (appliedFilters.desc === '__without__') {
+          if (e.description?.trim()) return false
+        } else {
+          if (!e.description?.toLowerCase().includes(appliedFilters.desc.toLowerCase())) return false
+        }
       }
 
       return true
@@ -310,18 +335,75 @@ export default function SummaryReportPage() {
   const billableSecs = useMemo(() => filtered.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
 
   const barData = useMemo(() => {
-    return eachDayOfInterval({ start: from, end: to }).map(date => {
+    // Bar chart always shows time per day — groupBy affects the table, not the bar
+    // But the bar color segments change based on groupBy
+    const days = eachDayOfInterval({ start: from, end: to })
+
+    if (groupBy === 'Project') {
+      // Stacked by project color
+      return days.map(date => {
+        const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
+        const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+        const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+        return { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
+      })
+    }
+
+    if (groupBy === 'User') {
+      return days.map(date => {
+        const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
+        const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+        const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+        return { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
+      })
+    }
+
+    if (groupBy === 'Tag') {
+      return days.map(date => {
+        const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
+        const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+        const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
+        return { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
+      })
+    }
+
+    if (groupBy === 'Month') {
+      // Group by month
+      const monthMap: Record<string, { b: number; nb: number }> = {}
+      filtered.forEach(e => {
+        const key = format(new Date(e.startTime), 'MMM yyyy')
+        if (!monthMap[key]) monthMap[key] = { b: 0, nb: 0 }
+        const hrs = (e.duration ?? 0) / 3600
+        if (e.billable) monthMap[key].b += hrs
+        else monthMap[key].nb += hrs
+      })
+      return Object.entries(monthMap).map(([name, v]) => ({
+        name, billable: Number(v.b.toFixed(2)), nonBillable: Number(v.nb.toFixed(2)), totalLabel: fmtH((v.b + v.nb) * 3600)
+      }))
+    }
+
+    if (groupBy === 'Week') {
+      const weekMap: Record<string, { b: number; nb: number }> = {}
+      filtered.forEach(e => {
+        const key = `Week of ${format(new Date(e.startTime), 'MMM d')}`
+        if (!weekMap[key]) weekMap[key] = { b: 0, nb: 0 }
+        const hrs = (e.duration ?? 0) / 3600
+        if (e.billable) weekMap[key].b += hrs
+        else weekMap[key].nb += hrs
+      })
+      return Object.entries(weekMap).map(([name, v]) => ({
+        name, billable: Number(v.b.toFixed(2)), nonBillable: Number(v.nb.toFixed(2)), totalLabel: fmtH((v.b + v.nb) * 3600)
+      }))
+    }
+
+    // Default: by day
+    return days.map(date => {
       const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
       const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
       const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-      return {
-        name: format(date, 'EEE, MMM d'),
-        billable: Number(b.toFixed(2)),
-        nonBillable: Number(nb.toFixed(2)),
-        totalLabel: (b + nb) > 0 ? fmtH((b + nb) * 3600) : '',
-      }
+      return { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
     })
-  }, [filtered, from, to])
+  }, [filtered, from, to, groupBy])
 
   const donutData = useMemo(() => {
     const map: Record<string, number> = {}
@@ -337,27 +419,26 @@ export default function SummaryReportPage() {
       return users.map(u => {
         const ue = filtered.filter(e => e.userId === u.id)
         if (!ue.length) return null
-        const descMap: Record<string, { duration: number; count: number; projectId?: string }> = {}
+        const projMap: Record<string, { duration: number; count: number; project: typeof projects[0] | undefined }> = {}
         ue.forEach(e => {
-          const k = e.description || '(no description)'
-          if (!descMap[k]) descMap[k] = { duration: 0, count: 0, projectId: e.projectId }
-          descMap[k].duration += e.duration ?? 0
-          descMap[k].count++
+          const pid = e.projectId || '__none__'
+          if (!projMap[pid]) projMap[pid] = { duration: 0, count: 0, project: projects.find(p => p.id === pid) }
+          projMap[pid].duration += e.duration ?? 0
+          projMap[pid].count++
         })
         return {
-          id: u.id,
-          title: u.name,
-          color: '#03a9f4',
+          id: u.id, title: u.name, color: '#03a9f4',
           entryCount: ue.length,
           duration: ue.reduce((a, e) => a + (e.duration ?? 0), 0),
           billable: false,
-          children: Object.entries(descMap).map(([desc, d]) => {
-            const proj = projects.find(p => p.id === d.projectId)
-            return { id: `${u.id}-${desc}`, title: desc, color: proj?.color || '#ccc', entryCount: d.count, duration: d.duration, billable: false }
-          }),
+          children: Object.entries(projMap).sort((a, b) => b[1].duration - a[1].duration).map(([pid, d]) => ({
+            id: `${u.id}-${pid}`, title: d.project?.name || '(Without Project)',
+            color: d.project?.color || '#ccc', entryCount: d.count, duration: d.duration, billable: d.project?.billable ?? false,
+          })),
         }
       }).filter(Boolean) as SummaryRow[]
     }
+
     if (groupBy === 'Project') {
       return projects.map(p => {
         const pe = filtered.filter(e => e.projectId === p.id)
@@ -365,6 +446,85 @@ export default function SummaryReportPage() {
         return { id: p.id, title: p.name, color: p.color, entryCount: pe.length, duration: pe.reduce((a, e) => a + (e.duration ?? 0), 0), billable: p.billable }
       }).filter(Boolean) as SummaryRow[]
     }
+
+    if (groupBy === 'Project Lead') {
+      const leadMap: Record<string, { duration: number; count: number; name: string }> = {}
+      filtered.forEach(e => {
+        const proj = projects.find(p => p.id === e.projectId)
+        const leadId = proj?.leadId || '__none__'
+        const leadName = users.find(u => u.id === leadId)?.name || '(No Lead)'
+        if (!leadMap[leadId]) leadMap[leadId] = { duration: 0, count: 0, name: leadName }
+        leadMap[leadId].duration += e.duration ?? 0
+        leadMap[leadId].count++
+      })
+      return Object.entries(leadMap).sort((a, b) => b[1].duration - a[1].duration).map(([id, d]) => ({
+        id, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+      }))
+    }
+
+    if (groupBy === 'Group') {
+      // Group by workspace team groups — show all users as flat list
+      return users.map(u => {
+        const ue = filtered.filter(e => e.userId === u.id)
+        if (!ue.length) return null
+        return { id: u.id, title: u.name, color: '#8e24aa', entryCount: ue.length, duration: ue.reduce((a, e) => a + (e.duration ?? 0), 0), billable: false }
+      }).filter(Boolean) as SummaryRow[]
+    }
+
+    if (groupBy === 'Tag') {
+      // No tags on entries yet — show flat list by description
+      const tagMap: Record<string, { duration: number; count: number }> = {}
+      filtered.forEach(e => {
+        const key = e.description || '(no description)'
+        if (!tagMap[key]) tagMap[key] = { duration: 0, count: 0 }
+        tagMap[key].duration += e.duration ?? 0
+        tagMap[key].count++
+      })
+      return Object.entries(tagMap).sort((a, b) => b[1].duration - a[1].duration).map(([title, d]) => ({
+        id: title, title, color: '#f9a825', entryCount: d.count, duration: d.duration, billable: false
+      }))
+    }
+
+    if (groupBy === 'Month') {
+      const monthMap: Record<string, { duration: number; count: number }> = {}
+      filtered.forEach(e => {
+        const key = format(new Date(e.startTime), 'MMMM yyyy')
+        if (!monthMap[key]) monthMap[key] = { duration: 0, count: 0 }
+        monthMap[key].duration += e.duration ?? 0
+        monthMap[key].count++
+      })
+      return Object.entries(monthMap).map(([title, d]) => ({
+        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+      }))
+    }
+
+    if (groupBy === 'Week') {
+      const weekMap: Record<string, { duration: number; count: number }> = {}
+      filtered.forEach(e => {
+        const key = `Week of ${format(new Date(e.startTime), 'MMM d, yyyy')}`
+        if (!weekMap[key]) weekMap[key] = { duration: 0, count: 0 }
+        weekMap[key].duration += e.duration ?? 0
+        weekMap[key].count++
+      })
+      return Object.entries(weekMap).map(([title, d]) => ({
+        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+      }))
+    }
+
+    if (groupBy === 'Date') {
+      const dateMap: Record<string, { duration: number; count: number }> = {}
+      filtered.forEach(e => {
+        const key = format(new Date(e.startTime), 'EEE, MMM d yyyy')
+        if (!dateMap[key]) dateMap[key] = { duration: 0, count: 0 }
+        dateMap[key].duration += e.duration ?? 0
+        dateMap[key].count++
+      })
+      return Object.entries(dateMap).map(([title, d]) => ({
+        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+      }))
+    }
+
+    // Default flat list
     return filtered.map(e => {
       const proj = projects.find(p => p.id === e.projectId)
       return { id: e.id, title: e.description || '(no description)', color: proj?.color || '#ccc', entryCount: 1, duration: e.duration ?? 0, billable: e.billable }
@@ -375,77 +535,70 @@ export default function SummaryReportPage() {
     <div className="flex flex-col h-full bg-[#f2f6f8] overflow-hidden">
 
       {/* ── Tab bar ── */}
-      <div className="flex items-center justify-between px-4 h-[48px] bg-white border-b border-[#e4eaee] flex-shrink-0">
+      <div className="flex items-center justify-between px-6 m-6 h-[56px] bg-white border-b border-[#e4eaee] flex-shrink-0">
         <div className="flex items-center gap-1">
-          {/* Time Report button */}
-          <button className="flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] border border-[#d0d8de] rounded mr-2 hover:border-[#aaa] cursor-pointer">
-            Time Report <ChevronDown className="h-3 w-3 text-[#aaa]" />
-          </button>
+          <TimeReportDropdown />
           {TABS.map(tab => (
             <Link
               key={tab.href}
               href={tab.href}
               className={cn(
-                'px-4 h-[30px] flex items-center text-[13px] rounded transition-colors',
+                'px-4 h-[56px] flex items-center text-[14px] transition-colors border-b-2 -mb-px',
                 pathname === tab.href
-                  ? 'bg-[#03a9f4] text-white font-medium'
-                  : 'text-[#555] hover:bg-[#f0f4f8]'
+                  ? 'text-[#333] font-bold border-b-[#333]'
+                  : 'text-[#777] hover:text-[#333] border-b-transparent font-normal'
               )}
             >
               {tab.label}
             </Link>
           ))}
         </div>
-
-        {/* Date nav */}
         <div className="flex items-center gap-0">
-          <button
-            onClick={() => setDateRange(r => ({ from: addDays(r.from, -1), to: addDays(r.to, -1) }))}
-            className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-r-0 rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer"
-          >
+          <button onClick={() => setDateRange(r => ({ from: addDays(r.from, -7), to: addDays(r.to, -7) }))} className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-r-0 rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer">
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
           <DateRangePicker initialRange={dateRange} onRangeChange={setDateRange} />
-          <button
-            onClick={() => setDateRange(r => ({ from: addDays(r.from, 1), to: addDays(r.to, 1) }))}
-            className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer"
-          >
+          <button onClick={() => setDateRange(r => ({ from: addDays(r.from, 7), to: addDays(r.to, 7) }))} className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer">
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
       {/* ── Filter bar ── */}
-      <div className="flex items-center gap-1.5 px-4 h-[46px] bg-white border-b border-[#e4eaee] flex-shrink-0">
-        <button className="flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] transition-colors cursor-pointer">
-          <Filter className="h-3.5 w-3.5" /> Filter <ChevronDown className="h-3 w-3 text-[#aaa]" />
-        </button>
-        <FilterDropdown label="Team" placeholder="Search users or groups" items={TEAM_ITEMS} selected={selTeam} onChange={setSelTeam} />
-        <FilterDropdown label="Project Lead" placeholder="Search Project Lead" items={LEAD_ITEMS} selected={selLead} onChange={setSelLead} showWithout="Without Project Lead" />
-        <FilterDropdown label="Project" placeholder="Search Projects" items={PROJECT_ITEMS} selected={selProject} onChange={setSelProject} showWithout="Without Project" />
-        <FilterDropdown label="Task" placeholder="Search Tasks" items={TASK_ITEMS} selected={selTask} onChange={setSelTask} showWithout="Without Task" />
-        <FilterDropdown label="Tag" placeholder="Search Tags" items={TAG_ITEMS} selected={selTag} onChange={setSelTag} showWithout="Without Tag" />
-        <FilterDropdown label="Status" placeholder="" items={STATUS_ITEMS} selected={selStatus} onChange={setSelStatus} noSearch />
-        {/* Description — search input style */}
-        <DescriptionFilter value={descSearch} onChange={setDescSearch} />
-        <button
-          onClick={applyFilters}
-          className="ml-auto px-5 h-[30px] text-[13px] font-medium text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded transition-colors cursor-pointer whitespace-nowrap">
-          Apply Filter
+      <div className="flex items-center px-6 h-[65px] m-6 bg-white border-b border-[#e4eaee] flex-shrink-0">
+        <FilterVisibilityDropdown visible={visibleFilters} onChange={setVisibleFilters} />
+        {visibleFilters.includes('Team') && <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" /><FilterDropdown label="Team" placeholder="Search users or groups" items={TEAM_ITEMS} selected={selTeam} onChange={setSelTeam} /></>}
+        {visibleFilters.includes('Project Lead') && <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" /><FilterDropdown label="Project Lead" placeholder="Search Project Lead" items={LEAD_ITEMS} selected={selLead} onChange={setSelLead} showWithout="Without Project Lead" /></>}
+        {visibleFilters.includes('Project') && <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" /><FilterDropdown label="Project" placeholder="Search Projects" items={PROJECT_ITEMS} selected={selProject} onChange={setSelProject} showWithout="Without Project" /></>}
+        {visibleFilters.includes('Task') && <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" /><FilterDropdown label="Task" placeholder="Search Tasks" items={TASK_ITEMS} selected={selTask} onChange={setSelTask} showWithout="Without Task" /></>}
+        {visibleFilters.includes('Tag') && <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" /><FilterDropdown label="Tag" placeholder="Search Tags" items={TAG_ITEMS} selected={selTag} onChange={setSelTag} showWithout="Without Tag" /></>}
+        {visibleFilters.includes('Status') && <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" /><FilterDropdown label="Status" placeholder="" items={STATUS_ITEMS} selected={selStatus} onChange={setSelStatus} noSearch /></>}
+        {visibleFilters.includes('Description') && <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" /><DescriptionFilter value={descSearch} onChange={setDescSearch} /></>}
+        <button onClick={applyFilters} className="ml-auto px-5 h-[32px] text-[13px] font-bold uppercase tracking-wide text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm cursor-pointer whitespace-nowrap">
+          APPLY FILTER
         </button>
       </div>
 
+      {/* Clear filters */}
+      {(appliedFilters.team.length > 0 || appliedFilters.lead.length > 0 || appliedFilters.project.length > 0 || appliedFilters.task.length > 0 || appliedFilters.tag.length > 0 || appliedFilters.status.length > 0 || appliedFilters.desc) && (
+        <div className="flex justify-end px-4 py-1 bg-white border-b border-[#e4eaee]">
+          <button onClick={() => { setSelTeam([]); setSelLead([]); setSelProject([]); setSelTask([]); setSelTag([]); setSelStatus([]); setDescSearch(''); setAppliedFilters({ team: [], lead: [], project: [], task: [], tag: [], status: [], desc: '' }) }} className="text-[13px] text-[#03a9f4] hover:underline cursor-pointer">
+            Clear filters
+          </button>
+        </div>
+      )}
+
       {/* ── Scrollable content ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 m-6 overflow-y-auto bg-[#f2f6f8]">
 
         {/* Stats bar */}
-        <div className="flex items-center justify-between bg-white border-b border-[#e4eaee] px-5 h-[44px] flex-wrap gap-2">
-          <div className="flex items-center gap-5 text-[14px]">
-            <span className="text-[#555]">Total: <strong className="text-[#333] font-bold tabular-nums">{fmtSecs(totalSecs)}</strong></span>
-            <span className="text-[#555]">Billable: <strong className="text-[#333] font-bold tabular-nums">{fmtSecs(billableSecs)}</strong></span>
-            <span className="text-[#555]">Amount: <strong className="text-[#333] font-bold">0.00 USD</strong></span>
+        <div className="flex items-center justify-between px-6 h-[48px] bg-[#e4eaee] border-b border-[#e4eaee]">
+          <div className="flex items-center gap-6 text-[14px]">
+            <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{fmtSecs(totalSecs)}</strong></span>
+            <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{fmtSecs(billableSecs)}</strong></span>
+            <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[15px]">0.00 USD</strong></span>
           </div>
-          <div className="flex items-center gap-3 text-[13px] text-[#555]">
+          <div className="flex items-center gap-4 text-[13px] text-[#555]">
             <button className="hover:text-[#03a9f4] cursor-pointer">Create invoice</button>
             <button className="flex items-center gap-0.5 hover:text-[#03a9f4] cursor-pointer">Export <ChevronDown className="h-3 w-3" /></button>
             <button className="hover:text-[#03a9f4] cursor-pointer"><Printer className="h-4 w-4" /></button>
@@ -460,9 +613,9 @@ export default function SummaryReportPage() {
           </div>
         </div>
 
-        {/* Bar chart section */}
-        <div className="bg-white border-b border-[#e4eaee] px-5 pt-4 pb-2">
-          <div className="mb-3">
+        {/* Billability + Bar chart */}
+        <div className="px-6 pt-5 pb-6 bg-white border-b border-[#e4eaee]">
+          <div className="mb-4">
             <button className="flex items-center gap-1.5 px-3 h-[28px] text-[13px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
               Billability <ChevronDown className="h-3 w-3 text-[#aaa]" />
             </button>
@@ -470,19 +623,19 @@ export default function SummaryReportPage() {
           <SummaryBarChart data={barData} />
         </div>
 
-        {/* Group by + Table + Donut */}
-        <div className="flex gap-0 items-start p-4">
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-[13px] text-[#aaa]">Group by:</span>
-              <SimpleDropdown value={groupBy} options={GROUP_OPTIONS} onChange={setGroupBy} />
-              <SimpleDropdown value={subGroupBy} options={SUB_GROUP_OPTIONS} onChange={setSubGroupBy} />
-            </div>
+        {/* Group by row */}
+        <div className="flex items-center gap-2 px-4 py-2.5 my-4 text-[15px] bg-[#f5f7f9] border-b border-[#e4eaee]">
+          <span className="text-[15px] text-[#555]">Group by :</span>
+          <SimpleDropdown value={groupBy} options={GROUP_OPTIONS} onChange={setGroupBy} />
+          <SimpleDropdown value={subGroupBy} options={SUB_GROUP_OPTIONS} onChange={setSubGroupBy} />
+        </div>
+
+        {/* Table + Donut side by side */}
+        <div className="flex items-start">
+          <div className="w-[60%] flex-shrink-0 border-r border-[#e4eaee]">
             <SummaryTable rows={tableRows} />
           </div>
-
-          {/* Donut */}
-          <div className="flex-shrink-0 pl-4 pt-8">
+          <div className="flex-1 flex items-center justify-center py-10">
             <SummaryDonut data={donutData} totalLabel={fmtSecs(totalSecs)} />
           </div>
         </div>

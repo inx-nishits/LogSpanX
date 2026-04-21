@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, Search, Copy, MoreVertical, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TimeReportDropdown } from '../_components/time-report-dropdown'
 import { TABS } from '../_components/report-shell'
 
 const DUMMY_SHARED = [
@@ -28,21 +29,19 @@ export default function SharedReportPage() {
 
   return (
     <div className="flex flex-col h-full bg-[#f2f6f8] overflow-hidden">
-      {/* Tab bar — no date nav for shared */}
-      <div className="flex items-center px-4 h-[48px] bg-white border-b border-[#e4eaee] flex-shrink-0">
+      {/* Tab bar */}
+      <div className="flex items-center px-6 m-6 h-[65px] bg-white border-b border-[#e4eaee] flex-shrink-0">
         <div className="flex items-center gap-1">
-          <button className="flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] border border-[#d0d8de] rounded mr-2 hover:border-[#aaa] cursor-pointer">
-            Time Report <ChevronDown className="h-3 w-3 text-[#aaa]" />
-          </button>
+          <TimeReportDropdown />
           {TABS.map(tab => (
             <Link
               key={tab.href}
               href={tab.href}
               className={cn(
-                'px-4 h-[30px] flex items-center text-[13px] rounded transition-colors',
+                'px-4 h-[56px] flex items-center text-[14px] transition-colors border-b-2 -mb-px',
                 pathname === tab.href
-                  ? 'bg-[#03a9f4] text-white font-medium'
-                  : 'text-[#555] hover:bg-[#f0f4f8]'
+                  ? 'text-[#333] font-bold border-b-[#333]'
+                  : 'text-[#777] hover:text-[#333] border-b-transparent font-normal'
               )}
             >
               {tab.label}
@@ -52,17 +51,17 @@ export default function SharedReportPage() {
       </div>
 
       {/* Search + filter bar */}
-      <div className="flex items-center gap-3 px-4 h-[52px] bg-[#f2f6f8] border-b border-[#e4eaee] flex-shrink-0">
-        <button className="flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
-          All reports <ChevronDown className="h-3 w-3 text-[#aaa]" />
+      <div className="flex items-center gap-3 px-6 m-6 h-[65px] bg-white border-b border-[#e4eaee] flex-shrink-0">
+        <button className="flex items-center gap-1.5 px-3 h-[34px] text-[14px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
+          All reports <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
         </button>
-        <div className="flex items-center gap-2 px-3 h-[30px] bg-white border border-[#d0d8de] rounded min-w-[220px]">
-          <Search className="h-3.5 w-3.5 text-[#bbb] flex-shrink-0" />
+        <div className="flex items-center gap-2 px-3 h-[34px] bg-white border border-[#d0d8de] rounded min-w-[240px] hover:border-[#aaa]">
+          <Search className="h-4 w-4 text-[#bbb] flex-shrink-0" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name"
-            className="flex-1 text-[13px] outline-none placeholder:text-[#bbb] bg-transparent"
+            className="flex-1 text-[14px] outline-none placeholder:text-[#bbb] bg-transparent"
           />
         </div>
       </div>

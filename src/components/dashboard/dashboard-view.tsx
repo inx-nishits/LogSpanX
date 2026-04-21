@@ -133,7 +133,7 @@ export function DashboardView() {
             const dm = Math.floor((dayTotalSec % 3600) / 60)
 
             const dayObj: BarDay = {
-                name: format(date, 'EEE'),
+                name: format(date, 'EEE, MMM d'),
                 fullDate: format(date, 'EEE, MMM d'),
                 displayTotal: dayTotalSec > 0 ? `${dh}:${String(dm).padStart(2, '0')}` : ''
             }

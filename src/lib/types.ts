@@ -78,6 +78,15 @@ export interface Task {
   completed: boolean
 }
 
+export interface Tag {
+  id: string
+  name: string
+  workspaceId: string
+  archived: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface Report {
   id: string
   name: string

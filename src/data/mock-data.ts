@@ -23,20 +23,20 @@ export const mockClients: Client[] = [
 ]
 
 export const mockProjects: Project[] = [
-  { id: 'project_1', name: 'StaffBot Dedicated : Billable', color: '#03a9f4', leadId: 'user_3', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_2', name: 'Nexaan(Jiteshbhai) : T & M : Billable', color: '#e91e63', leadId: 'user_4', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_3', name: 'Kavia AI : Dedicated : Billable', color: '#1565c0', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_4', name: '_INX-Learning : Non-Billable', color: '#d32f2f', leadId: 'user_2', billable: false, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_5', name: 'Ecosmob : Dedicated : Billable', color: '#f9a825', leadId: 'user_6', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_6', name: 'Nurvia : Fixed-cost : Billable', color: '#7cb342', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_7', name: 'Lifeguru : Fixed-cost : Billable', color: '#6a1b9a', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_8', name: 'Pocket Sergeant : Maintenance : Billable', color: '#e65100', leadId: 'user_5', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_9', name: 'Inhouse Clokify Revamp :: Next - Node', color: '#0d47a1', leadId: 'user_1', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_10', name: 'Culturify : Fixed cost : Billable', color: '#00897b', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_11', name: 'DycoVue : Dedicated : Billable', color: '#8e24aa', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_12', name: 'Ceremonia : Fixed Cost : Billable', color: '#c0ca33', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_13', name: '_INX-Company Website Revamp', color: '#546e7a', leadId: 'user_2', billable: false, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
-  { id: 'project_14', name: 'HealthSync : T & M : Billable', color: '#26a69a', leadId: 'user_4', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_1', name: 'StaffBot Dedicated : Billable', color: '#4285f4', leadId: 'user_3', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_2', name: 'Nexaan(Jiteshbhai) : T & M : Billable', color: '#ea4335', leadId: 'user_4', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_3', name: 'Kavia AI : Dedicated : Billable', color: '#34a853', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_4', name: '_INX-Learning : Non-Billable', color: '#fbbc04', leadId: 'user_2', billable: false, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_5', name: 'Ecosmob : Dedicated : Billable', color: '#9c27b0', leadId: 'user_6', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_6', name: 'Nurvia : Fixed-cost : Billable', color: '#00acc1', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_7', name: 'Lifeguru : Fixed-cost : Billable', color: '#8d6e63', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_8', name: 'Pocket Sergeant : Maintenance : Billable', color: '#f57c00', leadId: 'user_5', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_9', name: 'Inhouse Clokify Revamp :: Next - Node', color: '#5e35b1', leadId: 'user_1', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_10', name: 'Culturify : Fixed cost : Billable', color: '#2e7d32', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_11', name: 'DycoVue : Dedicated : Billable', color: '#7b1fa2', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_12', name: 'Ceremonia : Fixed Cost : Billable', color: '#689f38', leadId: 'user_2', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_13', name: '_INX-Company Website Revamp', color: '#616161', leadId: 'user_2', billable: false, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'project_14', name: 'HealthSync : T & M : Billable', color: '#0277bd', leadId: 'user_4', billable: true, members: [], archived: false, workspaceId: 'workspace_1', createdAt: new Date(), updatedAt: new Date() },
 ]
 
 export const mockTasks: Task[] = [

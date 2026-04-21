@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronLeft, ChevronRight, ChevronDown, Filter } from 'lucide-react'
-import { startOfWeek, endOfWeek, addDays } from 'date-fns'
+import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react'
+import { addDays } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { FilterDropdown } from '../summary/filter-dropdown'
 import { DateRangePicker } from '@/components/dashboard/date-range-picker'
+import { FilterVisibilityDropdown, FilterKey, ALL_FILTER_KEYS } from './filter-visibility-dropdown'
+import { DescriptionPill } from './description-pill'
 
 export const TABS = [
   { label: 'Summary', href: '/dashboard/reports/summary' },
@@ -112,44 +114,65 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, chil
   const [selTask, setSelTask] = useState<string[]>([])
   const [selTag, setSelTag] = useState<string[]>([])
   const [selStatus, setSelStatus] = useState<string[]>([])
+  const [visibleFilters, setVisibleFilters] = useState<FilterKey[]>([...ALL_FILTER_KEYS])
+  const [timeReportOpen, setTimeReportOpen] = useState(false)
+  const timeReportRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (timeReportRef.current && !timeReportRef.current.contains(e.target as Node)) setTimeReportOpen(false)
+    }
+    document.addEventListener('click', h)
+    return () => document.removeEventListener('click', h)
+  }, [])
 
   return (
     <div className="flex flex-col h-full bg-[#f2f6f8] overflow-hidden">
       {/* Tab bar */}
-      <div className="flex items-center justify-between px-4 h-[48px] bg-white border-b border-[#e4eaee] flex-shrink-0">
+      <div className="flex items-center justify-between px-6 m-6 h-[56px] bg-white border-b border-[#e4eaee] flex-shrink-0">
         <div className="flex items-center gap-1">
-          <button className="flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] border border-[#d0d8de] rounded mr-2 hover:border-[#aaa] cursor-pointer">
-            Time Report <ChevronDown className="h-3 w-3 text-[#aaa]" />
-          </button>
+          <div className="relative" ref={timeReportRef}>
+            <button
+              onClick={() => setTimeReportOpen(o => !o)}
+              className="flex items-center gap-1.5 px-3 h-[34px] text-[14px] text-[#555] bg-white border border-[#d0d8de] rounded mr-3 hover:border-[#aaa] cursor-pointer font-medium"
+            >
+              TIME REPORT <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
+            </button>
+            {timeReportOpen && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-[#e4eaee] shadow-lg z-[200] min-w-[180px] py-1">
+                <button className="w-full text-left px-4 py-2.5 text-[14px] text-[#333] hover:bg-[#f5f7f9] cursor-pointer font-medium bg-[#f5f7f9]">
+                  Time report
+                </button>
+                <button className="w-full text-left px-4 py-2.5 text-[14px] text-[#555] hover:bg-[#f5f7f9] cursor-pointer">
+                  Team report
+                </button>
+                <button className="w-full text-left px-4 py-2.5 text-[14px] text-[#555] hover:bg-[#f5f7f9] cursor-pointer">
+                  Expense report
+                </button>
+              </div>
+            )}
+          </div>
           {TABS.map(tab => (
             <Link
               key={tab.href}
               href={tab.href}
               className={cn(
-                'px-4 h-[30px] flex items-center text-[13px] rounded transition-colors',
+                'px-4 h-[56px] flex items-center text-[14px] transition-colors border-b-2 -mb-px',
                 pathname === tab.href
-                  ? 'bg-[#03a9f4] text-white font-medium'
-                  : 'text-[#555] hover:bg-[#f0f4f8]'
+                  ? 'text-[#333] font-bold border-b-[#333]'
+                  : 'text-[#777] hover:text-[#333] border-b-transparent font-normal'
               )}
             >
               {tab.label}
             </Link>
           ))}
         </div>
-
-        {/* Date range picker + prev/next */}
         <div className="flex items-center gap-0">
-          <button
-            onClick={() => onRangeChange({ from: addDays(dateRange.from, -1), to: addDays(dateRange.to, -1) })}
-            className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-r-0 rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer"
-          >
+          <button onClick={() => onRangeChange({ from: addDays(dateRange.from, -7), to: addDays(dateRange.to, -7) })} className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-r-0 rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer">
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
           <DateRangePicker initialRange={dateRange} onRangeChange={onRangeChange} />
-          <button
-            onClick={() => onRangeChange({ from: addDays(dateRange.from, 1), to: addDays(dateRange.to, 1) })}
-            className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer"
-          >
+          <button onClick={() => onRangeChange({ from: addDays(dateRange.from, 7), to: addDays(dateRange.to, 7) })} className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer">
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -157,21 +180,31 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, chil
 
       {/* Filter bar */}
       {showFilters && (
-        <div className="flex items-center gap-1.5 px-4 h-[46px] bg-white border-b border-[#e4eaee] flex-shrink-0 flex-wrap">
-          <button className="flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
-            <Filter className="h-3.5 w-3.5" /> Filter <ChevronDown className="h-3 w-3 text-[#aaa]" />
-          </button>
-          <FilterDropdown label="Team" placeholder="Search users or groups" items={TEAM_ITEMS} selected={selTeam} onChange={setSelTeam} />
-          <FilterDropdown label="Project Lead" placeholder="Search Project Lead" items={LEAD_ITEMS} selected={selLead} onChange={setSelLead} showWithout="Without Project Lead" />
-          <FilterDropdown label="Project" placeholder="Search Projects" items={PROJECT_ITEMS} selected={selProject} onChange={setSelProject} showWithout="Without Project" />
-          <FilterDropdown label="Task" placeholder="Search Tasks" items={TASK_ITEMS} selected={selTask} onChange={setSelTask} showWithout="Without Task" />
-          <FilterDropdown label="Tag" placeholder="Search Tags" items={TAG_ITEMS} selected={selTag} onChange={setSelTag} showWithout="Without Tag" />
-          <FilterDropdown label="Status" placeholder="" items={STATUS_ITEMS} selected={selStatus} onChange={setSelStatus} noSearch />
-          <button className="flex items-center gap-1 px-3 h-[30px] text-[13px] border border-[#d0d8de] rounded text-[#555] hover:border-[#aaa] cursor-pointer">
-            Description <ChevronDown className="h-3 w-3 text-[#aaa]" />
-          </button>
-          <button className="ml-auto px-5 h-[30px] text-[13px] font-medium text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded cursor-pointer whitespace-nowrap">
-            Apply Filter
+        <div className="flex items-center px-6 h-[65px] m-6 bg-white border-b border-[#e4eaee] flex-shrink-0">
+          <FilterVisibilityDropdown visible={visibleFilters} onChange={setVisibleFilters} />
+          {visibleFilters.includes('Team') && (
+            <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
+            <FilterDropdown label="Team" placeholder="Search users or groups" items={TEAM_ITEMS} selected={selTeam} onChange={setSelTeam} /></>)}
+          {visibleFilters.includes('Project Lead') && (
+            <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
+            <FilterDropdown label="Project Lead" placeholder="Search Project Lead" items={LEAD_ITEMS} selected={selLead} onChange={setSelLead} showWithout="Without Project Lead" /></>)}
+          {visibleFilters.includes('Project') && (
+            <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
+            <FilterDropdown label="Project" placeholder="Search Projects" items={PROJECT_ITEMS} selected={selProject} onChange={setSelProject} showWithout="Without Project" /></>)}
+          {visibleFilters.includes('Task') && (
+            <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
+            <FilterDropdown label="Task" placeholder="Search Tasks" items={TASK_ITEMS} selected={selTask} onChange={setSelTask} showWithout="Without Task" /></>)}
+          {visibleFilters.includes('Tag') && (
+            <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
+            <FilterDropdown label="Tag" placeholder="Search Tags" items={TAG_ITEMS} selected={selTag} onChange={setSelTag} showWithout="Without Tag" /></>)}
+          {visibleFilters.includes('Status') && (
+            <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
+            <FilterDropdown label="Status" placeholder="" items={STATUS_ITEMS} selected={selStatus} onChange={setSelStatus} noSearch /></>)}
+          {visibleFilters.includes('Description') && (
+            <DescriptionPill />
+          )}
+          <button className="ml-auto px-5 h-[32px] text-[13px] font-bold uppercase tracking-wide text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm cursor-pointer whitespace-nowrap">
+            APPLY FILTER
           </button>
         </div>
       )}

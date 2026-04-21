@@ -121,7 +121,7 @@ export function DateRangePicker({ initialRange, onRangeChange }: DateRangePicker
                                     "h-9 w-10 flex items-center justify-center text-[13px] relative transition-colors cursor-pointer",
                                     !isCurrentMonth ? "text-[#ccc]" : "text-[#333] hover:bg-[#f5f7f9]",
                                     isInRange && isCurrentMonth && "bg-[#f2f9ff]",
-                                    isSelected && isCurrentMonth && "bg-[#03a9f4] text-white hover:bg-[#03a9f4] z-10"
+                                    isSelected && isCurrentMonth && "bg-[#4285f4] text-white hover:bg-[#4285f4] z-10"
                                 )}
                             >
                                 {format(day, 'd')}
@@ -140,8 +140,8 @@ export function DateRangePicker({ initialRange, onRangeChange }: DateRangePicker
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "flex items-center bg-white border border-[#d0d8de] rounded-sm h-[38px] px-3 gap-3 cursor-pointer transition-colors hover:border-[#03a9f4]",
-                    isOpen && "border-[#03a9f4]"
+                    "flex items-center bg-white border border-[#d0d8de] rounded-sm h-[28px] px-3 gap-3 cursor-pointer transition-colors hover:border-[#4285f4]",
+                    isOpen && "border-[#4285f4]"
                 )}
             >
                 <CalendarDays className="h-4 w-4 text-[#999]" />
@@ -162,7 +162,7 @@ export function DateRangePicker({ initialRange, onRangeChange }: DateRangePicker
                                 className={cn(
                                     "w-full text-left px-5 py-2.5 text-[14px] transition-colors cursor-pointer",
                                     activePreset === preset.label
-                                        ? "bg-[#03a9f4] text-white"
+                                        ? "bg-[#4285f4] text-white"
                                         : "text-[#555] hover:bg-[#f5f7f9]"
                                 )}
                             >

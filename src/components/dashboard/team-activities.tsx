@@ -37,11 +37,13 @@ export function TeamActivities() {
             projectHours[pid] = (projectHours[pid] || 0) + ((e.duration ?? 0) / 3600)
         })
         const totalHours = totalSec / 3600
+
+        // Each segment width is its proportion of the total — they always sum to 100%
         const barSegments = Object.entries(projectHours)
             .sort((a, b) => b[1] - a[1])
             .map(([pid, hrs]) => ({
                 color: projects.find(p => p.id === pid)?.color || '#ccc',
-                width: (hrs / totalHours) * 100,
+                width: totalHours > 0 ? (hrs / totalHours) * 100 : 0,
             }))
 
         const latestDur = latest?.duration ?? 0
@@ -80,7 +82,6 @@ export function TeamActivities() {
             <div className="divide-y divide-[#efefef]">
                 {members.map((member, i) => {
                     const initials = member.name.split(' ').map(n => n[0]).join('')
-                    const barTotalWidth = Math.max(20, (member.totalWeekHours / maxHours) * 100)
 
                     return (
                         <div key={member.id} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-[#fafbfc] transition-colors">
@@ -109,18 +110,25 @@ export function TeamActivities() {
                                 </div>
                             </div>
 
-                            {/* Total + Bar */}
+                            {/* Total + Bar — all bars same full width, grey bg = remaining */}
                             <div className="col-span-4 flex items-center justify-end space-x-6">
                                 <span className="text-[14px] font-bold text-[#333] tabular-nums w-[60px] text-right">{member.totalWeekDisplay}</span>
                                 <div className="flex-1 max-w-[240px]">
-                                    <div className="h-[14px] bg-transparent rounded-none overflow-hidden flex" style={{ width: `${barTotalWidth}%`, marginLeft: 'auto' }}>
-                                        {member.barSegments.map((seg, si) => (
-                                            <div
-                                                key={si}
-                                                className="h-full"
-                                                style={{ width: `${seg.width}%`, backgroundColor: seg.color }}
-                                            />
-                                        ))}
+                                    <div className="h-[14px] w-full bg-[#e4eaee] overflow-hidden flex">
+                                        {/* Colored fill — proportional to maxHours, rest stays grey */}
+                                        {member.barSegments.map((seg, si) => {
+                                            const filledWidth = (member.totalWeekHours / maxHours) * 100
+                                            return (
+                                                <div
+                                                    key={si}
+                                                    className="h-full flex-shrink-0"
+                                                    style={{
+                                                        width: `${(seg.width / 100) * filledWidth}%`,
+                                                        backgroundColor: seg.color
+                                                    }}
+                                                />
+                                            )
+                                        })}
                                     </div>
                                 </div>
                             </div>

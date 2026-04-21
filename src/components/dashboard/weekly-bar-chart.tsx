@@ -17,7 +17,7 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                 </span>
             </div>
             <div className="h-[380px] w-full pl-2 pr-6 pt-5 pb-3">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart
                         data={data}
                         margin={{ top: 28, right: 5, left: 5, bottom: 5 }}
@@ -29,7 +29,7 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                             dataKey="name"
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fontSize: 13, fill: '#999', fontWeight: 400 }}
+                            tick={{ fontSize: 11, fill: '#999', fontWeight: 400 }}
                             dy={10}
                         />
                         <YAxis

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, format } from 'date-fns'
 import { ChevronDown, DollarSign, MoreVertical, Printer, Share2, Tag } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
@@ -23,6 +23,36 @@ function fmtTime(d: Date) {
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+function EntryMenu() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="w-[32px] flex-shrink-0 flex items-center justify-center relative" ref={ref}>
+      <button
+        className="p-1 text-[#ccc] hover:text-[#555] cursor-pointer"
+        onClick={() => setOpen(o => !o)}
+      >
+        <MoreVertical className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-0.5 bg-white border border-[#e4eaee] shadow-lg z-50 min-w-[120px] py-1">
+          <button className="w-full text-left px-4 py-2 text-[14px] text-[#333] hover:bg-[#f5f7f9] cursor-pointer" onClick={() => setOpen(false)}>Duplicate</button>
+          <button className="w-full text-left px-4 py-2 text-[14px] text-red-500 hover:bg-red-50 cursor-pointer" onClick={() => setOpen(false)}>Delete</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function DetailedReportPage() {
   const { timeEntries, projects, users } = useDataStore()
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -42,26 +72,26 @@ export default function DetailedReportPage() {
 
   return (
     <ReportShell dateRange={dateRange} onRangeChange={setDateRange}>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 m-6 overflow-y-auto bg-white">
 
         {/* Action bar */}
-        <div className="flex items-center gap-2 px-4 h-[44px] bg-white border-b border-[#e4eaee] flex-shrink-0">
-          <button className="flex items-center gap-1.5 px-3 h-[28px] text-[13px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
+        <div className="flex items-center gap-2 py-3 bg-[#f2f6f8] border-b border-[#e4eaee]">
+          <button className="flex items-center gap-1.5 px-3 h-[30px] text-[15px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
             Time audit <ChevronDown className="h-3 w-3 text-[#aaa]" />
           </button>
-          <button className="flex items-center gap-1.5 px-3 h-[28px] text-[13px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
+          <button className="flex items-center gap-1.5 px-3 h-[30px] text-[15px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
             Add time for others <ChevronDown className="h-3 w-3 text-[#aaa]" />
           </button>
         </div>
 
         {/* Stats bar */}
-        <div className="flex items-center justify-between bg-white border-b border-[#e4eaee] px-5 h-[44px]">
-          <div className="flex items-center gap-5 text-[14px]">
-            <span className="text-[#555]">Total: <strong className="text-[#333] font-bold tabular-nums">{fmtSecs(totalSecs)}</strong></span>
-            <span className="text-[#555]">Billable: <strong className="text-[#333] font-bold tabular-nums">{fmtSecs(billableSecs)}</strong></span>
-            <span className="text-[#555]">Amount: <strong className="text-[#333] font-bold">0.00 USD</strong></span>
+        <div className="flex items-center justify-between bg-[#e4eaee] border-b border-[#e4eaee] px-4 h-[38px]">
+          <div className="flex items-center gap-5 text-[15px]">
+            <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{fmtSecs(totalSecs)}</strong></span>
+            <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{fmtSecs(billableSecs)}</strong></span>
+            <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[15px]">0.00 USD</strong></span>
           </div>
-          <div className="flex items-center gap-3 text-[13px] text-[#555]">
+          <div className="flex items-center gap-4 text-[15px] text-[#555]">
             <button className="hover:text-[#03a9f4] cursor-pointer">Create invoice</button>
             <button className="flex items-center gap-0.5 hover:text-[#03a9f4] cursor-pointer">Export <ChevronDown className="h-3 w-3" /></button>
             <button className="hover:text-[#03a9f4] cursor-pointer"><Printer className="h-4 w-4" /></button>
@@ -77,23 +107,23 @@ export default function DetailedReportPage() {
         </div>
 
         {/* Table header */}
-        <div className="flex items-center h-[36px] bg-white border-b border-[#e4eaee] px-4 text-[11px] font-semibold text-[#aaa] uppercase tracking-wider">
-          <div className="w-5 flex-shrink-0 mr-2">
-            <div className="w-[14px] h-[14px] border border-[#ccc]" />
+        <div className="flex items-center h-[38px] bg-[#f5f7f9] border-b border-[#e4eaee] px-4 text-[12px] font-bold text-[#aaa] uppercase tracking-wider">
+          <div className="w-5 flex-shrink-0 mr-3">
+            <div className="w-[14px] h-[14px] border border-[#ccc] rounded-sm" />
           </div>
           <div className="flex-1 flex items-center gap-1 cursor-pointer hover:text-[#555]">
-            Time Entry <ChevronDown className="h-3 w-3" />
+            Time Entry <span className="text-[11px]">↕</span>
           </div>
-          <div className="w-[80px] text-right flex-shrink-0">Amount</div>
-          <div className="w-[140px] text-right flex-shrink-0 mx-4">User</div>
-          <div className="w-[120px] text-right flex-shrink-0">Time</div>
-          <div className="w-[80px] text-right flex-shrink-0 ml-4">Duration</div>
-          <div className="w-8 flex-shrink-0" />
+          <div className="w-[100px] text-right flex-shrink-0 flex items-center justify-end gap-1 cursor-pointer hover:text-[#555]">Amount <span className="text-[11px]">↕</span></div>
+          <div className="w-[150px] text-right flex-shrink-0 mx-3 flex items-center justify-end gap-1 cursor-pointer hover:text-[#555]">User <span className="text-[11px]">↕</span></div>
+          <div className="w-[120px] text-right flex-shrink-0 flex items-center justify-end gap-1 cursor-pointer hover:text-[#555]">Time <span className="text-[11px]">↕</span></div>
+          <div className="w-[90px] text-right flex-shrink-0 ml-3 flex items-center justify-end gap-1 cursor-pointer hover:text-[#555]">Duration <span className="text-[11px]">↕</span></div>
+          <div className="w-[32px] flex-shrink-0" />
         </div>
 
         {/* Rows */}
         {filtered.length === 0 ? (
-          <div className="py-20 text-center text-[14px] text-[#aaa] bg-white">No entries for selected range</div>
+          <div className="py-16 text-center text-[15px] text-[#aaa]">No entries for selected range</div>
         ) : (
           filtered.map(entry => {
             const proj = projects.find(p => p.id === entry.projectId)
@@ -103,65 +133,66 @@ export default function DetailedReportPage() {
             const isToday = new Date().toDateString() === start.toDateString()
 
             return (
-              <div key={entry.id} className="flex items-center min-h-[56px] bg-white border-b border-[#f0f0f0] px-4 hover:bg-[#fafbfc] transition-colors group">
+              <div key={entry.id} className="flex items-center h-[58px] bg-white border-b border-[#f0f0f0] px-4 hover:bg-[#fafbfc] transition-colors group relative">
                 {/* Checkbox */}
-                <div className="w-5 flex-shrink-0 mr-2">
-                  <div className="w-[14px] h-[14px] border border-[#ccc] hover:border-[#03a9f4] cursor-pointer" />
+                <div className="w-5 flex-shrink-0 mr-3">
+                  <div className="w-[14px] h-[14px] border border-[#ccc] rounded-sm hover:border-[#03a9f4] cursor-pointer" />
                 </div>
 
                 {/* Description + project */}
-                <div className="flex-1 min-w-0 pr-4 py-2">
-                  <p className="text-[13px] text-[#333] truncate">{entry.description || '(no description)'}</p>
+                <div className="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
+                  <span className="text-[15px] text-[#333] truncate max-w-[38%] flex-shrink-0">{entry.description || '(no description)'}</span>
                   {proj && (
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       <div className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
-                      <span className="text-[12px] truncate" style={{ color: proj.color }}>{proj.name}</span>
-                      {user && <span className="text-[12px] text-[#aaa]">- {user.name}</span>}
+                      <span className="text-[14px] truncate flex-1" style={{ color: proj.color }}>{proj.name}</span>
                     </div>
                   )}
-                  <button className="mt-1 flex items-center gap-1 text-[11px] text-[#aaa] hover:text-[#03a9f4] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Tag className="h-3 w-3" /> Add tags
+                </div>
+
+                {/* Add tags */}
+                <button className="flex-shrink-0 ml-1 mr-2 px-2 h-[22px] text-[12px] text-[#aaa] border border-[#d0d8de] rounded hover:border-[#03a9f4] hover:text-[#03a9f4] cursor-pointer whitespace-nowrap">
+                  Add tags
+                </button>
+
+                <div className="w-px h-8 border-l border-dotted border-[#d0d8de] flex-shrink-0" />
+                {/* Amount */}
+                <div className="w-[100px] flex items-center justify-end gap-2 flex-shrink-0 px-2">
+                  <span className="text-[14px] text-[#333] tabular-nums">0.00</span>
+                  <button className={cn('flex items-center justify-center w-[26px] h-[22px] rounded-full border cursor-pointer transition-colors', entry.billable ? 'border-[#03a9f4] text-[#03a9f4] hover:bg-[#e8f7fe]' : 'border-[#ddd] text-[#ddd]')}>  
+                    <DollarSign className="h-[13px] w-[13px]" />
                   </button>
                 </div>
 
-                {/* Amount */}
-                <div className="w-[80px] text-right flex-shrink-0">
-                  <div className="flex items-center justify-end gap-1">
-                    <DollarSign className={cn('h-4 w-4', entry.billable ? 'text-[#03a9f4]' : 'text-[#ddd]')} />
-                    <span className="text-[13px] text-[#333] tabular-nums">0.00</span>
-                  </div>
-                </div>
-
+                <div className="w-px h-8 border-l border-dotted border-[#d0d8de] flex-shrink-0" />
                 {/* User */}
-                <div className="w-[140px] text-right flex-shrink-0 mx-4">
-                  <button className="flex items-center justify-end gap-1 text-[13px] text-[#555] hover:text-[#03a9f4] cursor-pointer ml-auto">
+                <div className="w-[150px] text-right flex-shrink-0 px-2">
+                  <button className="flex items-center justify-end gap-0.5 text-[14px] text-[#555] hover:text-[#03a9f4] cursor-pointer ml-auto">
                     {user?.name || '—'} <ChevronDown className="h-3 w-3 text-[#aaa]" />
                   </button>
                 </div>
 
+                <div className="w-px h-8 border-l border-dotted border-[#d0d8de] flex-shrink-0" />
                 {/* Time range */}
-                <div className="w-[120px] text-right flex-shrink-0">
-                  <div className="text-[13px] text-[#333] tabular-nums">
-                    {fmtTime(start)} {end ? fmtTime(end) : '...'}
-                  </div>
-                  <div className="text-[11px] text-[#aaa]">{isToday ? 'Today' : format(start, 'MMM d')}</div>
+                <div className="w-[120px] text-right flex-shrink-0 px-2">
+                  <div className="text-[15px] text-[#333] tabular-nums">{fmtTime(start)} {end ? fmtTime(end) : '...'}</div>
+                  <div className="text-[13px] text-[#aaa] mt-[2px]">{isToday ? 'Today' : format(start, 'dd/MM/yyyy')}</div>
                 </div>
 
+                <div className="w-px h-8 border-l border-dotted border-[#d0d8de] flex-shrink-0" />
                 {/* Duration */}
-                <div className="w-[80px] text-right flex-shrink-0 ml-4">
-                  <span className="text-[14px] font-bold text-[#333] tabular-nums">{fmtDur(entry.duration ?? 0)}</span>
+                <div className="w-[90px] text-right flex-shrink-0 px-2">
+                  <span className="text-[17px] font-bold text-[#333] tabular-nums">{fmtDur(entry.duration ?? 0)}</span>
                 </div>
 
-                {/* More */}
-                <div className="w-8 flex-shrink-0 flex items-center justify-center">
-                  <button className="p-1 text-[#ccc] hover:text-[#555] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                </div>
+                <div className="w-px h-8 border-l border-dotted border-[#d0d8de] flex-shrink-0" />
+                {/* Three dots — dedicated column */}
+                <EntryMenu />
               </div>
             )
           })
         )}
+
       </div>
     </ReportShell>
   )

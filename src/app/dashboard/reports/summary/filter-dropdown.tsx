@@ -72,10 +72,8 @@ export function FilterDropdown({ label, placeholder, items, selected, onChange, 
       <button
         onClick={() => setOpen(o => !o)}
         className={cn(
-          'flex items-center gap-1 px-3 h-[30px] text-[13px] border rounded transition-colors cursor-pointer select-none',
-          open || hasSelected
-            ? 'border-[#03a9f4] text-[#03a9f4] bg-white'
-            : 'border-[#d0d8de] text-[#555] bg-white hover:border-[#aaa]'
+          'flex items-center gap-1 px-4 h-[52px] text-[14px] transition-colors cursor-pointer select-none',
+          open || hasSelected ? 'text-[#03a9f4]' : 'text-[#555] hover:text-[#333]'
         )}
       >
         {label}
@@ -100,7 +98,7 @@ export function FilterDropdown({ label, placeholder, items, selected, onChange, 
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={placeholder}
-                className="flex-1 text-[13px] outline-none placeholder:text-[#bbb] bg-transparent"
+                className="flex-1 text-[15px] outline-none placeholder:text-[#bbb] bg-transparent"
               />
             </div>
           )}
@@ -108,8 +106,8 @@ export function FilterDropdown({ label, placeholder, items, selected, onChange, 
           {/* SHOW / Active header */}
           {!noSearch && (
             <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#eee]">
-              <span className="text-[11px] font-semibold text-[#aaa] uppercase tracking-wider">Show</span>
-              <button className="flex items-center gap-0.5 text-[12px] text-[#555] hover:text-[#03a9f4] cursor-pointer">
+              <span className="text-[14px] font-semibold text-[#aaa] uppercase tracking-wider">Show</span>
+              <button className="flex items-center gap-0.5 text-[14px] text-[#555] hover:text-[#03a9f4] cursor-pointer">
                 Active <ChevronDown className="h-3 w-3" />
               </button>
             </div>
@@ -131,7 +129,7 @@ export function FilterDropdown({ label, placeholder, items, selected, onChange, 
               )}>
                 {allSelected && <Check className="h-2.5 w-2.5 text-white stroke-[3px]" />}
               </div>
-              <span className="text-[13px] text-[#333]">Select all</span>
+              <span className="text-[15px] text-[#333]">Select all</span>
             </div>
 
             {/* Without option */}
@@ -146,14 +144,14 @@ export function FilterDropdown({ label, placeholder, items, selected, onChange, 
                 )}>
                   {selected.includes('__without__') && <Check className="h-2.5 w-2.5 text-white stroke-[3px]" />}
                 </div>
-                <span className="text-[13px] text-[#333]">{showWithout}</span>
+                <span className="text-[15px] text-[#333]">{showWithout}</span>
               </div>
             )}
 
             {/* Grouped items */}
             {Object.entries(groups).map(([group, groupItems]) => (
               <div key={group}>
-                <div className="pl-4 pr-3 pt-2 pb-0.5 text-[10px] font-bold text-[#aaa] uppercase tracking-widest">
+                <div className="pl-4 pr-3 pt-2 pb-0.5 text-[12px] font-bold text-[#aaa] uppercase tracking-widest">
                   {group}
                 </div>
                 {groupItems.map(item => (
@@ -163,7 +161,7 @@ export function FilterDropdown({ label, placeholder, items, selected, onChange, 
                     onClick={() => toggle(item.id)}
                   >
                     <CheckBox id={item.id} />
-                    <span className="text-[13px] text-[#333] truncate">{item.label}</span>
+                    <span className="text-[15px] text-[#333] truncate">{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -177,12 +175,12 @@ export function FilterDropdown({ label, placeholder, items, selected, onChange, 
                 onClick={() => toggle(item.id)}
               >
                 <CheckBox id={item.id} />
-                <span className="text-[13px] text-[#333] truncate">{item.label}</span>
+                <span className="text-[15px] text-[#333] truncate">{item.label}</span>
               </div>
             ))}
 
             {filteredItems.length === 0 && ungrouped.length === 0 && (
-              <div className="pl-4 py-4 text-[13px] text-[#aaa]">No results</div>
+              <div className="pl-4 py-4 text-[15px] text-[#aaa]">No results</div>
             )}
           </div>
         </div>
