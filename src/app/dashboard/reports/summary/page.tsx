@@ -747,8 +747,8 @@ export default function SummaryReportPage() {
       )}
 
       {/* ── Scrollable content ── */}
-      <div className="flex-1 m-6 overflow-y-auto bg-[#f2f6f8]">
-
+      <div className="flex-1 overflow-y-auto bg-[#f2f6f8] min-h-0">
+        <div className="m-6">
         {/* Stats bar */}
         <div className="flex items-center justify-between px-6 h-[48px] bg-[#e4eaee] border-b border-[#e4eaee]">
           <div className="flex items-center gap-6 text-[14px]">
@@ -787,8 +787,8 @@ export default function SummaryReportPage() {
         </div>
 
         {/* Table + Donut side by side */}
-        <div className="flex items-start">
-          <div className="w-[60%] flex-shrink-0 border-r border-[#e4eaee]">
+        <div className="flex items-start h-[450px]">
+          <div className="w-[60%] flex-shrink-0 border-r border-[#e4eaee] overflow-y-auto">
             <SummaryTable rows={tableRows} onRowClick={(row) => {
               if (!row.filterType || !row.filterId) return
               const from = dateRange.from.toISOString()
@@ -797,11 +797,12 @@ export default function SummaryReportPage() {
               router.push(`/dashboard/reports/detailed?${params.toString()}`)
             }} />
           </div>
-          <div className="flex-1 flex items-center justify-center py-10">
+          <div className="flex-1 flex items-center justify-center py-10 overflow-hidden">
             <SummaryDonut data={donutData} totalLabel={fmtSecs(totalSecs)} />
           </div>
         </div>
 
+        </div>
       </div>
     </div>
   )
