@@ -471,7 +471,7 @@ export default function ProjectsPage() {
                   </thead>
                   <tbody>
                     {sortedProjects.map((project, index) => (
-                      <tr key={index} className="hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7]">
+                      <tr key={index} className="hover:bg-[#f9fafb] group transition-colors border-b border-[#f1f4f7]">
                         <td className="p-4 whitespace-nowrap overflow-hidden">
                           <div className="flex items-center">
                             <div className="w-[8px] h-[8px] rounded-full mr-3 shrink-0" style={{ backgroundColor: project.color }} />

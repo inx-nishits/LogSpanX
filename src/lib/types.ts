@@ -4,6 +4,9 @@ export interface User {
   name: string
   avatar?: string
   role: 'owner' | 'admin' | 'member' | 'viewer'
+  projectManager?: boolean
+  group?: string
+  status?: 'active' | 'inactive' | 'invited'
   workspaceId: string
 }
 

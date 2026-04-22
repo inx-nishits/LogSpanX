@@ -278,7 +278,7 @@ export default function ProjectDetailPage() {
             <p className="text-[13px] text-[#666]">Inheritx Solutions</p>
           </div>
           <div className="flex items-center mb-auto pt-4 pr-4">
-             <div className="p-2.5 border border-[#e4eaee] rounded-sm cursor-pointer hover:bg-[#f2f6f8] bg-white group select-none shadow-none active:scale-95 transition-transform" onClick={() => setIsFavorited(!isFavorited)}>
+             <div className="p-2.5 border border-[#e4eaee] rounded-sm cursor-pointer hover:bg-[#f9fafb] bg-white group select-none shadow-none active:scale-95 transition-transform" onClick={() => setIsFavorited(!isFavorited)}>
                 <Star className={`h-[18px] w-[18px] transition-all duration-300 ${isFavorited ? 'text-yellow-400 fill-yellow-400 scale-110' : 'text-gray-300 group-hover:text-yellow-400'}`} />
              </div>
           </div>
@@ -329,7 +329,7 @@ export default function ProjectDetailPage() {
                       </thead>
                       <tbody>
                         {currentTasks.map((task, idx) => (
-                          <tr key={`${task.id || 'none'}-${idx}`} className="border-b border-[#f1f4f7] hover:bg-[#f2f6f8] transition-colors bg-white">
+                          <tr key={`${task.id || 'none'}-${idx}`} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
                             <td className="px-4 py-5 text-[13px]"><span className={task.status === 'done' ? 'line-through text-[#999]' : 'text-[#333]'}>{task.id && <span className="text-[#999] mr-1">{task.id}:</span>} {task.code}</span></td>
                             <td className="px-4 py-5">
                                <div className="flex flex-wrap gap-1.5">
@@ -403,7 +403,7 @@ export default function ProjectDetailPage() {
                     </thead>
                     <tbody>
                       {mockAccessUsers.map((user, idx) => (
-                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f2f6f8] transition-colors bg-white">
+                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
                           <td className="px-4 py-5 text-[13px]"><span className={user.status === 'inactive' ? 'line-through text-[#999]' : 'text-[#333]'}>{user.name}</span></td>
                           <td className="px-4 py-5 text-[13px] text-[#333]">{user.role}</td>
                         </tr>
@@ -421,7 +421,7 @@ export default function ProjectDetailPage() {
                     </thead>
                     <tbody>
                       {mockGroups.map((group, idx) => (
-                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f2f6f8] transition-colors bg-white">
+                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
                           <td className="px-4 py-5 text-[13px]"><span className="font-bold text-[#333]">{group.name}</span><span className="text-[#999] ml-2">- {group.members}</span></td>
                         </tr>
                       ))}
@@ -513,7 +513,7 @@ export default function ProjectDetailPage() {
                     </thead>
                     <tbody>
                       {currentStatusTasks.map((task, idx) => (
-                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f2f6f8] transition-colors bg-white">
+                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
                           <td className="px-4 py-4 text-[12px]">
                             <span className={task.status === 'done' ? 'line-through text-[#999]' : 'text-[#333]'}>{task.name}</span>
                           </td>

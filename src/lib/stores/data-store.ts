@@ -101,7 +101,7 @@ export const useDataStore = create<DataStore>()(
       }
     }),
     {
-      name: 'logspanx-storage-v4',  // Bumped to clear old 2024 mock data, now uses current dates
+      name: 'logspanx-storage-v6',  // Bumped to clear old cache
     }
   )
 )
