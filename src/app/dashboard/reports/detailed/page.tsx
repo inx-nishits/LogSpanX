@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, format, parseISO } from 'date-fns'
-import { ChevronDown, DollarSign, MoreVertical, Printer, Share2, X } from 'lucide-react'
+import { ChevronDown, DollarSign, MoreVertical, Printer, Share2 } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { cn } from '@/lib/utils'
 import { ReportShell, DateRange } from '../_components/report-shell'
@@ -59,16 +59,11 @@ export default function DetailedReportPage() {
   const paramTo        = searchParams.get('to')
   const filterType     = searchParams.get('filterType') as 'user' | 'project' | 'lead' | 'group' | null
   const filterId       = searchParams.get('filterId')
-  const filterLabel    = searchParams.get('filterLabel')
 
   const [dateRange, setDateRange] = useState<DateRange>(() => ({
     from: paramFrom ? startOfDay(parseISO(paramFrom)) : startOfDay(startOfWeek(new Date(), { weekStartsOn: 1 })),
     to:   paramTo   ? endOfDay(parseISO(paramTo))     : endOfDay(endOfWeek(new Date(), { weekStartsOn: 1 })),
   }))
-
-  const clearFilter = () => {
-    router.replace('/dashboard/reports/detailed')
-  }
 
   const filtered = useMemo(() => {
     let entries = timeEntries.filter(e => {
@@ -82,7 +77,6 @@ export default function DetailedReportPage() {
       } else if (filterType === 'project') {
         entries = entries.filter(e => e.projectId === filterId)
       } else if (filterType === 'lead') {
-        // filter entries whose project has this lead
         const leadProjectIds = new Set(
           projects.filter(p => p.leadId === filterId).map(p => p.id)
         )
@@ -96,28 +90,20 @@ export default function DetailedReportPage() {
   const totalSecs    = useMemo(() => filtered.reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
   const billableSecs = useMemo(() => filtered.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
 
-  const filterTypeLabel: Record<string, string> = {
-    user: 'User', project: 'Project', lead: 'Project Lead', group: 'Group',
-  }
+  // Derive initial filter bar selections from URL params
+  const initialTeam    = filterType === 'user'    && filterId ? [filterId] : []
+  const initialLead    = filterType === 'lead'    && filterId ? [filterId] : []
+  const initialProject = filterType === 'project' && filterId ? [filterId] : []
 
   return (
-    <ReportShell dateRange={dateRange} onRangeChange={setDateRange}>
+    <ReportShell
+      dateRange={dateRange}
+      onRangeChange={setDateRange}
+      initialTeam={initialTeam}
+      initialLead={initialLead}
+      initialProject={initialProject}
+    >
       <div className="flex-1 m-6 overflow-y-auto bg-white">
-
-        {/* Active filter badge */}
-        {filterType && filterId && filterLabel && (
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-[#f0f7fb] border-b border-[#d0e8f5]">
-            <span className="text-[13px] text-[#555]">
-              Filtered by <span className="font-semibold text-[#03a9f4]">{filterTypeLabel[filterType]}</span>:
-            </span>
-            <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#03a9f4] text-white text-[13px] rounded-full">
-              {filterLabel}
-              <button onClick={clearFilter} className="hover:opacity-70 cursor-pointer">
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          </div>
-        )}
 
         {/* Action bar */}
         <div className="flex items-center gap-2 py-3 bg-[#f2f6f8] border-b border-[#e4eaee]">

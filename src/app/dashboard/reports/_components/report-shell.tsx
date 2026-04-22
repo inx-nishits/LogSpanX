@@ -103,14 +103,17 @@ interface ReportShellProps {
   dateRange: DateRange
   onRangeChange: (r: DateRange) => void
   showFilters?: boolean
+  initialTeam?: string[]
+  initialLead?: string[]
+  initialProject?: string[]
   children: React.ReactNode
 }
 
-export function ReportShell({ dateRange, onRangeChange, showFilters = true, children }: ReportShellProps) {
+export function ReportShell({ dateRange, onRangeChange, showFilters = true, initialTeam = [], initialLead = [], initialProject = [], children }: ReportShellProps) {
   const pathname = usePathname()
-  const [selTeam, setSelTeam] = useState<string[]>([])
-  const [selLead, setSelLead] = useState<string[]>([])
-  const [selProject, setSelProject] = useState<string[]>([])
+  const [selTeam, setSelTeam] = useState<string[]>(initialTeam)
+  const [selLead, setSelLead] = useState<string[]>(initialLead)
+  const [selProject, setSelProject] = useState<string[]>(initialProject)
   const [selTask, setSelTask] = useState<string[]>([])
   const [selTag, setSelTag] = useState<string[]>([])
   const [selStatus, setSelStatus] = useState<string[]>([])
