@@ -339,7 +339,6 @@ export function TimeEntryList({ userId }: { userId: string }) {
                     </div>
                   </div>
 
-
                   {/* ── Entry rows ── */}
                   <div className="bg-white border-x border-b border-[#e4e8ec]">
                     {dayEntries.map(entry => {
