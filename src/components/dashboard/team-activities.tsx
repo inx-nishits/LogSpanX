@@ -148,12 +148,12 @@ export function TeamActivities({ dateRange }: TeamActivitiesProps) {
             </div>
 
             <div className="divide-y divide-[#efefef]">
-                {members.map((member) => {
+                {members.map((member, memberIndex) => {
                     const initials = member.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)
                     const filledWidth = (member.totalHours / maxHours) * 100
 
                     return (
-                        <div key={member.id} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-[#fafbfc] transition-colors">
+                        <div key={member.id || `member-${memberIndex}`} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-[#fafbfc] transition-colors">
                             <div className="col-span-2 flex items-center space-x-3">
                                 <div
                                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0"
@@ -189,7 +189,7 @@ export function TeamActivities({ dateRange }: TeamActivitiesProps) {
                                     <div className="h-[12px] w-full bg-[#e4eaee] overflow-hidden flex">
                                         {member.barSegments.map((seg, si) => (
                                             <div
-                                                key={si}
+                                                key={`${member.id || member.name}-${si}`}
                                                 className="h-full flex-shrink-0"
                                                 style={{
                                                     width: `${(seg.width / 100) * filledWidth}%`,

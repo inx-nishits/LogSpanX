@@ -38,7 +38,7 @@ export default function SharedReportPage() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                'px-4 h-[56px] flex items-center text-[14px] transition-colors border-b-2 -mb-px',
+                'px-4 h-[56px] flex items-center text-[16px] transition-colors border-b-2 -mb-px',
                 pathname === tab.href
                   ? 'text-[#333] font-bold border-b-[#333]'
                   : 'text-[#777] hover:text-[#333] border-b-transparent font-normal'
@@ -52,7 +52,7 @@ export default function SharedReportPage() {
 
       {/* Search + filter bar */}
       <div className="flex items-center gap-3 px-6 m-6 h-[65px] bg-white border-b border-[#e4eaee] flex-shrink-0">
-        <button className="flex items-center gap-1.5 px-3 h-[34px] text-[14px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
+        <button className="flex items-center gap-1.5 px-3 h-[34px] text-[16px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer">
           All reports <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
         </button>
         <div className="flex items-center gap-2 px-3 h-[34px] bg-white border border-[#d0d8de] rounded min-w-[240px] hover:border-[#aaa]">
@@ -61,7 +61,7 @@ export default function SharedReportPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name"
-            className="flex-1 text-[14px] outline-none placeholder:text-[#bbb] bg-transparent"
+            className="flex-1 text-[16px] outline-none placeholder:text-[#bbb] bg-transparent"
           />
         </div>
       </div>
@@ -71,11 +71,11 @@ export default function SharedReportPage() {
         <div className="bg-white border border-[#e4eaee]">
           {/* Section header */}
           <div className="px-4 py-2.5 bg-[#f5f7f9] border-b border-[#e4eaee]">
-            <span className="text-[13px] text-[#555] font-medium">Shared reports</span>
+            <span className="text-[15px] text-[#555] font-medium">Shared reports</span>
           </div>
 
           {/* Table header */}
-          <div className="flex items-center h-[36px] border-b border-[#e4eaee] px-4 text-[11px] font-semibold text-[#aaa] uppercase tracking-wider">
+          <div className="flex items-center h-[36px] border-b border-[#e4eaee] px-4 text-[13px] font-semibold text-[#aaa] uppercase tracking-wider">
             <div className="flex-1">Name</div>
             <div className="w-[160px] flex-shrink-0">Label</div>
             <div className="flex-1 text-right">URL</div>
@@ -84,20 +84,20 @@ export default function SharedReportPage() {
 
           {/* Rows */}
           {filtered.length === 0 ? (
-            <div className="py-16 text-center text-[14px] text-[#aaa]">No shared reports found</div>
+            <div className="py-16 text-center text-[16px] text-[#aaa]">No shared reports found</div>
           ) : (
             filtered.map(report => (
               <div key={report.id} className="flex items-center h-[48px] border-b border-[#f0f0f0] px-4 hover:bg-[#fafbfc] transition-colors group">
                 {/* Name */}
                 <div className="flex-1 flex items-center gap-2 min-w-0">
-                  <span className="text-[14px] text-[#333]">{report.name}</span>
+                  <span className="text-[16px] text-[#333]">{report.name}</span>
                   <Users className="h-3.5 w-3.5 text-[#aaa]" />
                 </div>
 
                 {/* Label */}
                 <div className="w-[160px] flex-shrink-0">
                   <span className={cn(
-                    'px-2.5 py-0.5 text-[12px] rounded border',
+                    'px-2.5 py-0.5 text-[16px] rounded border',
                     report.isPublic
                       ? 'text-[#03a9f4] border-[#03a9f4] bg-[#f0f9ff]'
                       : 'text-[#555] border-[#d0d8de] bg-white'
@@ -108,13 +108,13 @@ export default function SharedReportPage() {
 
                 {/* URL */}
                 <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
-                  <span className="text-[12px] text-[#aaa] truncate max-w-[260px] font-mono">
+                  <span className="text-[16px] text-[#aaa] truncate max-w-[260px] font-mono">
                     https://logspanx.app/shared/{report.token}
                   </span>
                   <button
                     onClick={() => handleCopy(report.token)}
                     className={cn(
-                      'px-3 h-[26px] text-[12px] border rounded flex-shrink-0 cursor-pointer transition-colors',
+                      'px-3 h-[26px] text-[16px] border rounded flex-shrink-0 cursor-pointer transition-colors',
                       copied === report.token
                         ? 'border-[#4caf50] text-[#4caf50] bg-[#f0fff4]'
                         : 'border-[#d0d8de] text-[#555] hover:border-[#03a9f4] hover:text-[#03a9f4]'

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Eye, EyeOff } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Eye, EyeOff } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { getDashboardRoute } from '@/lib/rbac'
 import { useAuthStore } from '@/lib/stores/auth-store'
 
 export default function LoginPage() {
@@ -16,7 +16,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   
   const router = useRouter()
-  const { login } = useAuthStore()
+  const { login, isAuthenticated, hasHydrated, isInitializing, error: authError } = useAuthStore()
+
+  useEffect(() => {
+    if (hasHydrated && !isInitializing && isAuthenticated) {
+      const currentRole = useAuthStore.getState().user?.role ?? 'member'
+      router.replace(getDashboardRoute(currentRole))
+    }
+  }, [hasHydrated, isInitializing, isAuthenticated, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,12 +33,13 @@ export default function LoginPage() {
     try {
       const success = await login(email, password)
       if (success) {
-        router.push('/dashboard')
+        const currentRole = useAuthStore.getState().user?.role ?? 'member'
+        router.replace(getDashboardRoute(currentRole))
       } else {
-        setError('Invalid email or password')
+        setError(authError || 'Invalid email or password')
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.')
+    } catch {
+      setError(authError || 'An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -51,7 +59,7 @@ export default function LoginPage() {
           Log in
         </h1>
         <div className="flex justify-center items-center text-[13px] text-gray-600 mb-8">
-          <span>Don't have an account?</span>
+          <span>Don&apos;t have an account?</span>
           <Link href="/signup" className="text-[#03a9f4] hover:underline hover:text-[#0288d1] ml-1">
             Sign up
           </Link>

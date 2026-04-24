@@ -74,7 +74,7 @@ function TableRow({
         </span>
 
         <span className="w-[120px] text-right text-[14px] text-[#aaa] tabular-nums flex-shrink-0">
-          0.00 USD
+          {row.billable ? '—' : '0.00 USD'}
         </span>
       </div>
 

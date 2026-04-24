@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
@@ -18,7 +18,13 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   const router = useRouter()
-  const { login } = useAuthStore()
+  const { signup, isAuthenticated, hasHydrated, isInitializing } = useAuthStore()
+
+  useEffect(() => {
+    if (hasHydrated && !isInitializing && isAuthenticated) {
+      router.replace('/dashboard')
+    }
+  }, [hasHydrated, isInitializing, isAuthenticated, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,14 +38,13 @@ export default function SignupPage() {
     }
 
     try {
-      // Mock signup - in real app, this would create a new user
-      // For demo, we'll just log in with existing user mock pattern
-      const success = await login(email, 'password') // fallback to dummy logic
-      if (success || email) { // force fake pass for prototype
-         // login logic is complex in mock, just push for seamless proto
-        router.push('/dashboard')
+      const success = await signup(name, email, password)
+      if (success) {
+        router.replace('/dashboard')
+      } else {
+        setError('Unable to create your account. Please try again.')
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.')
     } finally {
       setIsLoading(false)

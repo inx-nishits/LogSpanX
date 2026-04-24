@@ -1,27 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, Pencil, MoreVertical, Check, X, ChevronDown, Archive, Trash2, ArchiveRestore } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Tag } from '@/lib/types'
-
-// ─── Initial dummy data ───────────────────────────────────────────────────────
-const INITIAL_TAGS: Tag[] = [
-  { id: '1',  name: 'Design : HTML-CSS',    workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '2',  name: 'Design : UI-UX',       workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '3',  name: 'Mobile : Android',     workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '4',  name: 'Mobile : Flutter',     workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '5',  name: 'Mobile : iOS',         workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '6',  name: 'Mobile : React-Native',workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '7',  name: 'Project Management',   workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '8',  name: 'QA : Automation',      workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '9',  name: 'QA : Manual',          workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '10', name: 'Web : Angular',        workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '11', name: 'Web : Next.js',        workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '12', name: 'Web : React',          workspaceId: 'workspace_1', archived: false, createdAt: new Date(), updatedAt: new Date() },
-  { id: '13', name: 'Backend : Node.js',    workspaceId: 'workspace_1', archived: true,  createdAt: new Date(), updatedAt: new Date() },
-  { id: '14', name: 'Backend : Python',     workspaceId: 'workspace_1', archived: true,  createdAt: new Date(), updatedAt: new Date() },
-]
+import { useDataStore } from '@/lib/stores/data-store'
 
 type ShowFilter = 'active' | 'archived' | 'all'
 
@@ -37,16 +19,16 @@ function ShowDropdown({ value, onChange }: { value: ShowFilter; onChange: (v: Sh
   }, [])
 
   const OPTIONS: { value: ShowFilter; label: string }[] = [
-    { value: 'active',   label: 'Show active' },
+    { value: 'active', label: 'Show active' },
     { value: 'archived', label: 'Show archived' },
-    { value: 'all',      label: 'Show all' },
+    { value: 'all', label: 'Show all' },
   ]
 
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 h-[32px] text-[13px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer"
+        className="flex items-center gap-1.5 px-3 h-[32px] text-[15px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer"
       >
         {OPTIONS.find(o => o.value === value)?.label}
         <ChevronDown className="h-3 w-3 text-[#aaa]" />
@@ -58,7 +40,7 @@ function ShowDropdown({ value, onChange }: { value: ShowFilter; onChange: (v: Sh
               key={opt.value}
               onClick={() => { onChange(opt.value); setOpen(false) }}
               className={cn(
-                'w-full text-left px-4 py-2 text-[13px] cursor-pointer transition-colors',
+                'w-full text-left px-4 py-2 text-[15px] cursor-pointer transition-colors',
                 value === opt.value ? 'bg-[#03a9f4] text-white' : 'text-[#555] hover:bg-[#f0f4f8]'
               )}
             >
@@ -99,13 +81,13 @@ function MoreMenu({ archived, onEdit, onArchive, onDelete }: {
         <div className="absolute right-0 top-full mt-0.5 bg-white border border-[#ddd] shadow-lg z-50 min-w-[140px] py-0.5">
           <button
             onClick={() => { onEdit(); setOpen(false) }}
-            className="w-full text-left px-4 py-2 text-[13px] text-[#555] hover:bg-[#f0f4f8] cursor-pointer flex items-center gap-2"
+            className="w-full text-left px-4 py-2 text-[15px] text-[#555] hover:bg-[#f0f4f8] cursor-pointer flex items-center gap-2"
           >
             <Pencil className="h-3.5 w-3.5 text-[#aaa]" /> Edit
           </button>
           <button
             onClick={() => { onArchive(); setOpen(false) }}
-            className="w-full text-left px-4 py-2 text-[13px] text-[#555] hover:bg-[#f0f4f8] cursor-pointer flex items-center gap-2"
+            className="w-full text-left px-4 py-2 text-[15px] text-[#555] hover:bg-[#f0f4f8] cursor-pointer flex items-center gap-2"
           >
             {archived
               ? <><ArchiveRestore className="h-3.5 w-3.5 text-[#aaa]" /> Restore</>
@@ -114,7 +96,7 @@ function MoreMenu({ archived, onEdit, onArchive, onDelete }: {
           </button>
           <button
             onClick={() => { onDelete(); setOpen(false) }}
-            className="w-full text-left px-4 py-2 text-[13px] text-red-500 hover:bg-red-50 cursor-pointer flex items-center gap-2"
+            className="w-full text-left px-4 py-2 text-[15px] text-red-500 hover:bg-red-50 cursor-pointer flex items-center gap-2"
           >
             <Trash2 className="h-3.5 w-3.5" /> Delete
           </button>
@@ -126,7 +108,7 @@ function MoreMenu({ archived, onEdit, onArchive, onDelete }: {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function TagsPage() {
-  const [tags, setTags] = useState<Tag[]>(INITIAL_TAGS)
+  const { tags, createTag, updateTag, deleteTag } = useDataStore()
   const [showFilter, setShowFilter] = useState<ShowFilter>('active')
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -157,15 +139,7 @@ export default function TagsPage() {
   const handleAdd = () => {
     const name = newTagName.trim()
     if (!name) return
-    const newTag: Tag = {
-      id: Date.now().toString(),
-      name,
-      workspaceId: 'workspace_1',
-      archived: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    setTags(prev => [...prev, newTag])
+    void createTag(name)
     setNewTagName('')
   }
 
@@ -173,18 +147,20 @@ export default function TagsPage() {
   const handleEditSave = (id: string) => {
     const name = editingName.trim()
     if (!name) { setEditingId(null); return }
-    setTags(prev => prev.map(t => t.id === id ? { ...t, name, updatedAt: new Date() } : t))
+    void updateTag(id, { name })
     setEditingId(null)
   }
 
   // Archive toggle
   const handleArchive = (id: string) => {
-    setTags(prev => prev.map(t => t.id === id ? { ...t, archived: !t.archived, updatedAt: new Date() } : t))
+    const target = tags.find((tag) => tag.id === id)
+    if (!target) return
+    void updateTag(id, { archived: !target.archived })
   }
 
   // Delete
   const handleDelete = (id: string) => {
-    setTags(prev => prev.filter(t => t.id !== id))
+    void deleteTag(id)
     setSelected(prev => prev.filter(s => s !== id))
   }
 
@@ -214,7 +190,7 @@ export default function TagsPage() {
             value={searchInput}
             onChange={e => handleSearchChange(e.target.value)}
             placeholder="Search by name"
-            className="flex-1 text-[13px] outline-none placeholder:text-[#bbb] bg-transparent"
+            className="flex-1 text-[15px] outline-none placeholder:text-[#bbb] bg-transparent"
           />
           {searchInput && (
             <button onClick={() => { setSearchInput(''); setSearchQuery('') }} className="text-[#bbb] hover:text-[#555]">
@@ -230,11 +206,11 @@ export default function TagsPage() {
             onChange={e => setNewTagName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
             placeholder="Add new tag"
-            className="h-[32px] px-3 text-[13px] bg-white border border-[#d0d8de] border-r-0 rounded-l outline-none placeholder:text-[#bbb] min-w-[200px] focus:border-[#03a9f4]"
+            className="h-[32px] px-3 text-[15px] bg-white border border-[#d0d8de] border-r-0 rounded-l outline-none placeholder:text-[#bbb] min-w-[200px] focus:border-[#03a9f4]"
           />
           <button
             onClick={handleAdd}
-            className="h-[32px] px-5 text-[13px] font-medium text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-r cursor-pointer transition-colors whitespace-nowrap"
+            className="h-[32px] px-5 text-[15px] font-medium text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-r cursor-pointer transition-colors whitespace-nowrap"
           >
             ADD
           </button>
@@ -245,7 +221,7 @@ export default function TagsPage() {
       <div className="bg-white border border-[#e4eaee]">
         {/* Section label */}
         <div className="px-4 py-2 bg-[#f5f7f9] border-b border-[#e4eaee]">
-          <span className="text-[12px] text-[#999] font-medium">Tags</span>
+          <span className="text-[16px] text-[#999] font-medium">Tags</span>
         </div>
 
         {/* Header */}
@@ -259,12 +235,12 @@ export default function TagsPage() {
           >
             {allSelected && <Check className="h-2.5 w-2.5 text-white stroke-[3px]" />}
           </div>
-          <span className="text-[11px] font-bold text-[#aaa] uppercase tracking-wider">Name</span>
+          <span className="text-[13px] font-bold text-[#aaa] uppercase tracking-wider">Name</span>
         </div>
 
         {/* Rows */}
         {visible.length === 0 ? (
-          <div className="py-16 text-center text-[14px] text-[#aaa]">
+          <div className="py-16 text-center text-[16px] text-[#aaa]">
             {searchQuery ? 'No tags match your search' : 'No tags found'}
           </div>
         ) : (
@@ -295,7 +271,7 @@ export default function TagsPage() {
                       if (e.key === 'Enter') handleEditSave(tag.id)
                       if (e.key === 'Escape') setEditingId(null)
                     }}
-                    className="flex-1 max-w-[320px] h-[28px] px-2 text-[13px] border border-[#03a9f4] outline-none rounded-sm"
+                    className="flex-1 max-w-[320px] h-[28px] px-2 text-[15px] border border-[#03a9f4] outline-none rounded-sm"
                   />
                   <button onClick={() => handleEditSave(tag.id)} className="p-1 text-[#03a9f4] hover:text-[#0288d1] cursor-pointer">
                     <Check className="h-4 w-4 stroke-[2px]" />
@@ -305,7 +281,7 @@ export default function TagsPage() {
                   </button>
                 </div>
               ) : (
-                <span className={cn('flex-1 text-[14px] text-[#333] truncate', tag.archived && 'text-[#aaa] line-through')}>
+                <span className={cn('flex-1 text-[16px] text-[#333] truncate', tag.archived && 'text-[#aaa] line-through')}>
                   {tag.name}
                 </span>
               )}
@@ -335,7 +311,7 @@ export default function TagsPage() {
 
       {/* Bulk action bar */}
       {selected.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#333] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-4 text-[13px] z-50">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#333] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-4 text-[15px] z-50">
           <span className="font-medium">{selected.length} selected</span>
           <button
             onClick={() => { selected.forEach(id => handleArchive(id)); setSelected([]) }}

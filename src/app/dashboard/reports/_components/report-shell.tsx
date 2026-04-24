@@ -106,17 +106,23 @@ interface ReportShellProps {
   initialTeam?: string[]
   initialLead?: string[]
   initialProject?: string[]
+  initialTags?: string[]
+  initialTasks?: string[]
+  initialStatus?: string[]
+  initialDescription?: string
+  onApply?: (filters: { team: string[]; lead: string[]; project: string[]; tasks: string[]; tags: string[]; status: string[]; description: string }) => void
   children: React.ReactNode
 }
 
-export function ReportShell({ dateRange, onRangeChange, showFilters = true, initialTeam = [], initialLead = [], initialProject = [], children }: ReportShellProps) {
+export function ReportShell({ dateRange, onRangeChange, showFilters = true, initialTeam = [], initialLead = [], initialProject = [], initialTags = [], initialTasks = [], initialStatus = [], initialDescription = '', onApply, children }: ReportShellProps) {
   const pathname = usePathname()
   const [selTeam, setSelTeam] = useState<string[]>(initialTeam)
   const [selLead, setSelLead] = useState<string[]>(initialLead)
   const [selProject, setSelProject] = useState<string[]>(initialProject)
-  const [selTask, setSelTask] = useState<string[]>([])
-  const [selTag, setSelTag] = useState<string[]>([])
-  const [selStatus, setSelStatus] = useState<string[]>([])
+  const [selTask, setSelTask] = useState<string[]>(initialTasks)
+  const [selTag, setSelTag] = useState<string[]>(initialTags)
+  const [selStatus, setSelStatus] = useState<string[]>(initialStatus)
+  const [selDesc, setSelDesc] = useState<string>(initialDescription)
   const [visibleFilters, setVisibleFilters] = useState<FilterKey[]>([...ALL_FILTER_KEYS])
   const [timeReportOpen, setTimeReportOpen] = useState(false)
   const timeReportRef = useRef<HTMLDivElement>(null)
@@ -130,7 +136,7 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
   }, [])
 
   return (
-    <div className="flex flex-col h-full bg-[#f2f6f8] overflow-hidden">
+    <div className="flex flex-col bg-[#f2f6f8] min-h-screen">
       {/* Tab bar */}
       <div className="flex items-center justify-between px-6 m-6 h-[56px] bg-white border-b border-[#e4eaee] flex-shrink-0">
         <div className="flex items-center gap-1">
@@ -187,26 +193,29 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
           <FilterVisibilityDropdown visible={visibleFilters} onChange={setVisibleFilters} />
           {visibleFilters.includes('Team') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-            <FilterDropdown label="Team" placeholder="Search users or groups" items={TEAM_ITEMS} selected={selTeam} onChange={setSelTeam} /></>)}
+              <FilterDropdown label="Team" placeholder="Search users or groups" items={TEAM_ITEMS} selected={selTeam} onChange={setSelTeam} /></>)}
           {visibleFilters.includes('Project Lead') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-            <FilterDropdown label="Project Lead" placeholder="Search Project Lead" items={LEAD_ITEMS} selected={selLead} onChange={setSelLead} showWithout="Without Project Lead" /></>)}
+              <FilterDropdown label="Project Lead" placeholder="Search Project Lead" items={LEAD_ITEMS} selected={selLead} onChange={setSelLead} showWithout="Without Project Lead" /></>)}
           {visibleFilters.includes('Project') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-            <FilterDropdown label="Project" placeholder="Search Projects" items={PROJECT_ITEMS} selected={selProject} onChange={setSelProject} showWithout="Without Project" /></>)}
+              <FilterDropdown label="Project" placeholder="Search Projects" items={PROJECT_ITEMS} selected={selProject} onChange={setSelProject} showWithout="Without Project" /></>)}
           {visibleFilters.includes('Task') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-            <FilterDropdown label="Task" placeholder="Search Tasks" items={TASK_ITEMS} selected={selTask} onChange={setSelTask} showWithout="Without Task" /></>)}
+              <FilterDropdown label="Task" placeholder="Search Tasks" items={TASK_ITEMS} selected={selTask} onChange={setSelTask} showWithout="Without Task" /></>)}
           {visibleFilters.includes('Tag') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-            <FilterDropdown label="Tag" placeholder="Search Tags" items={TAG_ITEMS} selected={selTag} onChange={setSelTag} showWithout="Without Tag" /></>)}
+              <FilterDropdown label="Tag" placeholder="Search Tags" items={TAG_ITEMS} selected={selTag} onChange={setSelTag} showWithout="Without Tag" /></>)}
           {visibleFilters.includes('Status') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-            <FilterDropdown label="Status" placeholder="" items={STATUS_ITEMS} selected={selStatus} onChange={setSelStatus} noSearch /></>)}
+              <FilterDropdown label="Status" placeholder="" items={STATUS_ITEMS} selected={selStatus} onChange={setSelStatus} noSearch /></>)}
           {visibleFilters.includes('Description') && (
-            <DescriptionPill />
+            <DescriptionPill value={selDesc} onChange={setSelDesc} />
           )}
-          <button className="ml-auto px-5 h-[32px] text-[13px] font-bold uppercase tracking-wide text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm cursor-pointer whitespace-nowrap">
+          <button
+            onClick={() => onApply?.({ team: selTeam, lead: selLead, project: selProject, tasks: selTask, tags: selTag, status: selStatus, description: selDesc })}
+            className="ml-auto px-5 h-[32px] text-[13px] font-bold uppercase tracking-wide text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm cursor-pointer whitespace-nowrap"
+          >
             APPLY FILTER
           </button>
         </div>

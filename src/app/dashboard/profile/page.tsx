@@ -6,13 +6,13 @@ import { Mail, Briefcase, Clock, ShieldCheck, User as UserIcon } from 'lucide-re
 export default function ProfilePage() {
   const { user } = useAuthStore()
 
-  const userInitials = user?.name 
-    ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2) 
+  const userInitials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2)
     : 'NS'
 
   return (
     <div className="w-full h-full bg-[#f2f6f8] animate-in fade-in duration-300">
-      
+
       {/* Profile Header Band */}
       <div className="w-full bg-white border-b border-gray-200 px-4 py-8">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center md:items-center space-y-4 md:space-y-0 md:space-x-6 text-center md:text-left">
@@ -27,11 +27,11 @@ export default function ProfilePage() {
               {user?.name || 'Nishit Sangani'}
             </h1>
             <div className="flex flex-col sm:flex-row items-center mt-1 sm:space-x-3 space-y-2 sm:space-y-0">
-              <span className="text-[10px] md:text-[11px] font-bold text-[#03a9f4] uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-100">
-                 Authorized User
+              <span className="text-[10px] md:text-[13px] font-bold text-[#03a9f4] uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-100">
+                Authorized User
               </span>
               <span className="text-[10px] md:text-xs text-gray-400 font-medium">
-                Workspace: InheritX Solutions
+                LogSpanX Pro Member
               </span>
             </div>
           </div>
@@ -39,20 +39,20 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-        
+
         {/* Left Column: Stats/Status */}
         <div className="col-span-1 space-y-6">
           <div className="bg-white rounded-sm border border-gray-200 overflow-hidden shadow-sm">
             <div className="bg-[#f0f7fb] px-4 py-3 border-b border-[#d6e5ef]">
-              <h3 className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Account Status</h3>
+              <h3 className="text-[13px] font-black text-slate-600 uppercase tracking-widest">Account Status</h3>
             </div>
             <div className="p-4 space-y-4">
               <div className="flex items-center transition-all">
                 <div className="h-2 w-2 rounded-full bg-green-500 mr-3 animate-pulse" />
                 <span className="text-sm font-bold text-gray-700">Verified & Active</span>
               </div>
-              <p className="text-[11px] leading-relaxed text-gray-500 font-medium">
-                Your account is currently synced with the primary workspace and is managed by the security policy.
+              <p className="text-[13px] leading-relaxed text-gray-500 font-medium">
+                Your account is currently synced and managed by the security policy.
               </p>
             </div>
           </div>
@@ -75,38 +75,38 @@ export default function ProfilePage() {
               <h2 className="text-sm font-black text-slate-700 uppercase tracking-widest">Personal Identity</h2>
               <UserIcon className="h-4 w-4 text-slate-400" />
             </div>
-            
+
             <div className="divide-y divide-gray-50">
               <div className="flex items-center min-h-[64px] px-6 py-4 hover:bg-[#fcfdfe] transition-colors group">
-                <div className="w-1/3 flex items-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                <div className="w-1/3 flex items-center text-[13px] font-bold text-gray-400 uppercase tracking-wider">
                   <Briefcase className="w-3.5 h-3.5 mr-2 text-gray-300 group-hover:text-[#03a9f4] transition-colors" />
                   Full Name
                 </div>
-                <div className="w-2/3 text-[14px] font-bold text-gray-800">
+                <div className="w-2/3 text-[16px] font-bold text-gray-800">
                   {user?.name || 'Nishit Sangani'}
                 </div>
               </div>
 
               <div className="flex items-center min-h-[64px] px-6 py-4 hover:bg-[#fcfdfe] transition-colors group">
-                <div className="w-1/3 flex items-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                <div className="w-1/3 flex items-center text-[13px] font-bold text-gray-400 uppercase tracking-wider">
                   <Mail className="w-3.5 h-3.5 mr-2 text-gray-300 group-hover:text-[#03a9f4] transition-colors" />
                   Identity
                 </div>
-                <div className="w-2/3 text-[14px] font-bold text-gray-800">
+                <div className="w-2/3 text-[16px] font-bold text-gray-800">
                   {user?.email || 'nishit@inheritx.com'}
                 </div>
               </div>
 
               <div className="flex items-center min-h-[64px] px-6 py-4 hover:bg-[#fcfdfe] transition-colors group">
-                <div className="w-1/3 flex items-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                <div className="w-1/3 flex items-center text-[13px] font-bold text-gray-400 uppercase tracking-wider">
                   <Clock className="w-3.5 h-3.5 mr-2 text-gray-300 group-hover:text-[#03a9f4] transition-colors" />
                   Clock Format
                 </div>
-                <div className="w-2/3 text-[14px] font-bold text-gray-800">
+                <div className="w-2/3 text-[16px] font-bold text-gray-800">
                   12-Hour (Standard)
                 </div>
               </div>
-              
+
               <div className="px-6 py-4 bg-gray-50/20">
                 <div className="flex items-start space-x-3">
                   <div className="mt-0.5">
@@ -115,7 +115,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <p className="text-[10px] uppercase font-bold text-gray-400 tracking-tight leading-normal">
-                    Secure organizational profile. All modifications must be requested through your workspace owner.
+                    Secure organizational profile. All modifications must be requested through your administrator.
                   </p>
                 </div>
               </div>

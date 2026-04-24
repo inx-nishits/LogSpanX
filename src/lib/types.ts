@@ -4,22 +4,19 @@ export interface User {
   name: string
   avatar?: string
   role: 'owner' | 'admin' | 'member' | 'viewer'
-  workspaceId: string
+  archived?: boolean
+  billableRate?: number
+  group?: string
 }
 
-export interface Workspace {
+export interface Group {
   id: string
   name: string
-  settings: WorkspaceSettings
+  memberIds: string[]
+  createdAt: Date
+  updatedAt: Date
 }
 
-export interface WorkspaceSettings {
-  dateFormat: string
-  timeFormat: '12h' | '24h'
-  weekStart: 'monday' | 'sunday'
-  currency: string
-  timezone: string
-}
 
 export interface Project {
   id: string
@@ -31,7 +28,6 @@ export interface Project {
   hourlyRate?: number
   members: ProjectMember[]
   archived: boolean
-  workspaceId: string
   createdAt: Date
   updatedAt: Date
 }
@@ -48,7 +44,6 @@ export interface Client {
   email?: string
   phone?: string
   address?: string
-  workspaceId: string
   createdAt: Date
   updatedAt: Date
 }
@@ -62,7 +57,6 @@ export interface TimeEntry {
   tagIds?: string[]
   billable: boolean
   userId: string
-  workspaceId: string
   startTime: Date
   endTime?: Date
   duration?: number
@@ -75,14 +69,12 @@ export interface Task {
   id: string
   name: string
   projectId: string
-  workspaceId: string
   completed: boolean
 }
 
 export interface Tag {
   id: string
   name: string
-  workspaceId: string
   archived: boolean
   createdAt: Date
   updatedAt: Date
@@ -93,7 +85,6 @@ export interface Report {
   name: string
   type: 'summary' | 'detailed' | 'weekly'
   filters: ReportFilters
-  workspaceId: string
   createdAt: Date
   updatedAt: Date
 }

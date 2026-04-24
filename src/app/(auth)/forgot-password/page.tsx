@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/lib/stores/auth-store'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -13,6 +13,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   
   const router = useRouter()
+  const { forgotPassword } = useAuthStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,11 +21,10 @@ export default function ForgotPasswordPage() {
     setError('')
 
     try {
-      // Mock password reset - in real app, this would send an email
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await forgotPassword(email)
       setIsSubmitted(true)
     } catch (err) {
-      setError('An error occurred. Please try again.')
+      setError(err instanceof Error ? err.message : 'An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
             Check your email
           </h2>
           <p className="text-[13px] text-gray-600 mb-8">
-            We've sent a password reset link to{' '}
+            We&apos;ve sent a password reset link to{' '}
             <strong className="font-semibold text-gray-800">{email}</strong>
           </p>
           <button
@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
           Reset Password
         </h1>
         <div className="flex justify-center items-center text-[13px] text-gray-600 mb-8 text-center px-4">
-          <span>Enter your email and we'll send you a recovery link.</span>
+          <span>Enter your email and we&apos;ll send you a recovery link.</span>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">

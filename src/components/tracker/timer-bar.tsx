@@ -1,61 +1,112 @@
-'use client'
-
-import { useState } from 'react'
-import { Plus, Tag, DollarSign, Clock, MoreVertical } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Plus, Tag, DollarSign, Clock, MoreVertical, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { ProjectPicker } from './project-picker'
 import { TagPicker } from './tag-picker'
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isSameMonth, subMonths, addMonths, startOfDay } from 'date-fns'
+
+// ─── Shared Components (Ported) ───────────────────────────────────────────────
+
+function Tip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="relative group/tip flex items-center justify-center">
+      {children}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[11px] rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-[300]">
+        {label}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+      </div>
+    </div>
+  )
+}
+
+function CalPicker({ date, onChange, onClose }: { date: Date; onChange: (d: Date) => void; onClose: () => void }) {
+  const [view, setView] = useState(startOfMonth(date))
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
+  }, [onClose])
+  const days = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(view), { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(view), { weekStartsOn: 1 }),
+  })
+  return (
+    <div ref={ref} className="absolute z-[400] bg-white border border-gray-200 shadow-2xl rounded-sm p-3 w-[240px]"
+      style={{ top: 'calc(100% + 12px)', right: 0 }} onClick={e => e.stopPropagation()}>
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setView(subMonths(view, 1))} className="p-1 hover:bg-gray-100 rounded cursor-pointer">
+          <ChevronLeft className="h-4 w-4 text-gray-500" />
+        </button>
+        <span className="text-[13px] font-semibold text-gray-700">{format(view, 'MMM yyyy')}</span>
+        <button onClick={() => setView(addMonths(view, 1))} className="p-1 hover:bg-gray-100 rounded cursor-pointer">
+          <ChevronRight className="h-4 w-4 text-gray-500" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
+          <div key={d} className="text-center text-[11px] font-bold text-gray-400 py-1">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {days.map((day, i) => {
+          const sel = isSameDay(day, date), cur = isSameMonth(day, view), tod = isSameDay(day, new Date())
+          return (
+            <button key={i} onClick={() => { onChange(day); onClose() }}
+              className={cn('h-8 w-full flex items-center justify-center text-[12px] rounded cursor-pointer transition-colors',
+                !cur && 'text-gray-300',
+                cur && !sel && 'text-gray-700 hover:bg-gray-100',
+                tod && !sel && 'text-[#03a9f4] font-bold',
+                sel && 'bg-[#03a9f4] text-white font-bold')}>
+              {format(day, 'd')}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function CalBtn({ date, onChange }: { date: Date; onChange: (d: Date) => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <Tip label={isSameDay(date, new Date()) ? 'Today' : format(date, 'MMM d, yyyy')}>
+        <button onClick={() => setOpen(o => !o)} className={cn('transition-colors cursor-pointer', isSameDay(date, new Date()) ? 'text-[#ccc] hover:text-[#03a9f4]' : 'text-[#03a9f4]')}>
+          <Calendar style={{ width: 20, height: 20 }} strokeWidth={1.4} />
+        </button>
+      </Tip>
+      {open && <CalPicker date={date} onChange={onChange} onClose={() => setOpen(false)} />}
+    </div>
+  )
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // Autocomplete time input: 9→09:00, 14→14:00, 902→09:02, 14:1→14:10, 930→09:30
 function parseTimeInput(raw: string): string {
   const s = raw.replace(/[^0-9:]/g, '').trim()
   if (!s) return ''
-
-  // Already HH:MM format
   if (/^\d{1,2}:\d{2}$/.test(s)) {
     const [h, m] = s.split(':').map(Number)
     if (h > 23 || m > 59) return ''
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
   }
-
-  // Partial with colon e.g. 14:1 → 14:10
   if (/^\d{1,2}:\d{1}$/.test(s)) {
     const [h, m] = s.split(':')
     const hh = parseInt(h), mm = parseInt(m) * 10
     if (hh > 23 || mm > 59) return ''
     return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
   }
-
-  // Pure digits
   const digits = s.replace(':', '')
-  if (digits.length === 1) {
-    // 9 → 09:00
-    return `0${digits}:00`
-  }
-  if (digits.length === 2) {
-    // 14 → 14:00, 09 → 09:00
-    const h = parseInt(digits)
-    if (h > 23) return ''
-    return `${String(h).padStart(2, '0')}:00`
-  }
-  if (digits.length === 3) {
-    // 902 → 09:02, 930 → 09:30
-    const h = parseInt(digits[0]), m = parseInt(digits.slice(1))
-    if (h > 23 || m > 59) return ''
-    return `0${h}:${String(m).padStart(2, '0')}`
-  }
-  if (digits.length === 4) {
-    // 1430 → 14:30, 0902 → 09:02
-    const h = parseInt(digits.slice(0, 2)), m = parseInt(digits.slice(2))
-    if (h > 23 || m > 59) return ''
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-  }
+  if (digits.length === 1) return `0${digits}:00`
+  if (digits.length === 2) { const h = parseInt(digits); if (h > 23) return ''; return `${String(h).padStart(2, '0')}:00` }
+  if (digits.length === 3) { const h = parseInt(digits[0]), m = parseInt(digits.slice(1)); if (h > 23 || m > 59) return ''; return `0${h}:${String(m).padStart(2, '0')}` }
+  if (digits.length === 4) { const h = parseInt(digits.slice(0, 2)), m = parseInt(digits.slice(2)); if (h > 23 || m > 59) return ''; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
   return ''
 }
 
-// Divider between sections
 function Sep() {
   return <div className="h-6 w-px bg-gray-200 flex-shrink-0 pointer-events-none" />
 }
@@ -72,12 +123,13 @@ export function TimerBar() {
   const [focused, setFocused] = useState(false)
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
+  const [selectedDate, setSelectedDate] = useState(new Date())
 
   const handleAdd = () => {
     if (!user || !startTime || !endTime) return
-    const today = new Date().toISOString().split('T')[0]
-    const start = new Date(`${today}T${startTime}:00`)
-    const end = new Date(`${today}T${endTime}:00`)
+    const dateStr = format(selectedDate, 'yyyy-MM-dd')
+    const start = new Date(`${dateStr}T${startTime}:00`)
+    const end = new Date(`${dateStr}T${endTime}:00`)
     const duration = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000))
     addTimeEntry({
       description,
@@ -86,7 +138,6 @@ export function TimerBar() {
       tagIds,
       billable,
       userId: user.id,
-      workspaceId: user.workspaceId,
       startTime: start,
       endTime: end,
       duration,
@@ -98,6 +149,8 @@ export function TimerBar() {
     setBillable(false)
     setStartTime('')
     setEndTime('')
+    setSelectedDate(new Date()) // Reset to today or keep? Users usually want to batch entries. 
+    // Actually, reset to today is safer.
   }
 
   return (
@@ -129,7 +182,7 @@ export function TimerBar() {
           />
         ) : (
           <button
-            onClick={() => {}}
+            onClick={() => { }}
             className="flex items-center gap-1.5 text-[#03a9f4] hover:text-[#0288d1] cursor-pointer transition-colors"
           >
             <ProjectPicker
@@ -194,6 +247,13 @@ export function TimerBar() {
           className="text-[16px] text-gray-500 bg-transparent border-none outline-none w-[46px] tabular-nums text-center placeholder-gray-300"
         />
         <Clock style={{ width: 19, height: 19, color: '#ccc' }} strokeWidth={1.4} />
+      </div>
+
+      <Sep />
+
+      {/* Calendar */}
+      <div className="px-4 flex-shrink-0">
+        <CalBtn date={selectedDate} onChange={setSelectedDate} />
       </div>
 
       <Sep />

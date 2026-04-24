@@ -16,26 +16,27 @@ interface ProjectPickerProps {
   selectedTaskId?: string
   onSelect: (projectId: string, taskId?: string) => void
   onClear: () => void
+  customTrigger?: React.ReactNode
 }
 
-export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onClear }: ProjectPickerProps) {
+export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onClear, customTrigger }: ProjectPickerProps) {
   const { projects, users, tasks } = useDataStore()
   const [search, setSearch] = useState('')
   const [expandedLeads, setExpandedLeads] = useState<string[]>(['user_2', 'no_lead'])
   const [expandedProjects, setExpandedProjects] = useState<string[]>(['project_2'])
-  
+
   const [modalOpen, setModalOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [activeLead, setActiveLead] = useState({ id: '', name: '' })
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
   const selectedTask = tasks.find(t => t.id === selectedTaskId)
-  
+
   const filteredProjects = useMemo(() => {
-    return projects.filter(p => 
-      !p.archived && 
-      (p.name.toLowerCase().includes(search.toLowerCase()) || 
-       (p.leadId && users.find(u => u.id === p.leadId)?.name.toLowerCase().includes(search.toLowerCase())))
+    return projects.filter(p =>
+      !p.archived &&
+      (p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.leadId && users.find(u => u.id === p.leadId)?.name.toLowerCase().includes(search.toLowerCase())))
     )
   }, [projects, search, users])
 
@@ -61,24 +62,28 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
   return (
     <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
       <DropdownMenuTrigger asChild>
-        <div role="button" className={cn(
-          "flex items-center space-x-2 text-sm transition-colors w-full text-left cursor-pointer group",
-          (selectedProject || selectedTask) ? "text-gray-900" : "text-[#03a9f4] hover:text-[#0288d1]"
-        )}>
-          {selectedProject ? (
-            <div className="flex items-center space-x-2 min-w-0 w-full overflow-hidden">
-               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: selectedProject.color }} />
-               <span className="truncate font-normal leading-normal block">
-                {selectedProject.name}{selectedTask ? ` : ${selectedTask.name}` : ''}
-               </span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-1">
-              <Plus className="h-4 w-4 stroke-[1.2px]" />
-              <span className="font-normal text-[13px]">Project</span>
-            </div>
-          )}
-        </div>
+        {customTrigger ? (
+          <div className="w-full">{customTrigger}</div>
+        ) : (
+          <div role="button" className={cn(
+            "flex items-center space-x-2 text-sm transition-colors w-full text-left cursor-pointer group",
+            (selectedProject || selectedTask) ? "text-gray-900" : "text-[#03a9f4] hover:text-[#0288d1]"
+          )}>
+            {selectedProject ? (
+              <div className="flex items-center space-x-2 min-w-0 w-full overflow-hidden">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: selectedProject.color }} />
+                <span className="truncate font-normal leading-normal block">
+                  {selectedProject.name}{selectedTask ? ` : ${selectedTask.name}` : ''}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1">
+                <Plus className="h-4 w-4 stroke-[1.2px]" />
+                <span className="font-normal text-[13px]">Project</span>
+              </div>
+            )}
+          </div>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[360px] p-0 shadow-2xl bg-white border border-gray-100 rounded-sm mt-1 z-[100] max-h-[85vh] flex flex-col">
         <div className="p-3 border-b border-gray-100">
@@ -103,7 +108,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
 
             return (
               <div key={leadId} className="mt-1">
-                <div 
+                <div
                   className="px-4 py-2 flex items-center justify-between group/lead cursor-pointer hover:bg-gray-50/80 transition-colors"
                   onClick={() => toggleLead(leadId)}
                 >
@@ -115,7 +120,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
                   <div className="flex items-center space-x-3 text-gray-400">
                     <span className="text-[11px] font-medium">{leadProjects.length} Projects</span>
                     {isLeadExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation()
                         setActiveLead({ id: leadId, name: leadName })
@@ -138,7 +143,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
 
                       return (
                         <div key={project.id}>
-                          <div 
+                          <div
                             className={cn(
                               "w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer group/project",
                               isSelected && "bg-blue-50/40"
@@ -155,7 +160,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
                               </span>
                             </div>
                             <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                              <div 
+                              <div
                                 className="flex items-center space-x-1 text-gray-400 hover:text-gray-600 transition-colors px-1 whitespace-nowrap"
                                 onClick={(e) => projectTasks.length > 0 && toggleProjectExpansion(project.id, e)}
                               >
@@ -176,7 +181,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
                               {projectTasks.map((task) => {
                                 const isTaskSelected = selectedTaskId === task.id
                                 return (
-                                  <div 
+                                  <div
                                     key={task.id}
                                     className={cn(
                                       "w-full flex items-center justify-between pl-9 pr-4 py-2 hover:bg-gray-100/50 transition-colors cursor-pointer group/task",
@@ -213,8 +218,8 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
         </div>
       </DropdownMenuContent>
 
-      <ProjectLeadModal 
-        isOpen={modalOpen} 
+      <ProjectLeadModal
+        isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         leadId={activeLead.id}
         leadName={activeLead.name}

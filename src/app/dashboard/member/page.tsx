@@ -14,9 +14,9 @@ export default function MemberDashboard() {
             {/* Personalized Header & Tracker */}
             <div className="p-8 pb-0">
                 <h1 className="text-2xl font-normal text-gray-500 tracking-tight">How's your day going, <span className="font-bold text-gray-900">{user.name.split(' ')[0]}</span>?</h1>
-                <div className="mt-6 bg-white p-2 rounded-sm border border-[#e4eaee] shadow-sm max-w-[1400px]">
+                {/* <div className="mt-6 bg-white p-2 rounded-sm border border-[#e4eaee] shadow-sm max-w-[1400px]">
                     <TimerBar />
-                </div>
+                </div> */}
             </div>
 
             <DashboardView />

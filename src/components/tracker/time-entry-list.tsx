@@ -220,7 +220,7 @@ function CalBtn({ date, onChange }: { date: Date; onChange: (d: Date) => void })
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export function TimeEntryList({ userId }: { userId: string }) {
-  const { timeEntries, projects, users, updateTimeEntry, deleteTimeEntry, deleteMultipleTimeEntries, addTimeEntry } = useDataStore()
+  const { timeEntries, projects, users, updateTimeEntry, deleteTimeEntry, deleteTimeEntries, addTimeEntry } = useDataStore()
   const { user } = useAuthStore()
   const [bulkMode, setBulkMode] = useState(false)
   const [selIds, setSelIds] = useState<string[]>([])
@@ -265,7 +265,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
 
   const onDup = (e: typeof entries[0]) => addTimeEntry({
     description: e.description, projectId: e.projectId, taskId: e.taskId,
-    tagIds: e.tagIds, billable: e.billable, userId: e.userId, workspaceId: e.workspaceId,
+    tagIds: e.tagIds, billable: e.billable, userId: e.userId,
     startTime: new Date(e.startTime), endTime: e.endTime ? new Date(e.endTime) : undefined, duration: e.duration,
   })
 
@@ -275,7 +275,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
       <DeleteConfirmation isOpen={!!delId} onClose={() => setDelId(null)}
         onConfirm={() => { if (delId) { deleteTimeEntry(delId); setDelId(null) } }} count={1} />
       <DeleteConfirmation isOpen={bulkDel} onClose={() => setBulkDel(false)}
-        onConfirm={() => { deleteMultipleTimeEntries(selIds); setSelIds([]); setBulkDel(false); setBulkMode(false) }}
+        onConfirm={() => { deleteTimeEntries(selIds); setSelIds([]); setBulkDel(false); setBulkMode(false) }}
         count={selIds.length} />
 
       {wKeys.map(wKey => {

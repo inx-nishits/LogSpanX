@@ -1,31 +1,36 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { getDashboardRoute, isPathAllowedForRole } from '@/lib/rbac'
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, hasHydrated, isInitializing, user } = useAuthStore()
+  const pathname = usePathname()
   const router = useRouter()
-  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
-    setIsHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    if (isHydrated && !isAuthenticated) {
-      router.push('/login')
+    if (hasHydrated && !isInitializing && !isAuthenticated) {
+      router.replace('/login')
     }
-  }, [isAuthenticated, router, isHydrated])
+  }, [hasHydrated, isInitializing, isAuthenticated, router])
 
-  if (!isHydrated || !isAuthenticated) {
+  useEffect(() => {
+    if (!hasHydrated || isInitializing || !isAuthenticated || !user || !pathname) return
+
+    if (!isPathAllowedForRole(pathname, user.role)) {
+      router.replace(getDashboardRoute(user.role))
+    }
+  }, [hasHydrated, isInitializing, isAuthenticated, user, pathname, router])
+
+  if (!hasHydrated || isInitializing || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f2f6f8]">
         <div className="text-center">

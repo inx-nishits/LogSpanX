@@ -9,9 +9,10 @@ interface TagPickerProps {
   selectedTagIds: string[]
   onChange: (tagIds: string[]) => void
   iconSize?: number
+  children?: React.ReactNode
 }
 
-export function TagPicker({ selectedTagIds, onChange, iconSize = 19 }: TagPickerProps) {
+export function TagPicker({ selectedTagIds, onChange, iconSize = 19, children }: TagPickerProps) {
   const { tags } = useDataStore()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -48,7 +49,11 @@ export function TagPicker({ selectedTagIds, onChange, iconSize = 19 }: TagPicker
   return (
     <div className="relative" ref={ref}>
       {/* Trigger: chip if tags selected, icon if not */}
-      {hasSelected ? (
+      {children ? (
+        <div onClick={e => { e.stopPropagation(); setOpen(o => !o) }}>
+          {children}
+        </div>
+      ) : hasSelected ? (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
