@@ -49,6 +49,7 @@ interface DataStore {
   addProject: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>
   updateProjects: (ids: string[], updates: Partial<Project>) => Promise<void>
+  deleteProject: (id: string) => Promise<void>
 
   createTag: (name: string) => Promise<void>
   updateTag: (id: string, updates: Partial<Tag>) => Promise<void>
@@ -139,8 +140,8 @@ export const useDataStore = create<DataStore>((set, get) => ({
       const timeEntriesRaw = Array.isArray(timeEntriesResult)
         ? timeEntriesResult
         : (timeEntriesResult && typeof timeEntriesResult === 'object' && 'entries' in timeEntriesResult && Array.isArray((timeEntriesResult as Record<string, unknown>).entries))
-        ? (timeEntriesResult as { entries: ApiTimeEntry[] }).entries
-        : extractArray<ApiTimeEntry>(timeEntriesResult)
+          ? (timeEntriesResult as { entries: ApiTimeEntry[] }).entries
+          : extractArray<ApiTimeEntry>(timeEntriesResult)
 
       set({
         users: users.map(mapApiUser),
@@ -297,7 +298,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   updateProjects: async (ids, updates) => {
     const token = useAuthStore.getState().token
-    const payload = await apiRequest<ApiProject[]>('/projects/bulk', {
+    const payload = await apiRequest<unknown>('/projects/bulk', {
       method: 'PUT',
       token,
       body: JSON.stringify({
@@ -311,9 +312,18 @@ export const useDataStore = create<DataStore>((set, get) => ({
       }),
     })
 
-    const updatedProjects = new Map(payload.map((project) => [project.id, mapApiProject(project)]))
+    const projectsArray = extractArray<ApiProject>(payload)
+    const updatedProjects = new Map(projectsArray.map((project) => [project.id, mapApiProject(project)]))
     set((state) => ({
       projects: state.projects.map((project) => updatedProjects.get(project.id) ?? project),
+    }))
+  },
+
+  deleteProject: async (id) => {
+    const token = useAuthStore.getState().token
+    await apiRequest(`/projects/${id}`, { method: 'DELETE', token })
+    set((state) => ({
+      projects: state.projects.filter((project) => project.id !== id),
     }))
   },
 
