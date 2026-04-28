@@ -259,11 +259,10 @@ export const useDataStore = create<DataStore>((set, get) => ({
       body: JSON.stringify({
         name: project.name,
         color: project.color,
-        clientId: project.clientId,
-        leadId: project.leadId,
+        clientName: project.clientName || undefined,
+        leadId: project.leadId || undefined,
         billable: project.billable,
-        hourlyRate: project.hourlyRate,
-        members: project.members.map(serializeProjectMember),
+        members: project.members.map((m) => (typeof m === 'string' ? m : m.userId)),
       }),
     })
 

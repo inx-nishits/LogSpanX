@@ -33,20 +33,18 @@ interface NewProjectModalProps {
   onSubmit: (data: {
     name: string
     color: string
-    clientId?: string
+    clientName?: string
     leadId?: string
     billable: boolean
-    hourlyRate?: number
   }) => Promise<void>
 }
 
 function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalProps) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(PROJECT_COLORS[0])
-  const [clientId, setClientId] = useState('')
+  const [clientName, setClientName] = useState('')
   const [leadId, setLeadId] = useState('')
   const [billable, setBillable] = useState(true)
-  const [hourlyRate, setHourlyRate] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,10 +57,9 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
       await onSubmit({
         name: name.trim(),
         color,
-        clientId: clientId || undefined,
+        clientName: clientName || undefined,
         leadId: leadId || undefined,
         billable,
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : undefined,
       })
       onClose()
     } catch (err) {
@@ -116,13 +113,13 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-bold text-[#999] uppercase tracking-widest">Client</label>
             <select
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
               className="w-full px-3 py-2 text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-white"
             >
               <option value="">— No client —</option>
               {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.name}>{c.name}</option>
               ))}
             </select>
           </div>
@@ -142,7 +139,7 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
             </select>
           </div>
 
-          {/* Billable + Hourly Rate */}
+          {/* Billable */}
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <button
@@ -156,20 +153,6 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
               </button>
               <span className="text-[15px] text-[#666]">Billable</span>
             </div>
-            {billable && (
-              <div className="flex items-center gap-2 flex-1">
-                <label className="text-[13px] text-[#999] whitespace-nowrap">Hourly Rate ($)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full px-3 py-1.5 text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]"
-                />
-              </div>
-            )}
           </div>
 
           {error && <p className="text-[13px] text-red-500">{error}</p>}

@@ -23,7 +23,9 @@ export interface Project {
   name: string
   color: string
   clientId?: string
+  clientName?: string
   leadId?: string
+  leadName?: string
   billable: boolean
   hourlyRate?: number
   members: ProjectMember[]

@@ -101,6 +101,6 @@ export async function apiRequest<T>(
   if (payload && typeof payload === 'object' && 'success' in payload && payload.success === false) {
     throw new ApiError(getMessage(payload, 'Request failed'), response.status, payload)
   }
-
+  
   return unwrapped as T
 }

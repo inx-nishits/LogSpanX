@@ -3,7 +3,8 @@ import { Client, Group, Project, ProjectMember, Tag, Task, TimeEntry, User } fro
 type Nullable<T> = T | null | undefined
 
 export interface ApiUser {
-  id: string
+  id?: string
+  _id?: string
   email: string
   name: string
   avatar?: string | null
@@ -20,28 +21,32 @@ export interface ApiGroup {
 }
 
 export interface ApiProject {
-  id: string
+  id?: string
+  _id?: string
   name: string
   color?: string | null
   clientId?: string | null
-  leadId?: string | null
+  clientName?: string | null
+  leadId?: string | { _id?: string; id?: string; name?: string; email?: string } | null
   billable: boolean
   hourlyRate?: number | null
-  members?: ProjectMember[]
+  members?: (ProjectMember | string)[]
   archived?: boolean
   createdAt?: string
   updatedAt?: string
 }
 
 export interface ApiTask {
-  id: string
+  id?: string
+  _id?: string
   name: string
   projectId?: string
   completed: boolean
 }
 
 export interface ApiClient {
-  id: string
+  id?: string
+  _id?: string
   name: string
   email?: string | null
   phone?: string | null
@@ -51,7 +56,8 @@ export interface ApiClient {
 }
 
 export interface ApiTag {
-  id: string
+  id?: string
+  _id?: string
   name: string
   archived?: boolean
   createdAt?: string
@@ -59,7 +65,8 @@ export interface ApiTag {
 }
 
 export interface ApiTimeEntry {
-  id: string
+  id?: string
+  _id?: string
   description: string
   projectId?: string | null
   clientId?: string | null
@@ -76,6 +83,21 @@ export interface ApiTimeEntry {
 
 function toDate(value: Nullable<string>, fallback = new Date()) {
   return value ? new Date(value) : fallback
+}
+
+/** Resolve _id / id from any Mongoose-serialized document */
+function resolveId(obj: { id?: string; _id?: string }): string {
+  return obj.id ?? obj._id ?? ''
+}
+
+function normalizeProjectLead(lead: ApiProject['leadId']) {
+  if (!lead) return {}
+  if (typeof lead === 'string') return { leadId: lead }
+
+  return {
+    leadId: lead._id ?? lead.id,
+    leadName: lead.name ?? undefined,
+  }
 }
 
 const normalizeApiRole = (role: string | undefined | null): User['role'] => {
@@ -102,7 +124,7 @@ const normalizeApiRole = (role: string | undefined | null): User['role'] => {
 
 export function mapApiUser(user: ApiUser): User {
   return {
-    id: user.id,
+    id: resolveId(user),
     email: user.email,
     name: user.name,
     avatar: user.avatar ?? undefined,
@@ -116,7 +138,7 @@ export function mapApiUser(user: ApiUser): User {
 export function mapApiGroup(group: ApiGroup): Group {
   const now = new Date()
   return {
-    id: group.id,
+    id: resolveId(group as { id?: string; _id?: string }),
     name: group.name,
     memberIds: group.memberIds ?? [],
     createdAt: now,
@@ -125,15 +147,25 @@ export function mapApiGroup(group: ApiGroup): Group {
 }
 
 export function mapApiProject(project: ApiProject): Project {
+  const lead = normalizeProjectLead(project.leadId)
+
+  // Normalize members: API may return string[] or ProjectMember[]
+  const members = (project.members ?? []).map((m) => {
+    if (typeof m === 'string') return { userId: m, role: 'member' as const }
+    return m
+  })
+
   return {
-    id: project.id,
+    id: resolveId(project),
     name: project.name,
     color: project.color ?? '#03a9f4',
     clientId: project.clientId ?? undefined,
-    leadId: project.leadId ?? undefined,
+    clientName: project.clientName ?? undefined,
+    leadId: lead.leadId,
+    leadName: lead.leadName,
     billable: project.billable,
     hourlyRate: project.hourlyRate ?? undefined,
-    members: project.members ?? [],
+    members,
     archived: project.archived ?? false,
     createdAt: toDate(project.createdAt),
     updatedAt: toDate(project.updatedAt),
@@ -142,7 +174,7 @@ export function mapApiProject(project: ApiProject): Project {
 
 export function mapApiTask(task: ApiTask, projectId?: string): Task {
   return {
-    id: task.id,
+    id: resolveId(task),
     name: task.name,
     projectId: task.projectId ?? projectId ?? '',
     completed: task.completed,
@@ -151,7 +183,7 @@ export function mapApiTask(task: ApiTask, projectId?: string): Task {
 
 export function mapApiClient(client: ApiClient): Client {
   return {
-    id: client.id,
+    id: resolveId(client),
     name: client.name,
     email: client.email ?? undefined,
     phone: client.phone ?? undefined,
@@ -163,7 +195,7 @@ export function mapApiClient(client: ApiClient): Client {
 
 export function mapApiTag(tag: ApiTag): Tag {
   return {
-    id: tag.id,
+    id: resolveId(tag),
     name: tag.name,
     archived: tag.archived ?? false,
     createdAt: toDate(tag.createdAt),
@@ -173,7 +205,7 @@ export function mapApiTag(tag: ApiTag): Tag {
 
 export function mapApiTimeEntry(entry: ApiTimeEntry): TimeEntry {
   return {
-    id: entry.id,
+    id: resolveId(entry),
     description: entry.description,
     projectId: entry.projectId ?? undefined,
     clientId: entry.clientId ?? undefined,
