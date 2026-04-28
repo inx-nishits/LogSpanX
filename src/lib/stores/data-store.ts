@@ -50,6 +50,12 @@ interface DataStore {
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>
   updateProjects: (ids: string[], updates: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
+  assignMember: (projectId: string, userId: string, role?: string, hourlyRate?: number) => Promise<void>
+  unassignMember: (projectId: string, userId: string) => Promise<void>
+
+  createTask: (projectId: string, name: string) => Promise<void>
+  updateTask: (taskId: string, updates: { name?: string; completed?: boolean }) => Promise<void>
+  deleteTask: (taskId: string) => Promise<void>
 
   createTag: (name: string) => Promise<void>
   updateTag: (id: string, updates: Partial<Tag>) => Promise<void>
@@ -275,17 +281,16 @@ export const useDataStore = create<DataStore>((set, get) => ({
   updateProject: async (id, updates) => {
     const token = useAuthStore.getState().token
     const payload = await apiRequest<ApiProject>(`/projects/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       token,
       body: JSON.stringify({
         name: updates.name,
         color: updates.color,
-        clientId: updates.clientId,
+        clientName: updates.clientName,
         leadId: updates.leadId,
         billable: updates.billable,
-        hourlyRate: updates.hourlyRate,
         archived: updates.archived,
-        members: updates.members?.map(serializeProjectMember),
+        members: updates.members?.map((m) => (typeof m === 'string' ? m : m.userId)),
       }),
     })
 
@@ -312,7 +317,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
     })
 
     const projectsArray = extractArray<ApiProject>(payload)
-    const updatedProjects = new Map(projectsArray.map((project) => [project.id, mapApiProject(project)]))
+    const updatedProjects = new Map(projectsArray.map((project) => [project.id ?? project._id, mapApiProject(project)]))
     set((state) => ({
       projects: state.projects.map((project) => updatedProjects.get(project.id) ?? project),
     }))
@@ -323,6 +328,70 @@ export const useDataStore = create<DataStore>((set, get) => ({
     await apiRequest(`/projects/${id}`, { method: 'DELETE', token })
     set((state) => ({
       projects: state.projects.filter((project) => project.id !== id),
+      tasks: state.tasks.filter((task) => task.projectId !== id),
+    }))
+  },
+
+  assignMember: async (projectId, userId, role = 'member', hourlyRate) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<ApiProject>(`/projects/${projectId}/members`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ userId, role, hourlyRate }),
+    })
+
+    const updatedProject = mapApiProject(payload)
+    set((state) => ({
+      projects: state.projects.map((p) => (p.id === projectId ? updatedProject : p)),
+    }))
+  },
+
+  unassignMember: async (projectId, userId) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<ApiProject>(`/projects/${projectId}/members/${userId}`, {
+      method: 'DELETE',
+      token,
+    })
+
+    const updatedProject = mapApiProject(payload)
+    set((state) => ({
+      projects: state.projects.map((p) => (p.id === projectId ? updatedProject : p)),
+    }))
+  },
+
+  createTask: async (projectId, name) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<ApiTask>(`/projects/${projectId}/tasks`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ name, completed: false }),
+    })
+
+    const createdTask = mapApiTask(payload, projectId)
+    set((state) => ({
+      tasks: [...state.tasks, createdTask],
+    }))
+  },
+
+  updateTask: async (taskId, updates) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<ApiTask>(`/tasks/${taskId}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(updates),
+    })
+
+    const updatedTask = mapApiTask(payload)
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t.id === taskId ? { ...updatedTask, projectId: t.projectId } : t)),
+    }))
+  },
+
+  deleteTask: async (taskId) => {
+    const token = useAuthStore.getState().token
+    await apiRequest(`/tasks/${taskId}`, { method: 'DELETE', token })
+    set((state) => ({
+      tasks: state.tasks.filter((t) => t.id !== taskId),
     }))
   },
 

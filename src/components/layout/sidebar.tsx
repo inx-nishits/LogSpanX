@@ -82,22 +82,12 @@ const getMenuItems = (role: User['role']) => {
     { label: 'Project Lead', icon: UserCircle, href: '/dashboard/project-lead' },
     { label: 'Tags',         icon: Tag,        href: '/dashboard/tags'         },
   ]
-  const extraItems: MenuItem[] = [
-    { label: 'Timesheet', icon: ClipboardList, href: '/dashboard/timesheet' },
-    { label: 'Kiosks',    icon: Grid3X3,       href: '/dashboard/kiosks'    },
-    { label: 'Schedule',  icon: CalendarRange, href: '/dashboard/schedule'  },
-    { label: 'Expenses',  icon: Receipt,       href: '/dashboard/expenses'  },
-    { label: 'Time Off',  icon: TimerOff,      href: '/dashboard/time-off'  },
-    { label: 'Activity',  icon: Activity,      href: '/dashboard/activity', chevron: true },
-    { label: 'Approvals', icon: CheckSquare,   href: '/dashboard/approvals' },
-    { label: 'Invoices',  icon: FileText,      href: '/dashboard/invoices'  },
-  ]
 
   const filteredManage = (role === 'member' || role === 'viewer')
     ? manageItems.filter(i => !['Team', 'Project Lead'].includes(i.label))
     : manageItems
 
-  return { topItems, analyzeItems, manageItems: filteredManage, extraItems }
+  return { topItems, analyzeItems, manageItems: filteredManage }
 }
 
 /* ── Sidebar ────────────────────────────────────────────────── */
@@ -110,7 +100,7 @@ export function Sidebar() {
   const [flyoutTop, setFlyoutTop]         = useState(0)
   const reportsRef = useRef<HTMLDivElement>(null)
 
-  const { topItems, analyzeItems, manageItems, extraItems } = getMenuItems(user?.role || 'member')
+  const { topItems, analyzeItems, manageItems } = getMenuItems(user?.role || 'member')
   const col = isCollapsed && !isMobileOpen   // true when desktop-collapsed
 
   /* ── single nav row ── */
@@ -213,7 +203,7 @@ export function Sidebar() {
           <Section label="Manage" />
           {manageItems.map(i => <Row key={i.href} item={i} />)}
 
-          {/* Show More */}
+          {/* Show More
           {!col && (
             <button
               onClick={() => setShowMore(v => !v)}
@@ -226,9 +216,9 @@ export function Sidebar() {
                 {showMore ? 'Show Less' : 'Show More'}
               </span>
             </button>
-          )}
+          )} */}
 
-          {showMore && extraItems.map(i => <Row key={i.href} item={i} />)}
+          
         </nav>
 
         {/* ── Clockify «» collapse button ── */}
