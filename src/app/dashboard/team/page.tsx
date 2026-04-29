@@ -22,12 +22,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { X, UserPlus, ShieldCheck } from 'lucide-react'
+import { X } from 'lucide-react'
+import { canInviteMembers, canChangeUserRole, canDeleteUser } from '@/lib/rbac'
 
 export default function TeamPage() {
   const { user } = useAuthStore()
   const { users, groups: storeGroups } = useDataStore()
-  const isReadOnly = user?.role === 'member' || user?.role === 'viewer'
+  // TEAM_MEMBER is read-only; ADMIN and TEAM_LEAD can manage
+  const isReadOnly = user?.role === 'member'
+  const canInvite = user ? canInviteMembers(user.role) : false
+  const canChangeRole = user ? canChangeUserRole(user.role) : false
+  const canDelete = user ? canDeleteUser(user.role) : false
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<'MEMBERS' | 'GROUPS' | 'REMINDERS'>('MEMBERS')
 
@@ -119,7 +124,7 @@ export default function TeamPage() {
             ))}
           </div>
 
-          {!isReadOnly && (
+          {canInvite && (
             <button
               onClick={() => setIsAddMemberModalOpen(true)}
               className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[12px] font-bold py-2.5 px-6 rounded-[2px] transition-colors uppercase tracking-widest"
@@ -272,13 +277,13 @@ export default function TeamPage() {
                         <td className="p-4 py-2">
                           {member.role ? (
                             <span
-                              onClick={() => !isReadOnly && (setSelectedUserForRole(member), setIsRoleModalOpen(true))}
-                              className={cn('text-[#333] transition-colors', !isReadOnly && 'hover:text-[#03a9f4] cursor-pointer')}
+                              onClick={() => canChangeRole && (setSelectedUserForRole(member), setIsRoleModalOpen(true))}
+                              className={cn('text-[#333] transition-colors', canChangeRole && 'hover:text-[#03a9f4] cursor-pointer')}
                             >
-                              {member.role === 'owner' ? 'Owner' : member.role === 'admin' ? 'Project Manager' : 'Member'}
+                              {member.role === 'owner' ? 'Admin' : member.role === 'admin' ? 'Team Lead' : 'Team Member'}
                             </span>
                           ) : (
-                            !isReadOnly ? (
+                            canChangeRole ? (
                               <button
                                 onClick={() => { setSelectedUserForRole(member); setIsRoleModalOpen(true); }}
                                 className="flex items-center gap-1.5 text-[#03a9f4] hover:underline"
@@ -322,7 +327,7 @@ export default function TeamPage() {
                       className="flex-1 text-[13px] outline-none placeholder:text-[#bbb] bg-transparent"
                     />
                   </div>
-                  {!isReadOnly && (
+                  {canInvite && (
                     <div className="flex items-center gap-2">
                       <div className="w-[200px] border border-[#c6d2d9] rounded-[2px] h-9 flex items-center px-3 bg-white focus-within:border-[#03a9f4]">
                         <input placeholder="Add new group" className="w-full text-[13px] outline-none placeholder:text-[#bbb]" />
@@ -364,7 +369,7 @@ export default function TeamPage() {
                           </div>
                         </td>
                         <td className="p-4 py-2 text-right pr-6">
-                          {!isReadOnly && (
+                          {canDelete && (
                             <div className="flex items-center justify-end gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Pencil className="h-4 w-4 text-[#ccc] hover:text-[#03a9f4] cursor-pointer" />
                               <Trash2 className="h-4 w-4 text-[#ccc] hover:text-[#f44336] cursor-pointer" />
@@ -381,7 +386,7 @@ export default function TeamPage() {
         </div>
       </div>
       {/* Role Selection Modal — admins/owners only */}
-      {!isReadOnly && isRoleModalOpen && selectedUserForRole && (
+      {canChangeRole && isRoleModalOpen && selectedUserForRole && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000] p-4">
           <div className="bg-white rounded-[2px] shadow-2xl w-full max-w-[580px] overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between border-b border-[#e4eaee]">
@@ -419,7 +424,7 @@ export default function TeamPage() {
       )}
 
       {/* Add Member Modal — admins/owners only */}
-      {!isReadOnly && isAddMemberModalOpen && (
+      {canInvite && isAddMemberModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000] p-4">
           <div className="bg-white rounded-[2px] shadow-2xl w-full max-w-[760px] overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between border-b border-[#e4eaee]">

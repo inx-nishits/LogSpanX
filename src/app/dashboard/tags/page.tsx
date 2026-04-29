@@ -111,7 +111,7 @@ function MoreMenu({ archived, onEdit, onArchive, onDelete }: {
 export default function TagsPage() {
   const { tags, createTag, updateTag, deleteTag } = useDataStore()
   const { user } = useAuthStore()
-  const isReadOnly = user?.role === 'member' || user?.role === 'viewer'
+  const isReadOnly = user?.role === 'member'
   const [showFilter, setShowFilter] = useState<ShowFilter>('active')
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')

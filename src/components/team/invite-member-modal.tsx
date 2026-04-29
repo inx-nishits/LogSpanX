@@ -28,16 +28,10 @@ const ROLES: { id: UserType['role']; title: string; desc: string; icon: any }[] 
         icon: Shield
     },
     {
-        id: 'member',
+        id: 'member' as const,
         title: 'Team Member',
         desc: 'Can track time on assigned tasks and view personal reports.',
         icon: User
-    },
-    {
-        id: 'viewer',
-        title: 'Viewer',
-        desc: 'Read-only access to project reports and timelines.',
-        icon: Eye
     },
 ]
 

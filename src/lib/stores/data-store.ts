@@ -207,12 +207,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      // Only fetch users/groups if user is owner or admin
+      // ADMIN and TEAM_LEAD can both fetch users and groups
       const canManageTeam = currentUser.role === 'owner' || currentUser.role === 'admin'
 
       const [usersRaw, groupsRaw, clientsRaw, projectsRaw, tagsRaw, timeEntriesResult] = await Promise.all([
-        canManageTeam ? apiRequest<unknown>('/users', { method: 'GET', token }) : Promise.resolve([]),
-        canManageTeam ? apiRequest<unknown>('/groups', { method: 'GET', token }) : Promise.resolve([]),
+        apiRequest<unknown>('/users', { method: 'GET', token }).catch(() => []),
+        canManageTeam ? apiRequest<unknown>('/groups', { method: 'GET', token }).catch(() => []) : Promise.resolve([]),
         apiRequest<unknown>('/clients', { method: 'GET', token }),
         apiRequest<unknown>('/projects', { method: 'GET', token }),
         apiRequest<unknown>('/tags', { method: 'GET', token }),
@@ -223,7 +223,9 @@ export const useDataStore = create<DataStore>((set, get) => ({
         }),
       ])
 
-      const users = canManageTeam ? extractArray<ApiUser>(usersRaw) : []
+      const usersRawArray = extractArray<ApiUser>(usersRaw)
+      // If /users returned empty or was forbidden, fall back to just the current user
+      const users = usersRawArray.length > 0 ? usersRawArray : [currentUser as unknown as ApiUser]
       const groups = canManageTeam ? extractArray<ApiGroup>(groupsRaw) : []
       const clients = extractArray<ApiClient>(clientsRaw)
       const projects = extractArray<ApiProject>(projectsRaw)

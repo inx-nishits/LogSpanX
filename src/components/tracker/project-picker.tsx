@@ -103,7 +103,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
 
           {Object.entries(groupedByLead).map(([leadId, leadProjects]) => {
             const lead = users.find(u => u.id === leadId)
-            const leadName = lead ? lead.name : 'NO PROJECT LEAD'
+            const leadName = lead?.name || leadProjects[0]?.leadName || (leadId === 'no_lead' ? 'NO PROJECT LEAD' : 'NO PROJECT LEAD')
             const isLeadExpanded = expandedLeads.includes(leadId) || search.length > 0
 
             return (

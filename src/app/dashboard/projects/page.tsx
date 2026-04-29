@@ -177,7 +177,7 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
 export default function ProjectsPage() {
   const { projects: storeProjects, users, clients, timeEntries, addProject, updateProjects, deleteProject } = useDataStore()
   const { user } = useAuthStore()
-  const isReadOnly = user?.role === 'member' || user?.role === 'viewer'
+  const isReadOnly = user?.role === 'member'
 
   const [showNewModal, setShowNewModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)

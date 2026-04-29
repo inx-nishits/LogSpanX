@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react'
@@ -10,83 +10,15 @@ import { FilterDropdown } from '../summary/filter-dropdown'
 import { DateRangePicker } from '@/components/dashboard/date-range-picker'
 import { FilterVisibilityDropdown, FilterKey, ALL_FILTER_KEYS } from './filter-visibility-dropdown'
 import { DescriptionPill } from './description-pill'
+import { useDataStore } from '@/lib/stores/data-store'
+import { canViewAllTimeEntries } from '@/lib/rbac'
+import { useAuthStore } from '@/lib/stores/auth-store'
 
 export const TABS = [
   { label: 'Summary', href: '/dashboard/reports/summary' },
   { label: 'Detailed', href: '/dashboard/reports/detailed' },
   { label: 'Weekly', href: '/dashboard/reports/weekly' },
   { label: 'Shared', href: '/dashboard/reports/shared' },
-]
-
-export const TEAM_ITEMS = [
-  { id: 'g1', label: 'MEAR-Front End', group: 'Groups' },
-  { id: 'g2', label: 'MRN-Backend', group: 'Groups' },
-  { id: 'g3', label: 'Project Leads', group: 'Groups' },
-  { id: 'g4', label: 'Sales', group: 'Groups' },
-  { id: 'g5', label: 'Team BA', group: 'Groups' },
-  { id: 'g6', label: 'Team Design', group: 'Groups' },
-  { id: 'user_1', label: 'Nishit Sangani' },
-  { id: 'user_2', label: 'Aiyub Munshi' },
-  { id: 'user_3', label: 'Jaydeep Vegad' },
-  { id: 'user_4', label: 'Sonu Gupta' },
-  { id: 'user_5', label: 'Vrutik Patel' },
-  { id: 'user_6', label: 'Ram Jangid' },
-]
-
-export const LEAD_ITEMS = [
-  { id: 'pl_1', label: 'Aiyub Munshi' },
-  { id: 'pl_2', label: 'Chirag Gopiyani' },
-  { id: 'pl_3', label: 'Darshan Belani' },
-  { id: 'pl_4', label: 'Harin Patel' },
-  { id: 'pl_5', label: 'Inheritx Solutions' },
-  { id: 'pl_6', label: 'Jamal Derdivala' },
-  { id: 'pl_7', label: 'Jaydeep Vegad' },
-  { id: 'pl_8', label: 'Nishit Sangani' },
-]
-
-export const PROJECT_ITEMS = [
-  { id: 'project_1', label: 'StaffBot Dedicated : Billable', group: 'Jaydeep Vegad' },
-  { id: 'project_2', label: 'Nexaan(Jiteshbhai) : T & M : Billable', group: 'Sonu Gupta' },
-  { id: 'project_3', label: 'Kavia AI : Dedicated : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_4', label: '_INX-Learning : Non-Billable', group: 'Aiyub Munshi' },
-  { id: 'project_5', label: 'Ecosmob : Dedicated : Billable', group: 'Ram Jangid' },
-  { id: 'project_6', label: 'Nurvia : Fixed-cost : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_7', label: 'Lifeguru : Fixed-cost : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_8', label: 'Pocket Sergeant : Maintenance : Billable', group: 'Vrutik Patel' },
-  { id: 'project_9', label: 'Inhouse Clokify Revamp :: Next - Node', group: 'Nishit Sangani' },
-  { id: 'project_10', label: 'Culturify : Fixed cost : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_11', label: 'DycoVue : Dedicated : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_12', label: 'Ceremonia : Fixed Cost : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_13', label: '_INX-Company Website Revamp', group: 'No Project Lead' },
-  { id: 'project_14', label: 'HealthSync : T & M : Billable', group: 'Sonu Gupta' },
-]
-
-export const TASK_ITEMS = [
-  { id: 'task_1', label: 'Frontend Refactor', group: 'StaffBot Dedicated : Billable' },
-  { id: 'task_2', label: 'API Integration', group: 'Nexaan : T & M : Billable' },
-  { id: 'task_3', label: 'ML Pipeline Setup', group: 'Kavia AI : Dedicated : Billable' },
-  { id: 'task_4', label: 'React Training Module', group: '_INX-Learning : Non-Billable' },
-  { id: 'task_5', label: 'VoIP Gateway Config', group: 'Ecosmob : Dedicated : Billable' },
-  { id: 'task_6', label: 'Dashboard UI', group: 'Nurvia : Fixed-cost : Billable' },
-  { id: 'task_7', label: 'Backend Optimization', group: 'Lifeguru : Fixed-cost : Billable' },
-  { id: 'task_8', label: 'Bug Fixes Sprint 4', group: 'Pocket Sergeant : Maintenance : Billable' },
-  { id: 'task_9', label: 'Next.js Migration', group: 'Inhouse Clokify Revamp :: Next - Node' },
-  { id: 'task_10', label: 'Payment Integration', group: 'Culturify : Fixed cost : Billable' },
-  { id: 'task_11', label: 'Real-time Sync', group: 'DycoVue : Dedicated : Billable' },
-  { id: 'task_12', label: 'Landing Page Design', group: 'Ceremonia : Fixed Cost : Billable' },
-  { id: 'task_13', label: 'SEO Audit', group: '_INX-Company Website Revamp' },
-  { id: 'task_14', label: 'FHIR API Integration', group: 'HealthSync : T & M : Billable' },
-]
-
-export const TAG_ITEMS = [
-  { id: 'tag_1', label: 'Bug' },
-  { id: 'tag_2', label: 'Feature' },
-  { id: 'tag_3', label: 'Review' },
-  { id: 'tag_4', label: 'Meeting' },
-  { id: 'tag_5', label: 'Research' },
-  { id: 'tag_6', label: 'Design' },
-  { id: 'tag_7', label: 'DevOps' },
-  { id: 'tag_8', label: 'Testing' },
 ]
 
 export const STATUS_ITEMS = [
@@ -116,6 +48,59 @@ interface ReportShellProps {
 
 export function ReportShell({ dateRange, onRangeChange, showFilters = true, initialTeam = [], initialLead = [], initialProject = [], initialTags = [], initialTasks = [], initialStatus = [], initialDescription = '', onApply, children }: ReportShellProps) {
   const pathname = usePathname()
+  const { user } = useAuthStore()
+  const { users, groups, projects, tasks, tags } = useDataStore()
+
+  // ── Build filter items from store data ──────────────────────────────────────
+  const teamItems = useMemo(() => {
+    const groupItems = groups.map(g => ({ id: g.id, label: g.name, group: 'Groups' }))
+    const userItems = canViewAllTimeEntries(user?.role ?? 'member')
+      ? users.map(u => ({ id: u.id, label: u.name }))
+      : [] // members only see their own data, no team filter needed
+    return [...groupItems, ...userItems]
+  }, [groups, users, user])
+
+  const leadItems = useMemo(() => {
+    // Unique leads from projects that have a leadId
+    const seen = new Set<string>()
+    return projects
+      .filter(p => p.leadId && p.leadName)
+      .reduce<{ id: string; label: string }[]>((acc, p) => {
+        if (!seen.has(p.leadId!)) {
+          seen.add(p.leadId!)
+          acc.push({ id: p.leadId!, label: p.leadName! })
+        }
+        return acc
+      }, [])
+  }, [projects])
+
+  const projectItems = useMemo(() =>
+    projects
+      .filter(p => !p.archived)
+      .map(p => ({
+        id: p.id,
+        label: p.name,
+        group: p.leadName || 'No Project Lead',
+      })),
+    [projects]
+  )
+
+  const taskItems = useMemo(() =>
+    tasks.map(t => {
+      const proj = projects.find(p => p.id === t.projectId)
+      return { id: t.id, label: t.name, group: proj?.name || 'Unknown Project' }
+    }),
+    [tasks, projects]
+  )
+
+  const tagItems = useMemo(() =>
+    tags
+      .filter(t => !t.archived)
+      .map(t => ({ id: t.id, label: t.name })),
+    [tags]
+  )
+  // ────────────────────────────────────────────────────────────────────────────
+
   const [selTeam, setSelTeam] = useState<string[]>(initialTeam)
   const [selLead, setSelLead] = useState<string[]>(initialLead)
   const [selProject, setSelProject] = useState<string[]>(initialProject)
@@ -193,19 +178,19 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
           <FilterVisibilityDropdown visible={visibleFilters} onChange={setVisibleFilters} />
           {visibleFilters.includes('Team') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-              <FilterDropdown label="Team" placeholder="Search users or groups" items={TEAM_ITEMS} selected={selTeam} onChange={setSelTeam} /></>)}
+              <FilterDropdown label="Team" placeholder="Search users or groups" items={teamItems} selected={selTeam} onChange={setSelTeam} noDataMessage="No users or groups" /></>)}
           {visibleFilters.includes('Project Lead') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-              <FilterDropdown label="Project Lead" placeholder="Search Project Lead" items={LEAD_ITEMS} selected={selLead} onChange={setSelLead} showWithout="Without Project Lead" /></>)}
+              <FilterDropdown label="Project Lead" placeholder="Search Project Lead" items={leadItems} selected={selLead} onChange={setSelLead} showWithout="Without Project Lead" noDataMessage="No project leads" /></>)}
           {visibleFilters.includes('Project') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-              <FilterDropdown label="Project" placeholder="Search Projects" items={PROJECT_ITEMS} selected={selProject} onChange={setSelProject} showWithout="Without Project" /></>)}
+              <FilterDropdown label="Project" placeholder="Search Projects" items={projectItems} selected={selProject} onChange={setSelProject} showWithout="Without Project" noDataMessage="No projects" /></>)}
           {visibleFilters.includes('Task') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-              <FilterDropdown label="Task" placeholder="Search Tasks" items={TASK_ITEMS} selected={selTask} onChange={setSelTask} showWithout="Without Task" /></>)}
+              <FilterDropdown label="Task" placeholder="Search Tasks" items={taskItems} selected={selTask} onChange={setSelTask} showWithout="Without Task" noDataMessage="No tasks" /></>)}
           {visibleFilters.includes('Tag') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
-              <FilterDropdown label="Tag" placeholder="Search Tags" items={TAG_ITEMS} selected={selTag} onChange={setSelTag} showWithout="Without Tag" /></>)}
+              <FilterDropdown label="Tag" placeholder="Search Tags" items={tagItems} selected={selTag} onChange={setSelTag} showWithout="Without Tag" noDataMessage="No tags" /></>)}
           {visibleFilters.includes('Status') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
               <FilterDropdown label="Status" placeholder="" items={STATUS_ITEMS} selected={selStatus} onChange={setSelStatus} noSearch /></>)}

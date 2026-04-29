@@ -3,7 +3,7 @@ export interface User {
   email: string
   name: string
   avatar?: string
-  role: 'owner' | 'admin' | 'member' | 'viewer'
+  role: 'owner' | 'admin' | 'member'
   archived?: boolean
   billableRate?: number
   group?: string

@@ -18,9 +18,10 @@ interface FilterDropdownProps {
   onChange: (ids: string[]) => void
   showWithout?: string
   noSearch?: boolean
+  noDataMessage?: string
 }
 
-export function FilterDropdown({ label, placeholder, items, selected, onChange, showWithout, noSearch }: FilterDropdownProps) {
+export function FilterDropdown({ label, placeholder, items, selected, onChange, showWithout, noSearch, noDataMessage }: FilterDropdownProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const ref = useRef<HTMLDivElement>(null)
@@ -179,8 +180,10 @@ export function FilterDropdown({ label, placeholder, items, selected, onChange, 
               </div>
             ))}
 
-            {filteredItems.length === 0 && ungrouped.length === 0 && (
-              <div className="pl-4 py-4 text-[15px] text-[#aaa]">No results</div>
+            {filteredItems.length === 0 && Object.keys(groups).length === 0 && ungrouped.length === 0 && (
+              <div className="pl-4 py-4 text-[15px] text-[#aaa]">
+                {search ? 'No results' : (noDataMessage || 'No data to show')}
+              </div>
             )}
           </div>
         </div>

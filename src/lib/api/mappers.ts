@@ -108,22 +108,17 @@ function normalizeProjectLead(lead: ApiProject['leadId']) {
 const normalizeApiRole = (role: string | undefined | null): User['role'] => {
   const normalized = String(role ?? '').toLowerCase().trim()
 
-  if (['owner', 'admin', 'projects_manager', 'project_manager', 'project manager'].includes(normalized)) {
+  // Backend ADMIN role
+  if (['admin'].includes(normalized)) {
     return 'owner'
   }
 
-  if (['team_lead', 'team lead', 'project_lead', 'project lead', 'lead'].includes(normalized)) {
+  // Backend TEAM_LEAD role
+  if (['team_lead', 'team lead'].includes(normalized)) {
     return 'admin'
   }
 
-  if (['member', 'team_member', 'team member', 'user'].includes(normalized)) {
-    return 'member'
-  }
-
-  if (normalized === 'viewer') {
-    return 'viewer'
-  }
-
+  // Backend TEAM_MEMBER role (and any unknown role defaults to member)
   return 'member'
 }
 
