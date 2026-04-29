@@ -113,18 +113,6 @@ export function TeamActivities({ dateRange }: TeamActivitiesProps) {
 
     const maxHours = useMemo(() => Math.max(...members.map(m => m.totalHours), 1), [members])
 
-    const SortIcon = ({ col }: { col: 'member' | 'activity' }) => {
-        if (col === 'member') {
-            if (memberSort === 'asc') return <ChevronUp className="h-3 w-3 text-[#03a9f4]" />
-            if (memberSort === 'desc') return <ChevronDown className="h-3 w-3 text-[#03a9f4]" />
-        }
-        if (col === 'activity') {
-            if (activitySort === 'no-desc-first') return <ChevronUp className="h-3 w-3 text-[#03a9f4]" />
-            if (activitySort === 'no-activity-first') return <ChevronDown className="h-3 w-3 text-[#03a9f4]" />
-        }
-        return <ChevronsUpDown className="h-3 w-3 text-[#ccc]" />
-    }
-
     return (
         <div className="bg-white rounded-sm border border-[#e4eaee]">
             <div className="px-6 py-2.5 border-b border-[#e4eaee] bg-[#fcfcfc]">
@@ -136,13 +124,13 @@ export function TeamActivities({ dateRange }: TeamActivitiesProps) {
                     onClick={cycleMemSort}
                     className="col-span-2 flex items-center gap-1 hover:text-[#555] transition-colors cursor-pointer"
                 >
-                    Team Member <SortIcon col="member" />
+                    Team Member {memberSort === 'asc' ? <ChevronUp className="h-3 w-3 text-[#03a9f4]" /> : memberSort === 'desc' ? <ChevronDown className="h-3 w-3 text-[#03a9f4]" /> : <ChevronsUpDown className="h-3 w-3 text-[#ccc]" />}
                 </button>
                 <button
                     onClick={cycleActSort}
                     className="col-span-4 flex items-center gap-1 hover:text-[#555] transition-colors cursor-pointer"
                 >
-                    Latest Activity <SortIcon col="activity" />
+                    Latest Activity {activitySort === 'no-desc-first' ? <ChevronUp className="h-3 w-3 text-[#03a9f4]" /> : activitySort === 'no-activity-first' ? <ChevronDown className="h-3 w-3 text-[#03a9f4]" /> : <ChevronsUpDown className="h-3 w-3 text-[#ccc]" />}
                 </button>
                 <div className="col-span-6 text-right">Total Tracked</div>
             </div>

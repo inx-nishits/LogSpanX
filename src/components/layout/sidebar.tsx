@@ -84,7 +84,7 @@ const getMenuItems = (role: User['role']) => {
   ]
 
   const filteredManage = (role === 'member' || role === 'viewer')
-    ? manageItems.filter(i => !['Team', 'Project Lead'].includes(i.label))
+    ? manageItems.filter(i => !['Project Lead'].includes(i.label))
     : manageItems
 
   return { topItems, analyzeItems, manageItems: filteredManage }

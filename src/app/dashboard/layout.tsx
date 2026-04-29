@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { useDataStore } from '@/lib/stores/data-store'
 import { getDashboardRoute, isPathAllowedForRole } from '@/lib/rbac'
 
 export default function DashboardLayout({
@@ -12,25 +13,31 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { isAuthenticated, hasHydrated, isInitializing, user } = useAuthStore()
+  const { authStatus, hasHydrated, user } = useAuthStore()
+  const { isInitialized } = useDataStore()
   const pathname = usePathname()
   const router = useRouter()
 
+  const isAuthenticated = authStatus === 'authenticated'
+  const isAuthPending = authStatus === 'initializing' || authStatus === 'idle'
+  const isLoading = isAuthPending || (isAuthenticated && !isInitialized)
+
+  // Redirect to login if unauthenticated
   useEffect(() => {
-    if (hasHydrated && !isInitializing && !isAuthenticated) {
+    if (hasHydrated && authStatus === 'unauthenticated') {
       router.replace('/login')
     }
-  }, [hasHydrated, isInitializing, isAuthenticated, router])
+  }, [hasHydrated, authStatus, router])
 
+  // RBAC route guard — only runs when auth + data are both ready
   useEffect(() => {
-    if (!hasHydrated || isInitializing || !isAuthenticated || !user || !pathname) return
-
+    if (!hasHydrated || isAuthPending || !isAuthenticated || !user || !pathname) return
     if (!isPathAllowedForRole(pathname, user.role)) {
       router.replace(getDashboardRoute(user.role))
     }
-  }, [hasHydrated, isInitializing, isAuthenticated, user, pathname, router])
+  }, [hasHydrated, isAuthPending, isAuthenticated, user, pathname, router])
 
-  if (!hasHydrated || isInitializing || !isAuthenticated) {
+  if (!hasHydrated || isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f2f6f8]">
         <div className="text-center">
@@ -43,16 +50,11 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-[#f2f6f8] overflow-hidden relative">
-      {/* Sidebar - Positioned differently on mobile */}
       <div className="z-50 h-full relative">
         <Sidebar />
       </div>
-
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-full">
-        {/* Fixed Topbar */}
         <Topbar />
-        
-        {/* Main Content Area - Scrollable */}
         <main className="flex-1 overflow-y-auto scrollbar-hide relative h-full">
           {children}
         </main>

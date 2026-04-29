@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/auth-store'
 
 export default function HomePage() {
-  const { isAuthenticated, user, hasHydrated, isInitializing } = useAuthStore()
+  const { authStatus, user, hasHydrated } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (!hasHydrated || isInitializing) return
+    if (!hasHydrated || authStatus === 'idle' || authStatus === 'initializing') return
 
-    if (!isAuthenticated || !user) {
+    if (authStatus !== 'authenticated' || !user) {
       router.replace('/login')
       return
     }
@@ -24,7 +24,7 @@ export default function HomePage() {
     } else {
       router.replace('/dashboard/member')
     }
-  }, [hasHydrated, isInitializing, isAuthenticated, user, router])
+  }, [hasHydrated, authStatus, user, router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

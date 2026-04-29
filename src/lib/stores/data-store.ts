@@ -16,10 +16,47 @@ import {
   mapApiTask,
   mapApiTimeEntry,
   mapApiUser,
-  serializeProjectMember,
   serializeTimeEntryPatch,
 } from '@/lib/api/mappers'
-import { Client, Group, Project, Tag, Task, TimeEntry, User } from '@/lib/types'
+import { Client, Group, Project, Tag, Task, TimeEntry, User, ReportFilters } from '@/lib/types'
+
+export interface SummaryReportData {
+  totalAmount: number
+  totalDuration: number
+  groupings: { groupName: string; duration: number; amount: number }[]
+}
+
+export interface DetailedReportData {
+  entries: { id: string; duration: number }[]
+  totalDuration: number
+  totalAmount: number
+}
+
+export interface WeeklyReportData {
+  days: { date: string; duration: number }[]
+  totalDuration: number
+}
+
+export interface SharedReport {
+  id: string
+  name: string
+  token: string
+  type: 'summary' | 'detailed' | 'weekly'
+  filters: unknown
+}
+
+export interface SharedReportData {
+  reportDetails: { name: string }
+  data: { totalDuration: number; groupings: unknown[] }
+}
+
+export interface DashboardStats {
+  todayHours: number
+  weekHours: number
+  activeProjects: number
+  topProject: string
+  teamActivity: unknown[]
+}
 
 interface DataStore {
   timeEntries: TimeEntry[]
@@ -57,13 +94,29 @@ interface DataStore {
   updateTask: (taskId: string, updates: { name?: string; completed?: boolean }) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
 
+  addClient: (client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  updateClient: (id: string, updates: Partial<Client>) => Promise<void>
+  deleteClient: (id: string) => Promise<void>
+
   createTag: (name: string) => Promise<void>
   updateTag: (id: string, updates: Partial<Tag>) => Promise<void>
   deleteTag: (id: string) => Promise<void>
 
+  createGroup: (name: string, memberIds: string[]) => Promise<void>
+  updateGroup: (id: string, updates: { name?: string; memberIds?: string[] }) => Promise<void>
+  deleteGroup: (id: string) => Promise<void>
+
   inviteUser: (email: string, role: User['role'], billableRate?: number) => Promise<void>
   updateUserRecord: (id: string, updates: Partial<User>) => Promise<void>
   deleteUserRecord: (id: string) => Promise<void>
+
+  getSummaryReport: (filters: ReportFilters) => Promise<SummaryReportData>
+  getDetailedReport: (filters: ReportFilters) => Promise<DetailedReportData>
+  getWeeklyReport: (filters: ReportFilters) => Promise<WeeklyReportData>
+  shareReport: (name: string, type: 'summary' | 'detailed' | 'weekly', filters: ReportFilters) => Promise<{ token: string; url: string }>
+  getSharedReports: () => Promise<SharedReport[]>
+  getSharedReport: (token: string) => Promise<SharedReportData>
+  getDashboardStats: () => Promise<DashboardStats>
 }
 
 function initialState() {
@@ -101,42 +154,77 @@ function extractArray<T>(payload: unknown): T[] {
 
 async function fetchProjectTasks(projects: Project[]) {
   const token = useAuthStore.getState().token
-  const taskGroups = await Promise.all(
-    projects.map(async (project) => {
-      const tasksRaw = await apiRequest<ApiTask[]>(`/projects/${project.id}/tasks`, { method: 'GET', token })
-      const tasks = extractArray<ApiTask>(tasksRaw)
-      return tasks.map((task) => mapApiTask(task, project.id))
-    })
-  )
+  const CONCURRENCY = 5
+  const results: Task[] = []
 
-  return taskGroups.flat()
+  for (let i = 0; i < projects.length; i += CONCURRENCY) {
+    const batch = projects.slice(i, i + CONCURRENCY)
+    const batchResults = await Promise.all(
+      batch.map(async (project) => {
+        try {
+          const tasksRaw = await apiRequest<ApiTask[]>(`/projects/${project.id}/tasks`, { method: 'GET', token })
+          const tasks = extractArray<ApiTask>(tasksRaw)
+          return tasks.map((task) => mapApiTask(task, project.id))
+        } catch {
+          return []
+        }
+      })
+    )
+    results.push(...batchResults.flat())
+  }
+
+  return results
 }
 
 export const useDataStore = create<DataStore>((set, get) => ({
   ...initialState(),
 
   initialize: async () => {
-    if (get().isLoading) return
+    if (get().isLoading || get().isInitialized) return
     const token = useAuthStore.getState().token
     if (!token) {
       set({ ...initialState(), isInitialized: false })
       return
     }
 
+    // Resolve the current user — may be null on first load if auth hasn't
+    // finished initializing yet, so fall back to fetching /auth/me directly.
+    let currentUser = useAuthStore.getState().user
+    if (!currentUser) {
+      try {
+        const profile = await apiRequest<ApiUser>('/auth/me', { method: 'GET', token })
+        currentUser = mapApiUser(profile)
+        useAuthStore.getState().setToken(token)
+        // Use set with a function to merge safely without overwriting persisted fields
+        const resolvedUser = currentUser
+        useAuthStore.setState((s) => ({ ...s, user: resolvedUser, authStatus: 'authenticated' as const }))
+      } catch {
+        set({ ...initialState(), isInitialized: false })
+        return
+      }
+    }
+
     set({ isLoading: true, error: null })
 
     try {
+      // Only fetch users/groups if user is owner or admin
+      const canManageTeam = currentUser.role === 'owner' || currentUser.role === 'admin'
+
       const [usersRaw, groupsRaw, clientsRaw, projectsRaw, tagsRaw, timeEntriesResult] = await Promise.all([
-        apiRequest<unknown>('/users', { method: 'GET', token }),
-        apiRequest<unknown>('/groups', { method: 'GET', token }),
+        canManageTeam ? apiRequest<unknown>('/users', { method: 'GET', token }) : Promise.resolve([]),
+        canManageTeam ? apiRequest<unknown>('/groups', { method: 'GET', token }) : Promise.resolve([]),
         apiRequest<unknown>('/clients', { method: 'GET', token }),
         apiRequest<unknown>('/projects', { method: 'GET', token }),
         apiRequest<unknown>('/tags', { method: 'GET', token }),
-        apiRequest<unknown>('/time-entries', { method: 'GET', token }),
+        apiRequest<unknown>('/time-entries', {
+          method: 'GET',
+          token,
+          query: currentUser ? { userId: currentUser.id } : undefined,
+        }),
       ])
 
-      const users = extractArray<ApiUser>(usersRaw)
-      const groups = extractArray<ApiGroup>(groupsRaw)
+      const users = canManageTeam ? extractArray<ApiUser>(usersRaw) : []
+      const groups = canManageTeam ? extractArray<ApiGroup>(groupsRaw) : []
       const clients = extractArray<ApiClient>(clientsRaw)
       const projects = extractArray<ApiProject>(projectsRaw)
       const tags = extractArray<ApiTag>(tagsRaw)
@@ -145,9 +233,11 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
       const timeEntriesRaw = Array.isArray(timeEntriesResult)
         ? timeEntriesResult
-        : (timeEntriesResult && typeof timeEntriesResult === 'object' && 'entries' in timeEntriesResult && Array.isArray((timeEntriesResult as Record<string, unknown>).entries))
-          ? (timeEntriesResult as { entries: ApiTimeEntry[] }).entries
-          : extractArray<ApiTimeEntry>(timeEntriesResult)
+        : (timeEntriesResult && typeof timeEntriesResult === 'object' && 'items' in timeEntriesResult && Array.isArray((timeEntriesResult as Record<string, unknown>).items))
+          ? (timeEntriesResult as { items: ApiTimeEntry[] }).items
+          : (timeEntriesResult && typeof timeEntriesResult === 'object' && 'entries' in timeEntriesResult && Array.isArray((timeEntriesResult as Record<string, unknown>).entries))
+            ? (timeEntriesResult as { entries: ApiTimeEntry[] }).entries
+            : extractArray<ApiTimeEntry>(timeEntriesResult)
 
       set({
         users: users.map(mapApiUser),
@@ -177,13 +267,27 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   addTimeEntry: async (entry) => {
     const token = useAuthStore.getState().token
-    const payload = await apiRequest<ApiTimeEntry>('/time-entries', {
+    const payload = await apiRequest<{ id: string; description?: string; duration?: number; userId?: string }>('/time-entries', {
       method: 'POST',
       token,
       body: JSON.stringify(serializeTimeEntryPatch(entry)),
     })
 
-    const createdEntry = mapApiTimeEntry(payload)
+    const now = new Date()
+    const createdEntry: TimeEntry = {
+      id: payload.id,
+      description: payload.description ?? entry.description,
+      projectId: entry.projectId,
+      taskId: entry.taskId,
+      tagIds: entry.tagIds ?? [],
+      billable: entry.billable,
+      userId: payload.userId ?? entry.userId,
+      startTime: entry.startTime instanceof Date ? entry.startTime : new Date(entry.startTime),
+      endTime: entry.endTime ? (entry.endTime instanceof Date ? entry.endTime : new Date(entry.endTime)) : undefined,
+      duration: payload.duration ?? entry.duration,
+      createdAt: now,
+      updatedAt: now,
+    }
     set((state) => ({
       timeEntries: [createdEntry, ...state.timeEntries],
     }))
@@ -191,15 +295,30 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   updateTimeEntry: async (id, updates) => {
     const token = useAuthStore.getState().token
-    const payload = await apiRequest<ApiTimeEntry>(`/time-entries/${id}`, {
-      method: 'PUT',
+    const payload = await apiRequest<{ id: string; description?: string; endTime?: string }>(`/time-entries/${id}`, {
+      method: 'PATCH',
       token,
       body: JSON.stringify(serializeTimeEntryPatch(updates)),
     })
 
-    const updatedEntry = mapApiTimeEntry(payload)
     set((state) => ({
-      timeEntries: state.timeEntries.map((entry) => (entry.id === id ? updatedEntry : entry)),
+      timeEntries: state.timeEntries.map((entry) => {
+        if (entry.id !== id) return entry
+        const merged: TimeEntry = {
+          ...entry,
+          ...updates,
+          description: payload.description ?? updates.description ?? entry.description,
+          endTime: payload.endTime ? new Date(payload.endTime) : (updates.endTime ?? entry.endTime),
+          updatedAt: new Date(),
+        }
+        if (merged.startTime && merged.endTime) {
+          merged.duration = Math.max(
+            0,
+            Math.floor((new Date(merged.endTime).getTime() - new Date(merged.startTime).getTime()) / 1000)
+          )
+        }
+        return merged
+      }),
     }))
   },
 
@@ -242,12 +361,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
     const lastDeletedEntries = get().lastDeletedEntries
     if (lastDeletedEntries.length === 0) return
 
-    await apiRequest('/time-entries/undo-delete', {
+    await apiRequest<{ id: string }[]>('/time-entries/undo-delete', {
       method: 'POST',
       token,
       body: JSON.stringify({ ids: lastDeletedEntries.map((entry) => entry.id) }),
     })
 
+    // Re-add the locally cached entries (API only returns ids, full data is in lastDeletedEntries)
     set((state) => ({
       timeEntries: [...lastDeletedEntries, ...state.timeEntries],
       lastDeletedEntries: [],
@@ -474,5 +594,183 @@ export const useDataStore = create<DataStore>((set, get) => ({
         memberIds: group.memberIds.filter((memberId) => memberId !== id),
       })),
     }))
+  },
+
+  // ─── Clients ─────────────────────────────────────────────────────────────────
+  addClient: async (client) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<ApiClient>('/clients', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        name: client.name,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+      }),
+    })
+
+    set((state) => ({
+      clients: [...state.clients, mapApiClient(payload)],
+    }))
+  },
+
+  updateClient: async (id, updates) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<ApiClient>(`/clients/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify({
+        name: updates.name,
+        email: updates.email,
+        phone: updates.phone,
+        address: updates.address,
+      }),
+    })
+
+    set((state) => ({
+      clients: state.clients.map((c) => (c.id === id ? mapApiClient(payload) : c)),
+    }))
+  },
+
+  deleteClient: async (id) => {
+    const token = useAuthStore.getState().token
+    await apiRequest(`/clients/${id}`, { method: 'DELETE', token })
+
+    set((state) => ({
+      clients: state.clients.filter((c) => c.id !== id),
+    }))
+  },
+
+  // ─── Groups ──────────────────────────────────────────────────────────────────
+  createGroup: async (name, memberIds) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<ApiGroup>('/groups', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ name, memberIds }),
+    })
+
+    set((state) => ({
+      groups: [...state.groups, mapApiGroup(payload)],
+    }))
+  },
+
+  updateGroup: async (id, updates) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<ApiGroup>(`/groups/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify({
+        name: updates.name,
+        memberIds: updates.memberIds,
+      }),
+    })
+
+    set((state) => ({
+      groups: state.groups.map((g) => (g.id === id ? mapApiGroup(payload) : g)),
+    }))
+  },
+
+  deleteGroup: async (id) => {
+    const token = useAuthStore.getState().token
+    await apiRequest(`/groups/${id}`, { method: 'DELETE', token })
+
+    set((state) => ({
+      groups: state.groups.filter((g) => g.id !== id),
+    }))
+  },
+
+  // ─── Reports ─────────────────────────────────────────────────────────────────
+  getSummaryReport: async (filters) => {
+    const token = useAuthStore.getState().token
+    return await apiRequest<SummaryReportData>('/reports/summary', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        dateRange: {
+          start: filters.dateRange.start.toISOString().split('T')[0],
+          end: filters.dateRange.end.toISOString().split('T')[0],
+        },
+        projectIds: filters.projectIds,
+        userIds: filters.userIds,
+        clientIds: filters.clientIds,
+        billable: filters.billable,
+      }),
+    })
+  },
+
+  getDetailedReport: async (filters) => {
+    const token = useAuthStore.getState().token
+    return await apiRequest<DetailedReportData>('/reports/detailed', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        dateRange: {
+          start: filters.dateRange.start.toISOString().split('T')[0],
+          end: filters.dateRange.end.toISOString().split('T')[0],
+        },
+        projectIds: filters.projectIds,
+        userIds: filters.userIds,
+        clientIds: filters.clientIds,
+        billable: filters.billable,
+      }),
+    })
+  },
+
+  getWeeklyReport: async (filters) => {
+    const token = useAuthStore.getState().token
+    return await apiRequest<WeeklyReportData>('/reports/weekly', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        dateRange: {
+          start: filters.dateRange.start.toISOString().split('T')[0],
+          end: filters.dateRange.end.toISOString().split('T')[0],
+        },
+      }),
+    })
+  },
+
+  shareReport: async (name, type, filters) => {
+    const token = useAuthStore.getState().token
+    return await apiRequest<{ token: string; url: string }>('/reports/share', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        name,
+        type,
+        filters: {
+          dateRange: {
+            start: filters.dateRange.start.toISOString().split('T')[0],
+            end: filters.dateRange.end.toISOString().split('T')[0],
+          },
+          projectIds: filters.projectIds,
+          userIds: filters.userIds,
+          clientIds: filters.clientIds,
+          billable: filters.billable,
+        },
+      }),
+    })
+  },
+
+  getSharedReports: async () => {
+    const token = useAuthStore.getState().token
+    const raw = await apiRequest<unknown>('/shared-reports', { method: 'GET', token })
+    return extractArray<SharedReport>(raw)
+  },
+
+  getSharedReport: async (token) => {
+    return await apiRequest<SharedReportData>(`/shared-reports/${token}`, {
+      method: 'GET',
+    })
+  },
+
+  getDashboardStats: async () => {
+    const token = useAuthStore.getState().token
+    return await apiRequest<DashboardStats>('/dashboard/stats', {
+      method: 'GET',
+      token,
+    })
   },
 }))

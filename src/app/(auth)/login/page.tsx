@@ -16,14 +16,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
 
   const router = useRouter()
-  const { login, isAuthenticated, hasHydrated, isInitializing, error: authError } = useAuthStore()
+  const { login, authStatus, hasHydrated, error: authError } = useAuthStore()
 
   useEffect(() => {
-    if (hasHydrated && !isInitializing && isAuthenticated) {
+    if (hasHydrated && authStatus === 'authenticated') {
       const currentRole = useAuthStore.getState().user?.role ?? 'member'
       router.replace(getDashboardRoute(currentRole))
     }
-  }, [hasHydrated, isInitializing, isAuthenticated, router])
+  }, [hasHydrated, authStatus, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

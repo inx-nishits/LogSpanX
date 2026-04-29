@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { startOfWeek, endOfWeek, isWithinInterval, format, eachDayOfInterval, isSameDay, endOfDay, startOfDay } from 'date-fns'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { useDataStore } from '@/lib/stores/data-store'
@@ -28,12 +28,17 @@ export interface BarDay {
 
 export function DashboardView() {
     const { user } = useAuthStore()
-    const { timeEntries, projects, tasks, users } = useDataStore()
+    const { timeEntries, projects, tasks, users, getDashboardStats } = useDataStore()
     const [filters, setFilters] = useState({ viewBy: 'project', teamScope: 'team', groupBy: 'time' })
     const [dateRange, setDateRange] = useState({
         from: startOfWeek(new Date(), { weekStartsOn: 1 }),
         to: endOfWeek(new Date(), { weekStartsOn: 1 })
     })
+    const [stats, setStats] = useState<{ todayHours: number; weekHours: number; activeProjects: number; topProject: string } | null>(null)
+
+    useEffect(() => {
+        getDashboardStats().then(setStats).catch(() => {})
+    }, [getDashboardStats])
 
     // Build lead name map from store instead of hardcoding
     const leadNames = useMemo(() =>
@@ -166,8 +171,10 @@ export function DashboardView() {
             : projects
 
         return {
-            totalTime: totalDisplay,
-            topProject: topProjectName,
+            totalTime: stats?.weekHours != null
+                ? `${Math.floor(stats.weekHours / 3600)}:${String(Math.floor((stats.weekHours % 3600) / 60)).padStart(2, '0')}`
+                : totalDisplay,
+            topProject: stats?.topProject || topProjectName,
             topLead: topLeadName,
             billablePercent,
             totalTasks,
@@ -177,7 +184,7 @@ export function DashboardView() {
             barProjects,
             isTaskView,
         }
-    }, [user, timeEntries, projects, tasks, users, filters, dateRange, leadNames])
+    }, [user, timeEntries, projects, tasks, users, filters, dateRange, leadNames, stats])
 
     if (!user || !dashboardData) return null
 

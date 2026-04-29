@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, Pencil, MoreVertical, Check, X, ChevronDown, Archive, Trash2, ArchiveRestore } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDataStore } from '@/lib/stores/data-store'
+import { useAuthStore } from '@/lib/stores/auth-store'
 
 type ShowFilter = 'active' | 'archived' | 'all'
 
@@ -109,6 +110,8 @@ function MoreMenu({ archived, onEdit, onArchive, onDelete }: {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function TagsPage() {
   const { tags, createTag, updateTag, deleteTag } = useDataStore()
+  const { user } = useAuthStore()
+  const isReadOnly = user?.role === 'member' || user?.role === 'viewer'
   const [showFilter, setShowFilter] = useState<ShowFilter>('active')
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -199,22 +202,24 @@ export default function TagsPage() {
           )}
         </div>
 
-        {/* Add new tag — right side */}
-        <div className="ml-auto flex items-center gap-0">
-          <input
-            value={newTagName}
-            onChange={e => setNewTagName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="Add new tag"
-            className="h-[32px] px-3 text-[15px] bg-white border border-[#d0d8de] border-r-0 rounded-l outline-none placeholder:text-[#bbb] min-w-[200px] focus:border-[#03a9f4]"
-          />
-          <button
-            onClick={handleAdd}
-            className="h-[32px] px-5 text-[15px] font-medium text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-r cursor-pointer transition-colors whitespace-nowrap"
-          >
-            ADD
-          </button>
-        </div>
+        {/* Add new tag — right side, owners/admins only */}
+        {!isReadOnly && (
+          <div className="ml-auto flex items-center gap-0">
+            <input
+              value={newTagName}
+              onChange={e => setNewTagName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAdd()}
+              placeholder="Add new tag"
+              className="h-[32px] px-3 text-[15px] bg-white border border-[#d0d8de] border-r-0 rounded-l outline-none placeholder:text-[#bbb] min-w-[200px] focus:border-[#03a9f4]"
+            />
+            <button
+              onClick={handleAdd}
+              className="h-[32px] px-5 text-[15px] font-medium text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-r cursor-pointer transition-colors whitespace-nowrap"
+            >
+              ADD
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -286,8 +291,8 @@ export default function TagsPage() {
                 </span>
               )}
 
-              {/* Actions — always visible like in the screenshot */}
-              {editingId !== tag.id && (
+              {/* Actions — hidden for read-only users */}
+              {editingId !== tag.id && !isReadOnly && (
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button
                     onClick={() => { setEditingId(tag.id); setEditingName(tag.name) }}
@@ -309,8 +314,8 @@ export default function TagsPage() {
         )}
       </div>
 
-      {/* Bulk action bar */}
-      {selected.length > 0 && (
+      {/* Bulk action bar — hidden for read-only users */}
+      {selected.length > 0 && !isReadOnly && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#333] text-white px-5 py-3 rounded shadow-2xl flex items-center gap-4 text-[15px] z-50">
           <span className="font-medium">{selected.length} selected</span>
           <button

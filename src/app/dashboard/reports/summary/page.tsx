@@ -1,117 +1,20 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, ChevronDown, Filter, Printer, Share2, Search, X, Check, Plus, ArrowUp, ArrowDown, Play, MoreVertical } from 'lucide-react'
-import { startOfWeek, endOfWeek, startOfDay, endOfDay, eachDayOfInterval, format, isSameDay, addDays } from 'date-fns'
+import { ChevronDown, Printer, Share2, Search, X, Check } from 'lucide-react'
+import { startOfWeek, endOfWeek, startOfDay, endOfDay, eachDayOfInterval, format, isSameDay } from 'date-fns'
 import { useDataStore } from '@/lib/stores/data-store'
 import { cn } from '@/lib/utils'
-import { TimeReportDropdown } from '../_components/time-report-dropdown'
 import { SummaryBarChart } from './summary-bar-chart'
 import { SummaryDonut } from './summary-donut'
 import { SummaryTable, SummaryRow } from './summary-table'
-import { FilterDropdown } from './filter-dropdown'
-import { FilterVisibilityDropdown, FilterKey, ALL_FILTER_KEYS } from '../_components/filter-visibility-dropdown'
-import { DateRangePicker } from '@/components/dashboard/date-range-picker'
 import { ReportShell } from '../_components/report-shell'
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 
-const TABS = [
-  { label: 'Summary', href: '/dashboard/reports/summary' },
-  { label: 'Detailed', href: '/dashboard/reports/detailed' },
-  { label: 'Weekly', href: '/dashboard/reports/weekly' },
-  { label: 'Shared', href: '/dashboard/reports/shared' },
-]
-
 const GROUP_OPTIONS = ['Project', 'Project Lead', 'User', 'Group', 'Tag', 'Month', 'Week', 'Date']
 const SUB_GROUP_OPTIONS = ['(None)', 'Project', 'Task', 'Project Lead', 'Tag', 'Description', 'Month', 'Week', 'Date']
-
-const TEAM_ITEMS = [
-  { id: 'g1', label: 'MEAR-Front End', group: 'Groups' },
-  { id: 'g2', label: 'MRN-Backend', group: 'Groups' },
-  { id: 'g3', label: 'Project Leads', group: 'Groups' },
-  { id: 'g4', label: 'Sales', group: 'Groups' },
-  { id: 'g5', label: 'Team BA', group: 'Groups' },
-  { id: 'g6', label: 'Team Design', group: 'Groups' },
-  { id: 'user_1', label: 'Nishit Sangani' },
-  { id: 'user_2', label: 'Aiyub Munshi' },
-  { id: 'user_3', label: 'Jaydeep Vegad' },
-  { id: 'user_4', label: 'Sonu Gupta' },
-  { id: 'user_5', label: 'Vrutik Patel' },
-  { id: 'user_6', label: 'Ram Jangid' },
-]
-
-const LEAD_ITEMS = [
-  { id: 'pl_1', label: 'Aiyub Munshi' },
-  { id: 'pl_2', label: 'Chirag Gopiyani' },
-  { id: 'pl_3', label: 'Darshan Belani' },
-  { id: 'pl_4', label: 'Harin Patel' },
-  { id: 'pl_5', label: 'Inheritx Solutions' },
-  { id: 'pl_6', label: 'Jamal Derdivala' },
-  { id: 'pl_7', label: 'Jaydeep Vegad' },
-  { id: 'pl_8', label: 'Nishit Sangani' },
-]
-
-const PROJECT_ITEMS = [
-  { id: 'project_1', label: 'StaffBot Dedicated : Billable', group: 'Jaydeep Vegad' },
-  { id: 'project_2', label: 'Nexaan(Jiteshbhai) : T & M : Billable', group: 'Sonu Gupta' },
-  { id: 'project_3', label: 'Kavia AI : Dedicated : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_4', label: '_INX-Learning : Non-Billable', group: 'Aiyub Munshi' },
-  { id: 'project_5', label: 'Ecosmob : Dedicated : Billable', group: 'Ram Jangid' },
-  { id: 'project_6', label: 'Nurvia : Fixed-cost : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_7', label: 'Lifeguru : Fixed-cost : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_8', label: 'Pocket Sergeant : Maintenance : Billable', group: 'Vrutik Patel' },
-  { id: 'project_9', label: 'Inhouse Clokify Revamp :: Next - Node', group: 'Nishit Sangani' },
-  { id: 'project_10', label: 'Culturify : Fixed cost : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_11', label: 'DycoVue : Dedicated : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_12', label: 'Ceremonia : Fixed Cost : Billable', group: 'Aiyub Munshi' },
-  { id: 'project_13', label: '_INX-Company Website Revamp', group: 'No Project Lead' },
-  { id: 'project_14', label: 'HealthSync : T & M : Billable', group: 'Sonu Gupta' },
-]
-
-const TASK_ITEMS = [
-  { id: 'task_1', label: 'Frontend Refactor', group: 'StaffBot Dedicated : Billable' },
-  { id: 'task_2', label: 'API Integration', group: 'Nexaan : T & M : Billable' },
-  { id: 'task_3', label: 'ML Pipeline Setup', group: 'Kavia AI : Dedicated : Billable' },
-  { id: 'task_4', label: 'React Training Module', group: '_INX-Learning : Non-Billable' },
-  { id: 'task_5', label: 'VoIP Gateway Config', group: 'Ecosmob : Dedicated : Billable' },
-  { id: 'task_6', label: 'Dashboard UI', group: 'Nurvia : Fixed-cost : Billable' },
-  { id: 'task_7', label: 'Backend Optimization', group: 'Lifeguru : Fixed-cost : Billable' },
-  { id: 'task_8', label: 'Bug Fixes Sprint 4', group: 'Pocket Sergeant : Maintenance : Billable' },
-  { id: 'task_9', label: 'Next.js Migration', group: 'Inhouse Clokify Revamp :: Next - Node' },
-  { id: 'task_10', label: 'Payment Integration', group: 'Culturify : Fixed cost : Billable' },
-  { id: 'task_11', label: 'Real-time Sync', group: 'DycoVue : Dedicated : Billable' },
-  { id: 'task_12', label: 'Landing Page Design', group: 'Ceremonia : Fixed Cost : Billable' },
-  { id: 'task_13', label: 'SEO Audit', group: '_INX-Company Website Revamp' },
-  { id: 'task_14', label: 'FHIR API Integration', group: 'HealthSync : T & M : Billable' },
-]
-
-const TAG_ITEMS = [
-  { id: 'tag_1', label: 'Bug' },
-  { id: 'tag_2', label: 'Feature' },
-  { id: 'tag_3', label: 'Review' },
-  { id: 'tag_4', label: 'Meeting' },
-  { id: 'tag_5', label: 'Research' },
-  { id: 'tag_6', label: 'Design' },
-  { id: 'tag_7', label: 'DevOps' },
-  { id: 'tag_8', label: 'Testing' },
-]
-
-const STATUS_ITEMS = [
-  { id: 'billable', label: 'Billable', group: 'Billable' },
-  { id: 'non-billable', label: 'Non-billable', group: 'Billable' },
-]
-
-const TEAM_MEMBERSHIP: Record<string, string[]> = {
-  'g1': ['user_1', 'user_2'],
-  'g2': ['user_3', 'user_4'],
-  'g3': ['user_1', 'user_2'],
-  'g4': ['user_5'],
-  'g5': ['user_6'],
-  'g6': ['user_1', 'user_6'],
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -197,7 +100,7 @@ function DescriptionFilter({ value, onChange }: { value: string; onChange: (v: s
 
 function SimpleDropdown({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useState<HTMLDivElement | null>(null)
+  const ref = useRef<HTMLDivElement | null>(null)
   return (
     <div className="relative">
       <button
@@ -277,7 +180,7 @@ function BillabilityDropdown({ mode, onChange }: { mode: 'billability' | 'projec
 export default function SummaryReportPage() {
   const pathname = usePathname()
   const router = useRouter()
-  const { timeEntries, projects, users, tags } = useDataStore()
+  const { timeEntries, projects, users, tags, groups } = useDataStore()
 
   const [dateRange, setDateRange] = useState({
     from: startOfDay(startOfWeek(new Date(), { weekStartsOn: 1 })),
@@ -286,10 +189,6 @@ export default function SummaryReportPage() {
   const [groupBy, setGroupBy] = useState('User')
   const [subGroupBy, setSubGroupBy] = useState('Description')
   const [billabilityMode, setBillabilityMode] = useState<'billability' | 'project'>('billability')
-
-  const [visibleFilters, setVisibleFilters] = useState<FilterKey[]>([...ALL_FILTER_KEYS])
-
-  // Applied filter state — only updates when Apply Filter is clicked
   const [appliedFilters, setAppliedFilters] = useState({
     team: [] as string[],
     lead: [] as string[],
@@ -300,7 +199,7 @@ export default function SummaryReportPage() {
     desc: '',
   })
 
-  const handleApply = (filters: any) => {
+  const handleApply = (filters: { team: string[]; lead: string[]; project: string[]; tasks: string[]; tags: string[]; status: string[]; description: string }) => {
     setAppliedFilters({
       team: filters.team,
       lead: filters.lead,
@@ -315,25 +214,28 @@ export default function SummaryReportPage() {
   const from = useMemo(() => startOfDay(dateRange.from), [dateRange.from])
   const to = useMemo(() => endOfDay(dateRange.to), [dateRange.to])
 
-  // Live filter state
+  // Build group membership map from real store groups
+  const groupMembership = useMemo(() => {
+    const map: Record<string, string[]> = {}
+    groups.forEach(g => { map[g.id] = g.memberIds })
+    return map
+  }, [groups])
+
   const teamUserIds = useMemo(() => {
+    if (!appliedFilters.team.length) return []
     const ids = new Set<string>()
     appliedFilters.team.forEach(id => {
-      if (id.startsWith('user_')) ids.add(id)
-      else if (TEAM_MEMBERSHIP[id]) TEAM_MEMBERSHIP[id].forEach(uid => ids.add(uid))
+      // check if it's a group id or user id
+      if (groupMembership[id]) groupMembership[id].forEach(uid => ids.add(uid))
+      else ids.add(id)
     })
     return Array.from(ids)
-  }, [appliedFilters.team])
+  }, [appliedFilters.team, groupMembership])
 
   const leadUserIds = useMemo(() => {
     if (!appliedFilters.lead.length) return []
-    const selectedLeadNames = LEAD_ITEMS
-      .filter(l => appliedFilters.lead.includes(l.id))
-      .map(l => l.label)
-    return users
-      .filter(u => selectedLeadNames.includes(u.name))
-      .map(u => u.id)
-  }, [appliedFilters.lead, users])
+    return appliedFilters.lead // lead filter stores user IDs directly
+  }, [appliedFilters.lead])
 
   const filtered = useMemo(() => {
     return timeEntries.filter(e => {
@@ -513,14 +415,14 @@ export default function SummaryReportPage() {
         const map: Record<string, { duration: number; count: number; name: string }> = {}
         entries.forEach(e => {
           const proj = projects.find(p => p.id === e.projectId)
-          const leadId = proj?.leadId || '__none__'
+          const leadId = String(proj?.leadId || '__none__')
           const leadName = users.find(u => u.id === leadId)?.name || '(No Lead)'
           if (!map[leadId]) map[leadId] = { duration: 0, count: 0, name: leadName }
           map[leadId].duration += e.duration ?? 0
           map[leadId].count++
         })
         return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([lid, d]) => ({
-          id: `${parentId}-${lid}`, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
+          id: `${parentId}-lead-${lid}`, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false
         }))
       }
 
@@ -533,7 +435,7 @@ export default function SummaryReportPage() {
           map[key].count++
         })
         return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([title, d]) => ({
-          id: `${parentId}-${title}`, title, color: '#f9a825', entryCount: d.count, duration: d.duration, billable: false
+          id: `${parentId}-desc-${title}`, title, color: '#f9a825', entryCount: d.count, duration: d.duration, billable: false
         }))
       }
 
@@ -615,7 +517,7 @@ export default function SummaryReportPage() {
       const leadMap: Record<string, { duration: number; count: number; name: string; entries: typeof filtered }> = {}
       filtered.forEach(e => {
         const proj = projects.find(p => p.id === e.projectId)
-        const leadId = proj?.leadId || '__none__'
+        const leadId = String(proj?.leadId || '__none__')
         const leadName = users.find(u => u.id === leadId)?.name || '(No Lead)'
         if (!leadMap[leadId]) leadMap[leadId] = { duration: 0, count: 0, name: leadName, entries: [] }
         leadMap[leadId].duration += e.duration ?? 0
@@ -623,8 +525,8 @@ export default function SummaryReportPage() {
         leadMap[leadId].entries.push(e)
       })
       return Object.entries(leadMap).sort((a, b) => b[1].duration - a[1].duration).map(([id, d]) => ({
-        id, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false, filterType: 'lead' as const, filterId: id,
-        children: buildChildren(d.entries, id)
+        id: `lead-${id}`, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false, filterType: 'lead' as const, filterId: id,
+        children: buildChildren(d.entries, `lead-${id}`)
       }))
     }
 
@@ -696,7 +598,7 @@ export default function SummaryReportPage() {
     // Default flat list
     return filtered.map(e => {
       const proj = projects.find(p => p.id === e.projectId)
-      return { id: e.id, title: e.description || '(no description)', color: proj?.color || '#ccc', entryCount: 1, duration: e.duration ?? 0, billable: e.billable }
+      return { id: String(e.id), title: e.description || '(no description)', color: proj?.color || '#ccc', entryCount: 1, duration: e.duration ?? 0, billable: e.billable }
     })
   }, [filtered, groupBy, subGroupBy, users, projects, tags])
 

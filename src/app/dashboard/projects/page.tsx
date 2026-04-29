@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useDataStore } from '@/lib/stores/data-store'
+import { useAuthStore } from '@/lib/stores/auth-store'
 
 // Helpers
 const fmtDur = (s: number) => {
@@ -175,6 +176,8 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function ProjectsPage() {
   const { projects: storeProjects, users, clients, timeEntries, addProject, updateProjects, deleteProject } = useDataStore()
+  const { user } = useAuthStore()
+  const isReadOnly = user?.role === 'member' || user?.role === 'viewer'
 
   const [showNewModal, setShowNewModal] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -376,13 +379,15 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="w-full px-5 pt-4 pb-2 relative z-50 flex items-center justify-between">
         <h1 className="text-lg text-[#333333] font-normal">Projects</h1>
-        <Button
-          onClick={() => setShowNewModal(true)}
-          className="bg-[#03a9f4] hover:bg-[#0288d1] text-white flex items-center gap-1.5 text-[13px] font-bold tracking-widest uppercase h-9 px-4 rounded-sm shadow"
-        >
-          <Plus className="h-4 w-4" />
-          New Project
-        </Button>
+        {!isReadOnly && (
+          <Button
+            onClick={() => setShowNewModal(true)}
+            className="bg-[#03a9f4] hover:bg-[#0288d1] text-white flex items-center gap-1.5 text-[13px] font-bold tracking-widest uppercase h-9 px-4 rounded-sm shadow"
+          >
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
+        )}
       </div>
 
       <div className="w-full px-5 pt-4 pb-20 relative z-10">
@@ -587,11 +592,14 @@ export default function ProjectsPage() {
                       </th>
                     </tr>
                     <tr className="border-b border-[#e4eaee] text-left select-none bg-white">
-                      <th className="w-[42px] pl-5 pr-6 py-3">
-                        <div className={`w-[14px] h-[14px] border ${allVisibleProjectsSelected ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center`} onClick={toggleSelectAllProjects}>
-                          {allVisibleProjectsSelected && <Check className="w-3 h-3 text-white stroke-[3px]" />}
-                        </div>
-                      </th>
+                      {!isReadOnly && (
+                        <th className="w-[42px] pl-5 pr-6 py-3">
+                          <div className={`w-[14px] h-[14px] border ${allVisibleProjectsSelected ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center`} onClick={toggleSelectAllProjects}>
+                            {allVisibleProjectsSelected && <Check className="w-3 h-3 text-white stroke-[3px]" />}
+                          </div>
+                        </th>
+                      )}
+                      {isReadOnly && <th className="w-[42px]" />}
                       {[
                         { label: 'NAME', width: '35%' },
                         { label: 'PROJECT LEAD', width: '20%' },
@@ -607,7 +615,7 @@ export default function ProjectsPage() {
                         >
                           <div className="flex items-center">
                             {col.label}
-                            {col.label === 'NAME' && selectedProjectIds.length > 0 && (
+                            {!isReadOnly && col.label === 'NAME' && selectedProjectIds.length > 0 && (
                               <div className="flex items-center ml-4 gap-3">
                                 <button className="text-[#03a9f4] text-[12px] font-bold normal-case hover:underline">Bulk Edit</button>
                                 <button onClick={handleArchiveProjects} className="text-[#03a9f4] text-[12px] font-bold normal-case hover:underline">Archive</button>
@@ -629,12 +637,14 @@ export default function ProjectsPage() {
                     {sortedProjects.map((project) => (
                       <tr key={project.id} className={`hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''}`}>
                         <td className="pl-5 pr-0 py-4">
-                          <div
-                            className={`w-[14px] h-[14px] border ${selectedProjectIds.includes(project.id) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center`}
-                            onClick={() => toggleProjectSelection(project.id)}
-                          >
-                            {selectedProjectIds.includes(project.id) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
-                          </div>
+                          {!isReadOnly && (
+                            <div
+                              className={`w-[14px] h-[14px] border ${selectedProjectIds.includes(project.id) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center`}
+                              onClick={() => toggleProjectSelection(project.id)}
+                            >
+                              {selectedProjectIds.includes(project.id) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
+                            </div>
+                          )}
                         </td>
                         {/* Name */}
                         <td className="p-4 pl-1 whitespace-nowrap overflow-hidden">
@@ -667,14 +677,16 @@ export default function ProjectsPage() {
                                 onClick={() => toggleFavorite(project.name)}
                                 className={`h-[18px] w-[18px] cursor-pointer transition-all mt-[2px] ${favorites.includes(project.name) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#d6e5ef] hover:text-[#f5a623]'}`}
                               />
-                              <button
-                                onClick={() => handleDeleteProject(project.id)}
-                                disabled={deletingId === project.id}
-                                className="ml-1 text-[#ccc] hover:text-red-500 transition-colors disabled:opacity-50"
-                                title="Delete project"
-                              >
-                                <Trash2 className="h-[16px] w-[16px]" />
-                              </button>
+                              {!isReadOnly && (
+                                <button
+                                  onClick={() => handleDeleteProject(project.id)}
+                                  disabled={deletingId === project.id}
+                                  className="ml-1 text-[#ccc] hover:text-red-500 transition-colors disabled:opacity-50"
+                                  title="Delete project"
+                                >
+                                  <Trash2 className="h-[16px] w-[16px]" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </td>

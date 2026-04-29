@@ -7,11 +7,12 @@ import { User } from '@/lib/types'
 interface AuthState {
   token: string | null
   user: User | null
-  isAuthenticated: boolean
+  authStatus: 'idle' | 'initializing' | 'authenticated' | 'unauthenticated'
   hasHydrated: boolean
-  isInitializing: boolean
   error: string | null
+  setToken: (token: string) => void
   initialize: () => Promise<void>
+  refreshToken: () => Promise<void>
   login: (email: string, password: string) => Promise<boolean>
   signup: (name: string, email: string, password: string) => Promise<boolean>
   forgotPassword: (email: string) => Promise<void>
@@ -31,9 +32,8 @@ interface AuthPayload {
 const initialState = {
   token: null,
   user: null,
-  isAuthenticated: false,
+  authStatus: 'idle' as const,
   hasHydrated: false,
-  isInitializing: true,
   error: null,
 }
 
@@ -42,62 +42,98 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       ...initialState,
 
+      setToken: (newToken: string) => {
+        set({ token: newToken })
+      },
+
+      refreshToken: async () => {
+        const token = get().token
+        if (!token) return
+        try {
+          const payload = await apiRequest<{ token: string }>('/auth/refresh', {
+            method: 'POST',
+            token,
+          })
+          set({ token: payload.token })
+        } catch (err) {
+          if (err instanceof Error && 'status' in err && (err as { status: number }).status === 401) {
+            set({ token: null, user: null, authStatus: 'unauthenticated' })
+          }
+          throw err
+        }
+      },
+
       initialize: async () => {
         const token = get().token
 
         if (!token) {
-          set({ isInitializing: false, isAuthenticated: false, user: null, error: null })
+          set({ authStatus: 'unauthenticated', error: null })
           return
         }
 
-        set({ isInitializing: true, error: null })
+        // Prevent re-running if already authenticated with a valid token
+        if (get().authStatus === 'authenticated' && get().user) {
+          return
+        }
+
+        set({ authStatus: 'initializing', error: null })
 
         try {
-          const profile = await apiRequest<ApiUser>('/auth/me', { method: 'GET', token })
+          // Attempt token refresh — failures are non-fatal unless the token is cleared (401)
+          let activeToken = token
+          try {
+            await get().refreshToken()
+            activeToken = get().token ?? token
+          } catch {
+            // If refresh cleared the token (401 expired), bail out
+            if (!get().token) {
+              set({ authStatus: 'unauthenticated' })
+              return
+            }
+            // Any other error (network, 5xx) — continue with the original token
+            activeToken = token
+          }
+
+          const profile = await apiRequest<ApiUser>('/auth/me', { method: 'GET', token: activeToken })
           set({
-            token,
+            token: activeToken,
             user: mapApiUser(profile),
-            isAuthenticated: true,
-            isInitializing: false,
+            authStatus: 'authenticated',
             error: null,
           })
         } catch (error) {
-          console.error('Failed to initialize auth', error)
-          set({
-            token: null,
-            user: null,
-            isAuthenticated: false,
-            isInitializing: false,
-            error: error instanceof Error ? error.message : 'Failed to initialize session',
-          })
+          const status = (error instanceof Error && 'status' in error) ? (error as { status: number }).status : 0
+          // Only clear session on definitive auth failures (401/403)
+          // Network errors or server errors should not log the user out
+          if (status === 401 || status === 403) {
+            set({ token: null, user: null, authStatus: 'unauthenticated', error: null })
+          } else {
+            console.error('Failed to initialize auth', error)
+            set({ authStatus: 'unauthenticated', error: error instanceof Error ? error.message : 'Failed to initialize session' })
+          }
         }
       },
 
       login: async (email: string, password: string) => {
         set({ error: null })
-
         try {
           const payload = await apiRequest<AuthPayload>('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
             token: null,
           })
-
           set({
             token: payload.token,
             user: mapApiUser(payload.user),
-            isAuthenticated: true,
-            isInitializing: false,
+            authStatus: 'authenticated',
             error: null,
           })
-
           return true
         } catch (error) {
           set({
             token: null,
             user: null,
-            isAuthenticated: false,
-            isInitializing: false,
+            authStatus: 'unauthenticated',
             error: error instanceof Error ? error.message : 'Login failed',
           })
           return false
@@ -106,29 +142,24 @@ export const useAuthStore = create<AuthState>()(
 
       signup: async (name: string, email: string, password: string) => {
         set({ error: null })
-
         try {
           const payload = await apiRequest<AuthPayload>('/auth/signup', {
             method: 'POST',
             body: JSON.stringify({ name, email, password }),
             token: null,
           })
-
           set({
             token: payload.token,
             user: mapApiUser(payload.user),
-            isAuthenticated: true,
-            isInitializing: false,
+            authStatus: 'authenticated',
             error: null,
           })
-
           return true
         } catch (error) {
           set({
             token: null,
             user: null,
-            isAuthenticated: false,
-            isInitializing: false,
+            authStatus: 'unauthenticated',
             error: error instanceof Error ? error.message : 'Signup failed',
           })
           return false
@@ -153,7 +184,6 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         const token = get().token
-
         try {
           if (token) {
             await apiRequest('/auth/logout', {
@@ -168,8 +198,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             token: null,
             user: null,
-            isAuthenticated: false,
-            isInitializing: false,
+            authStatus: 'unauthenticated',
             error: null,
           })
         }
@@ -233,11 +262,16 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         token: state.token,
         user: state.user,
-        isAuthenticated: state.isAuthenticated,
+        authStatus: state.authStatus === 'authenticated' ? 'authenticated' : 'idle' as const,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hasHydrated = true
+          // If we have a token + user persisted, treat as authenticated immediately
+          // initialize() will validate/refresh in the background
+          if (state.token && state.user && state.authStatus === 'authenticated') {
+            state.authStatus = 'authenticated'
+          }
         }
       },
     }

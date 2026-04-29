@@ -1,11 +1,13 @@
+'use client'
+
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Tag, DollarSign, Clock, MoreVertical, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { DollarSign, Clock, MoreVertical, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { ProjectPicker } from './project-picker'
 import { TagPicker } from './tag-picker'
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isSameMonth, subMonths, addMonths, startOfDay } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isSameMonth, subMonths, addMonths } from 'date-fns'
 
 // ─── Shared Components (Ported) ───────────────────────────────────────────────
 
@@ -125,32 +127,35 @@ export function TimerBar() {
   const [endTime, setEndTime] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date())
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!user || !startTime || !endTime) return
     const dateStr = format(selectedDate, 'yyyy-MM-dd')
     const start = new Date(`${dateStr}T${startTime}:00`)
     const end = new Date(`${dateStr}T${endTime}:00`)
     const duration = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000))
-    addTimeEntry({
-      description,
-      projectId: projectId || undefined,
-      taskId: taskId || undefined,
-      tagIds,
-      billable,
-      userId: user.id,
-      startTime: start,
-      endTime: end,
-      duration,
-    })
-    setDescription('')
-    setProjectId('')
-    setTaskId('')
-    setTagIds([])
-    setBillable(false)
-    setStartTime('')
-    setEndTime('')
-    setSelectedDate(new Date()) // Reset to today or keep? Users usually want to batch entries. 
-    // Actually, reset to today is safer.
+    try {
+      await addTimeEntry({
+        description,
+        projectId: projectId || undefined,
+        taskId: taskId || undefined,
+        tagIds,
+        billable,
+        userId: user.id,
+        startTime: start,
+        endTime: end,
+        duration,
+      })
+      setDescription('')
+      setProjectId('')
+      setTaskId('')
+      setTagIds([])
+      setBillable(false)
+      setStartTime('')
+      setEndTime('')
+      setSelectedDate(new Date())
+    } catch (err) {
+      console.error('Failed to add time entry', err)
+    }
   }
 
   return (
@@ -162,7 +167,7 @@ export function TimerBar() {
         placeholder="What have you worked on?"
         value={description}
         onChange={e => setDescription(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && handleAdd()}
+        onKeyDown={e => { if (e.key === 'Enter') void handleAdd() }}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         className={cn(
@@ -171,28 +176,14 @@ export function TimerBar() {
         )}
       />
 
-      {/* Project picker — no separator, sits right after description */}
+      {/* Project picker — rendered as a sibling div, not inside a button */}
       <div className="px-3 flex-shrink-0 min-w-[130px]">
-        {projectId ? (
-          <ProjectPicker
-            selectedProjectId={projectId}
-            selectedTaskId={taskId}
-            onSelect={(pid, tid) => { setProjectId(pid); setTaskId(tid || '') }}
-            onClear={() => { setProjectId(''); setTaskId('') }}
-          />
-        ) : (
-          <button
-            onClick={() => { }}
-            className="flex items-center gap-1.5 text-[#03a9f4] hover:text-[#0288d1] cursor-pointer transition-colors"
-          >
-            <ProjectPicker
-              selectedProjectId={projectId}
-              selectedTaskId={taskId}
-              onSelect={(pid, tid) => { setProjectId(pid); setTaskId(tid || '') }}
-              onClear={() => { setProjectId(''); setTaskId('') }}
-            />
-          </button>
-        )}
+        <ProjectPicker
+          selectedProjectId={projectId}
+          selectedTaskId={taskId}
+          onSelect={(pid, tid) => { setProjectId(pid); setTaskId(tid || '') }}
+          onClear={() => { setProjectId(''); setTaskId('') }}
+        />
       </div>
 
       <Sep />

@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/auth-store'
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, hasHydrated, isInitializing } = useAuthStore()
+  const { user, authStatus, hasHydrated } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (!hasHydrated || isInitializing || !isAuthenticated || !user) return
+    if (!hasHydrated || authStatus === 'idle' || authStatus === 'initializing') return
+    if (authStatus !== 'authenticated' || !user) return
 
     const role = user.role
     if (role === 'owner') {
@@ -19,7 +20,7 @@ export default function DashboardPage() {
     } else {
       router.replace('/dashboard/member')
     }
-  }, [hasHydrated, isInitializing, isAuthenticated, user, router])
+  }, [hasHydrated, authStatus, user, router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f2f6f8]">

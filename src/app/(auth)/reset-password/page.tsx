@@ -1,19 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useAuthStore } from '@/lib/stores/auth-store'
 
 export default function ResetPasswordPage() {
-  const searchParams = useSearchParams()
   const router = useRouter()
   const { resetPassword } = useAuthStore()
 
-  const tokenFromUrl = searchParams.get('token') ?? ''
-  const [token, setToken] = useState(tokenFromUrl)
+  const [token, setToken] = useState('')
+
+  useEffect(() => {
+    const urlToken = new URLSearchParams(window.location.search).get('token') ?? ''
+    setToken(urlToken)
+  }, [])
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)

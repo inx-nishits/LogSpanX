@@ -68,15 +68,20 @@ export interface ApiTimeEntry {
   id?: string
   _id?: string
   description: string
-  projectId?: string | null
+  // projectId can be a plain string ID or a populated object
+  projectId?: string | { id?: string; _id?: string; name?: string; color?: string } | null
   clientId?: string | null
   taskId?: string | null
+  // tags can be populated objects or plain string IDs (tagIds)
+  tags?: { _id?: string; id?: string; name?: string; color?: string }[]
   tagIds?: string[]
   billable: boolean
-  userId: string
+  // userId can be a plain string ID or a populated object
+  userId: string | { _id?: string; id?: string; name?: string; email?: string }
   startTime: string
   endTime?: string | null
   duration?: number | null
+  isRunning?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -204,15 +209,30 @@ export function mapApiTag(tag: ApiTag): Tag {
 }
 
 export function mapApiTimeEntry(entry: ApiTimeEntry): TimeEntry {
+  // userId may be a populated object
+  const userId = typeof entry.userId === 'object' && entry.userId !== null
+    ? (entry.userId._id ?? entry.userId.id ?? '')
+    : entry.userId as string
+
+  // projectId may be a populated object
+  const projectId = typeof entry.projectId === 'object' && entry.projectId !== null
+    ? (entry.projectId.id ?? entry.projectId._id ?? undefined)
+    : (entry.projectId ?? undefined)
+
+  // tags may be populated objects; fall back to tagIds string array
+  const tagIds = entry.tags?.length
+    ? entry.tags.map(t => (t._id || t.id || '')).filter((id): id is string => id !== '')
+    : (entry.tagIds ?? []).filter((id): id is string => typeof id === 'string' && id !== '')
+
   return {
     id: resolveId(entry),
     description: entry.description,
-    projectId: entry.projectId ?? undefined,
+    projectId,
     clientId: entry.clientId ?? undefined,
     taskId: entry.taskId ?? undefined,
-    tagIds: entry.tagIds ?? [],
+    tagIds,
     billable: entry.billable,
-    userId: entry.userId,
+    userId,
     startTime: new Date(entry.startTime),
     endTime: entry.endTime ? new Date(entry.endTime) : undefined,
     duration: entry.duration ?? undefined,
@@ -232,14 +252,11 @@ export function serializeProjectMember(member: ProjectMember) {
 export function serializeTimeEntryPatch(entry: Partial<TimeEntry>) {
   return {
     description: entry.description,
-    projectId: entry.projectId,
-    clientId: entry.clientId,
-    taskId: entry.taskId,
+    projectId: entry.projectId ?? undefined,
+    taskId: entry.taskId ?? undefined,
     tagIds: entry.tagIds,
     billable: entry.billable,
-    userId: entry.userId,
     startTime: entry.startTime?.toISOString(),
     endTime: entry.endTime?.toISOString(),
-    duration: entry.duration,
   }
 }

@@ -18,13 +18,13 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   const router = useRouter()
-  const { signup, isAuthenticated, hasHydrated, isInitializing } = useAuthStore()
+  const { signup, authStatus, hasHydrated } = useAuthStore()
 
   useEffect(() => {
-    if (hasHydrated && !isInitializing && isAuthenticated) {
+    if (hasHydrated && authStatus === 'authenticated') {
       router.replace('/dashboard')
     }
-  }, [hasHydrated, isInitializing, isAuthenticated, router])
+  }, [hasHydrated, authStatus, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

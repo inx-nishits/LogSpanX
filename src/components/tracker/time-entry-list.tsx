@@ -350,7 +350,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                       const liveDur = timeEntries.find(e => e.id === entry.id)?.duration ?? entry.duration ?? 0
 
                       return (
-                        <div key={entry.id}
+                        <div key={`${dKey}-${entry.id}`}
                           className={cn('flex items-stretch border-b border-[#f0f0f0] last:border-b-0 hover:bg-[#fafbfc] transition-colors group', isSel && 'bg-[#f0f8ff]')}
                           style={{ height: 54 }}>
 
@@ -457,9 +457,12 @@ export function TimeEntryList({ userId }: { userId: string }) {
       })}
 
       {bulkEdit && (
-        <BulkEditModal entryCount={selIds.length}
+        <BulkEditModal
+          entryIds={selIds}
+          entryCount={selIds.length}
           onClose={() => setBulkEdit(false)}
-          onSave={() => { setBulkEdit(false); setSelIds([]) }} />
+          onSave={() => { setBulkEdit(false); setSelIds([]) }}
+        />
       )}
     </div>
   )

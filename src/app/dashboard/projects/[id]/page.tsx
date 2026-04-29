@@ -410,7 +410,7 @@ function TasksTab({
                   <ChevronDown className="h-3 w-3" />
                 </span>
               </div>
-
+ 
               {/* Kebab menu */}
               <div className="w-[40px] flex justify-end relative">
                 <button
@@ -445,11 +445,13 @@ function TasksTab({
 }
 
 function TaskActionMenu({
+  onRename,
   onToggleComplete,
   onDelete,
   onClose,
   isCompleted,
 }: {
+  onRename: () => void
   onToggleComplete: () => void
   onDelete: () => void
   onClose: () => void
@@ -470,6 +472,12 @@ function TaskActionMenu({
       ref={ref}
       className="absolute right-0 top-full mt-1 bg-white border border-[#e4eaee] rounded-sm shadow-xl z-50 py-1 whitespace-nowrap"
     >
+      <button
+        onClick={onRename}
+        className="w-full text-left px-4 py-2 text-[13px] text-[#666] hover:bg-[#eaf4fb] transition-colors"
+      >
+        Rename task
+      </button>
       <button
         onClick={onToggleComplete}
         className="w-full text-left px-4 py-2 text-[13px] text-[#666] hover:bg-[#eaf4fb] transition-colors"
