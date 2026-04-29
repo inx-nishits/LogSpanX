@@ -2,15 +2,16 @@
 
 import { useMemo } from 'react'
 import { useDataStore } from '@/lib/stores/data-store'
+import { TimeEntry } from '@/lib/types'
 
-export function ActivityList() {
-    const { timeEntries, projects } = useDataStore()
+export function ActivityList({ entries }: { entries: TimeEntry[] }) {
+    const { projects } = useDataStore()
 
     // Group by description+project, sum durations, take top 10
     const activities = useMemo(() => {
         const map: Record<string, { description: string; projectId?: string; totalSec: number }> = {}
 
-        timeEntries.forEach(e => {
+        entries.forEach(e => {
             const key = `${e.description || ''}__${e.projectId || ''}`
             if (!map[key]) map[key] = { description: e.description || '', projectId: e.projectId, totalSec: 0 }
             map[key].totalSec += e.duration ?? 0
@@ -30,7 +31,7 @@ export function ActivityList() {
                     time: `${h}:${String(m).padStart(2, '0')}`,
                 }
             })
-    }, [timeEntries, projects])
+    }, [entries, projects])
 
     return (
         <div className="bg-white border border-[#e4eaee] rounded-sm flex flex-col h-full">
@@ -51,11 +52,14 @@ export function ActivityList() {
                         </div>
                         <span className="text-[14px] font-semibold text-[#333] tabular-nums ml-auto flex-shrink-0">{activity.time}</span>
                     </div>
-                ))}
-                {activities.length === 0 && (
-                    <div className="px-4 py-8 text-center text-[13px] text-[#bbb]">No activities yet</div>
-                )}
-            </div>
-        </div>
+                ))
+                }
+                {
+                    activities.length === 0 && (
+                        <div className="px-4 py-8 text-center text-[13px] text-[#bbb]">No activities yet</div>
+                    )
+                }
+            </div >
+        </div >
     )
 }

@@ -5,17 +5,19 @@ import { useDataStore } from '@/lib/stores/data-store'
 import { startOfDay, endOfDay } from 'date-fns'
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 
+import { TimeEntry } from '@/lib/types'
+
 const AVATAR_COLORS = ['#e91e63', '#9c27b0', '#03a9f4', '#4caf50', '#ff9800', '#795548']
 
 interface TeamActivitiesProps {
-    dateRange?: { from: Date; to: Date }
+    entries: TimeEntry[]
 }
 
 type MemberSort = 'none' | 'asc' | 'desc'
 type ActivitySort = 'none' | 'no-desc-first' | 'no-activity-first'
 
-export function TeamActivities({ dateRange }: TeamActivitiesProps) {
-    const { timeEntries, projects, users } = useDataStore()
+export function TeamActivities({ entries }: TeamActivitiesProps) {
+    const { projects, users } = useDataStore()
     const [memberSort, setMemberSort] = useState<MemberSort>('none')
     const [activitySort, setActivitySort] = useState<ActivitySort>('none')
 
@@ -29,30 +31,32 @@ export function TeamActivities({ dateRange }: TeamActivitiesProps) {
     }
 
     const rawMembers = useMemo(() => {
-        const rangeStart = dateRange ? startOfDay(dateRange.from) : null
-        const rangeEnd = dateRange ? endOfDay(dateRange.to) : null
+        // Extract unique user IDs from the dynamically provided entries
+        const activeUserIds = Array.from(new Set(entries.map(e => e.userId)))
 
-        const filtered = rangeStart && rangeEnd
-            ? timeEntries.filter(e => {
-                const t = new Date(e.startTime)
-                return t >= rangeStart && t <= rangeEnd
-            })
-            : timeEntries
+        // Also include all users from the store so that if we have a team 
+        // they appear even if they have 0 hours, if they are fetched!
+        const storeUserIds = users.map(u => u.id)
+        const allRelevantIds = Array.from(new Set([...activeUserIds, ...storeUserIds]))
 
-        return users.map((user, i) => {
-            const entries = filtered.filter(e => e.userId === user.id)
-            const name = user.name || user.id
+        return allRelevantIds.map((uid, i) => {
+            const userObj = users.find(u => u.id === uid)
+            const name = userObj?.name || `User (${uid.substring(0, 4)})`
+            const role = userObj?.role || 'member'
 
-            const totalSec = entries.reduce((a, c) => a + (c.duration ?? 0), 0)
+            const userEntries = entries.filter(e => e.userId === uid)
+
+
+            const totalSec = userEntries.reduce((a, c) => a + (c.duration ?? 0), 0)
             const h = Math.floor(totalSec / 3600)
             const m = Math.floor((totalSec % 3600) / 60)
 
-            const sorted = [...entries].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+            const sorted = [...userEntries].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
             const latest = sorted[0]
             const latestProject = projects.find(p => p.id === latest?.projectId)
 
             const projectHours: Record<string, number> = {}
-            entries.forEach(e => {
+            userEntries.forEach(e => {
                 const pid = e.projectId ?? 'unknown'
                 projectHours[pid] = (projectHours[pid] || 0) + ((e.duration ?? 0) / 3600)
             })
@@ -68,13 +72,13 @@ export function TeamActivities({ dateRange }: TeamActivitiesProps) {
             const latestDur = latest?.duration ?? 0
             const lh = Math.floor(latestDur / 3600)
             const lm = Math.floor((latestDur % 3600) / 60)
-            const hasActivity = entries.length > 0
+            const hasActivity = userEntries.length > 0
             const description = latest?.description?.trim() || ''
 
             return {
-                id: user.id,
+                id: uid,
                 name,
-                role: user.role || 'member',
+                role,
                 hasActivity,
                 description,
                 latestActivity: description || '(no description)',
@@ -87,7 +91,7 @@ export function TeamActivities({ dateRange }: TeamActivitiesProps) {
                 colorIndex: i,
             }
         })
-    }, [timeEntries, projects, users, dateRange])
+    }, [entries, projects, users])
 
     const members = useMemo(() => {
         const list = [...rawMembers]

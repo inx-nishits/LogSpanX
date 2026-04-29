@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay } from 'date-fns'
 import { ChevronDown, Printer, Share2 } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
@@ -41,6 +41,9 @@ function SimpleDropdown({ value, options, onChange }: { value: string; options: 
   )
 }
 
+import { getTimeEntries } from '@/lib/api/time-entries'
+import { mapApiTimeEntry } from '@/lib/api/mappers'
+
 export default function WeeklyReportPage() {
   const { timeEntries, projects, users } = useDataStore()
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -61,18 +64,44 @@ export default function WeeklyReportPage() {
 
   const days = useMemo(() => eachDayOfInterval({ start: from, end: to }), [from, to])
 
-  const filtered = useMemo(() =>
-    timeEntries.filter(e => {
-      const t = new Date(e.startTime)
-      if (t < from || t > to) return false
-      if (selUsers.length && !selUsers.includes(e.userId)) return false
-      if (selProjects.length && !selProjects.includes(e.projectId || '')) return false
-      if (selTags.length && !e.tagIds?.some(tid => selTags.includes(tid))) return false
-      if (descSearch && !e.description?.toLowerCase().includes(descSearch.toLowerCase())) return false
-      return true
-    }),
-    [timeEntries, from, to, selUsers, selProjects, selTags, descSearch]
-  )
+  const [filtered, setFiltered] = useState<typeof timeEntries>([])
+
+  useEffect(() => {
+    let active = true
+
+    const params: any = {
+      startDate: from.toISOString(),
+      endDate: to.toISOString(),
+    }
+    if (selUsers.length) params.userId = selUsers[0]
+    if (selProjects.length) params.projectId = selProjects[0]
+    if (selTags.length) params.tagId = selTags[0]
+    if (selStatus.length === 1 && selStatus.includes('billable')) params.billable = 'true'
+    if (selStatus.length === 1 && selStatus.includes('non-billable')) params.billable = 'false'
+
+    getTimeEntries(params)
+      .then((res: any) => {
+        if (!active) return
+        let entries = Array.isArray(res) ? res : (res?.items || res?.entries || [])
+        if (!Array.isArray(entries)) {
+          entries = Object.values(res || {}).find(v => Array.isArray(v)) || []
+        }
+
+        // Map raw API entries to the expected TimeEntry format
+        entries = entries.map(mapApiTimeEntry)
+
+        // Apply fallback local filters for descriptions or unhandled statuses
+        entries = entries.filter((e: any) => {
+          if (descSearch && !e.description?.toLowerCase().includes(descSearch.toLowerCase())) return false
+          return true
+        })
+
+        setFiltered(entries)
+      })
+      .catch(err => console.error(err))
+
+    return () => { active = false }
+  }, [from, to, selUsers, selProjects, selTags, selStatus, descSearch])
 
   const totalSecs = useMemo(() => filtered.reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
 

@@ -10,6 +10,8 @@ import { WeeklyBarChart } from './weekly-bar-chart'
 import { ProjectDonutChart } from './project-donut-chart'
 import { TeamActivities } from './team-activities'
 import { ActivityList } from './activity-list'
+import { getTimeEntries } from '@/lib/api/time-entries'
+import { mapApiTimeEntry } from '@/lib/api/mappers'
 
 export interface DonutEntry {
     name: string
@@ -37,8 +39,38 @@ export function DashboardView() {
     const [stats, setStats] = useState<{ todayHours: number; weekHours: number; activeProjects: number; topProject: string } | null>(null)
 
     useEffect(() => {
-        getDashboardStats().then(setStats).catch(() => {})
+        getDashboardStats().then(setStats).catch(() => { })
     }, [getDashboardStats])
+
+    const [sourceEntries, setSourceEntries] = useState<typeof timeEntries>([])
+
+    useEffect(() => {
+        let active = true
+        if (!user) return
+
+        const params: any = {
+            startDate: startOfDay(dateRange.from).toISOString(),
+            endDate: endOfDay(dateRange.to).toISOString(),
+        }
+
+        if (filters.teamScope === 'only-me') {
+            params.userId = user.id
+        }
+
+        getTimeEntries(params)
+            .then((res: any) => {
+                if (!active) return
+                let entries = Array.isArray(res) ? res : (res?.items || res?.entries || [])
+                if (!Array.isArray(entries)) {
+                    entries = Object.values(res || {}).find(v => Array.isArray(v)) || []
+                }
+                entries = entries.map(mapApiTimeEntry)
+                setSourceEntries(entries)
+            })
+            .catch(console.error)
+
+        return () => { active = false }
+    }, [user, dateRange, filters.teamScope])
 
     // Build lead name map from store instead of hardcoding
     const leadNames = useMemo(() =>
@@ -48,21 +80,6 @@ export function DashboardView() {
 
     const dashboardData = useMemo(() => {
         if (!user) return null
-
-        // 1. Date + Scope Filtering — use startOfDay/endOfDay so single-day picks include all entries
-        const rangeStart = startOfDay(dateRange.from)
-        const rangeEnd = endOfDay(dateRange.to)
-        let sourceEntries = timeEntries.filter(e => {
-            const t = new Date(e.startTime)
-            return t >= rangeStart && t <= rangeEnd
-        })
-
-        if (filters.teamScope === 'only-me') {
-            sourceEntries = sourceEntries.filter(e => e.userId === user.id)
-        } else if (filters.teamScope === 'team' && user.role === 'admin') {
-            const leadProjectIds = new Set(projects.filter(p => p.leadId === user.id).map(p => p.id))
-            sourceEntries = sourceEntries.filter(e => leadProjectIds.has(e.projectId ?? '') || e.userId === user.id)
-        }
 
         // 2. Stats
         const totalSeconds = sourceEntries.reduce((acc, e) => acc + (e.duration ?? 0), 0)
@@ -184,7 +201,7 @@ export function DashboardView() {
             barProjects,
             isTaskView,
         }
-    }, [user, timeEntries, projects, tasks, users, filters, dateRange, leadNames, stats])
+    }, [user, sourceEntries, projects, tasks, users, filters, dateRange, leadNames, stats])
 
     if (!user || !dashboardData) return null
 
@@ -217,7 +234,7 @@ export function DashboardView() {
                         <ProjectDonutChart data={dashboardData.donutData} totalTime={dashboardData.totalTime} isTaskView={dashboardData.isTaskView} />
                     </div>
                     <div className="lg:col-span-1">
-                        <ActivityList />
+                        <ActivityList entries={sourceEntries} />
                     </div>
                 </div>
             ) : (
@@ -234,7 +251,7 @@ export function DashboardView() {
                     />
                     <WeeklyBarChart data={dashboardData.barData} projects={dashboardData.barProjects} isTaskView={dashboardData.isTaskView} />
                     <ProjectDonutChart data={dashboardData.donutData} totalTime={dashboardData.totalTime} isTaskView={dashboardData.isTaskView} />
-                    <TeamActivities dateRange={dateRange} />
+                    <TeamActivities entries={sourceEntries} />
                 </div>
             )}
         </div>

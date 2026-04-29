@@ -8,6 +8,8 @@ export interface TimeEntryParams {
   endDate?: string
   userId?: string
   projectId?: string
+  billable?: boolean | string
+  tagId?: string
 }
 
 export interface CreateTimeEntryPayload {

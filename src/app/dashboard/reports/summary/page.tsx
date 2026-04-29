@@ -175,6 +175,9 @@ function BillabilityDropdown({ mode, onChange }: { mode: 'billability' | 'projec
   )
 }
 
+import { getTimeEntries } from '@/lib/api/time-entries'
+import { mapApiTimeEntry } from '@/lib/api/mappers'
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SummaryReportPage() {
@@ -237,74 +240,77 @@ export default function SummaryReportPage() {
     return appliedFilters.lead // lead filter stores user IDs directly
   }, [appliedFilters.lead])
 
-  const filtered = useMemo(() => {
-    return timeEntries.filter(e => {
-      const t = new Date(e.startTime)
-      if (t < from || t > to) return false
+  const [filtered, setFiltered] = useState<typeof timeEntries>([])
 
-      // Team filter
-      if (teamUserIds.length > 0 && !teamUserIds.includes(e.userId)) return false
+  useEffect(() => {
+    let active = true
 
-      // Project Lead filter
-      if (leadUserIds.length > 0) {
-        const proj = projects.find(p => p.id === e.projectId)
-        if (!proj || !leadUserIds.includes(proj.leadId ?? '')) return false
-      }
+    // Only one value per filter for simplistic passing to API as per normal backend params
+    const params: any = {
+      startDate: from.toISOString(),
+      endDate: to.toISOString(),
+    }
 
-      // Project filter
-      if (appliedFilters.project.length > 0) {
-        const wantWithout = appliedFilters.project.includes('__without__')
-        const pIds = appliedFilters.project.filter(id => id !== '__without__')
-        if (!e.projectId) {
-          if (!wantWithout) return false
-        } else {
-          if (pIds.length > 0 && !pIds.includes(e.projectId)) return false
-          if (pIds.length === 0 && !wantWithout) return false
+    // Convert array filters to strings or omit if empty. 
+    // Usually arrays are comma separated or just pick the first.
+    if (appliedFilters.team.length) params.userId = appliedFilters.team[0]
+    if (appliedFilters.project.length) params.projectId = appliedFilters.project[0]
+    // The backend endpoints primarily support userId, projectId, billable, tagId
+    if (appliedFilters.tag.length) params.tagId = appliedFilters.tag[0]
+    if (appliedFilters.status.length === 1 && appliedFilters.status.includes('billable')) params.billable = 'true'
+    if (appliedFilters.status.length === 1 && appliedFilters.status.includes('non-billable')) params.billable = 'false'
+
+    getTimeEntries(params)
+      .then((res: any) => {
+        if (!active) return
+        let entries = Array.isArray(res) ? res : (res?.items || res?.entries || [])
+        if (!Array.isArray(entries)) {
+          entries = Object.values(res || {}).find(v => Array.isArray(v)) || []
         }
-      }
 
-      // Task filter
-      if (appliedFilters.task.length > 0) {
-        const wantWithout = appliedFilters.task.includes('__without__')
-        const tIds = appliedFilters.task.filter(id => id !== '__without__')
-        if (!e.taskId) {
-          if (!wantWithout) return false
-        } else {
-          if (tIds.length > 0 && !tIds.includes(e.taskId)) return false
-          if (tIds.length === 0 && !wantWithout) return false
-        }
-      }
+        // Map raw API entries to the expected TimeEntry format
+        entries = entries.map(mapApiTimeEntry)
 
-      // Status filter
-      if (appliedFilters.status.length > 0 && appliedFilters.status.length < 2) {
-        if (appliedFilters.status.includes('billable') && !e.billable) return false
-        if (appliedFilters.status.includes('non-billable') && e.billable) return false
-      }
+        // Keep local filtering for anything backend might not support comprehensively
+        entries = entries.filter((e: any) => {
+          // Team filter
+          if (teamUserIds.length > 0 && !teamUserIds.includes(e.userId)) return false
 
-      // Tag filter
-      if (appliedFilters.tag.length > 0) {
-        const wantWithout = appliedFilters.tag.includes('__without__')
-        const tIds = appliedFilters.tag.filter(id => id !== '__without__')
-        if (!e.tagIds?.length) {
-          if (!wantWithout) return false
-        } else {
-          if (tIds.length > 0 && !e.tagIds.some(tid => tIds.includes(tid))) return false
-          if (tIds.length === 0 && !wantWithout) return false
-        }
-      }
+          // Project Lead filter
+          if (leadUserIds.length > 0) {
+            const proj = projects.find(p => p.id === e.projectId)
+            if (!proj || !leadUserIds.includes(proj.leadId ?? '')) return false
+          }
 
-      // Description filter
-      if (appliedFilters.desc) {
-        if (appliedFilters.desc === '__without__') {
-          if (e.description?.trim()) return false
-        } else {
-          if (!e.description?.toLowerCase().includes(appliedFilters.desc.toLowerCase())) return false
-        }
-      }
+          // Task filter
+          if (appliedFilters.task.length > 0) {
+            const wantWithout = appliedFilters.task.includes('__without__')
+            const tIds = appliedFilters.task.filter(id => id !== '__without__')
+            if (!e.taskId) {
+              if (!wantWithout) return false
+            } else {
+              if (tIds.length > 0 && !tIds.includes(e.taskId)) return false
+              if (tIds.length === 0 && !wantWithout) return false
+            }
+          }
 
-      return true
-    })
-  }, [timeEntries, from, to, teamUserIds, leadUserIds, appliedFilters, projects])
+          // Description filter
+          if (appliedFilters.desc) {
+            if (appliedFilters.desc === '__without__') {
+              if (e.description?.trim()) return false
+            } else {
+              if (!e.description?.toLowerCase().includes(appliedFilters.desc.toLowerCase())) return false
+            }
+          }
+          return true
+        })
+
+        setFiltered(entries)
+      })
+      .catch(err => console.error(err))
+
+    return () => { active = false }
+  }, [from, to, teamUserIds, leadUserIds, appliedFilters, projects])
 
   const totalSecs = useMemo(() => filtered.reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
   const billableSecs = useMemo(() => filtered.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])

@@ -272,7 +272,8 @@ function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defau
   )
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
+import { getTimeEntries } from '@/lib/api/time-entries'
+import { mapApiTimeEntry } from '@/lib/api/mappers'
 
 export default function DetailedReportPage() {
   const { timeEntries, projects, users, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
@@ -301,40 +302,58 @@ export default function DetailedReportPage() {
   const [rounding, setRounding] = useState(false)
   const [showEntryBar, setShowEntryBar] = useState(false)
 
-  const filtered = useMemo(() => {
-    let entries = [...timeEntries].filter(e => {
-      const t = new Date(e.startTime)
-      return t >= startOfDay(dateRange.from) && t <= endOfDay(dateRange.to)
-    })
+  const [filtered, setFiltered] = useState<typeof timeEntries>([])
 
-    if (selUsers.length) entries = entries.filter(e => selUsers.includes(e.userId))
-    if (selProjects.length) entries = entries.filter(e => e.projectId && selProjects.includes(e.projectId))
-    if (selTags.length) entries = entries.filter(e => e.tagIds?.some(tid => selTags.includes(tid)))
-    if (selTasks.length) entries = entries.filter(e => e.taskId && selTasks.includes(e.taskId))
-    if (selStatus.length > 0 && selStatus.length < 2) {
-      entries = entries.filter(e => {
-        if (selStatus.includes('billable') && !e.billable) return false
-        if (selStatus.includes('non-billable') && e.billable) return false
-        return true
-      })
+  useEffect(() => {
+    let active = true
+
+    // Only one value per filter for simplistic passing to API as per normal backend params
+    const params: any = {
+      startDate: dateRange.from.toISOString(),
+      endDate: dateRange.to.toISOString(),
     }
-    if (filterDesc) entries = entries.filter(e => e.description.toLowerCase().includes(filterDesc.toLowerCase()))
+    if (selUsers.length) params.userId = selUsers[0]
+    if (selProjects.length) params.projectId = selProjects[0]
+    if (selTags.length) params.tagId = selTags[0]
+    if (selStatus.length === 1 && selStatus.includes('billable')) params.billable = 'true'
+    if (selStatus.length === 1 && selStatus.includes('non-billable')) params.billable = 'false'
 
-    entries.sort((a, b) => {
-      let valA: any = a[sortField as keyof typeof a]
-      let valB: any = b[sortField as keyof typeof b]
-      if (sortField === 'startTime') { valA = new Date(a.startTime).getTime(); valB = new Date(b.startTime).getTime() }
-      if (sortField === 'userName') { valA = users.find(u => u.id === a.userId)?.name || ''; valB = users.find(u => u.id === b.userId)?.name || '' }
-      if (sortField === 'duration') { valA = a.duration || 0; valB = b.duration || 0 }
-      if (sortField === 'description') { valA = a.description || ''; valB = b.description || '' }
+    getTimeEntries(params)
+      .then((res: any) => {
+        if (!active) return
+        let entries = Array.isArray(res) ? res : (res?.items || res?.entries || [])
+        if (!Array.isArray(entries)) {
+          // fallback if it's nested differently
+          entries = Object.values(res || {}).find(v => Array.isArray(v)) || []
+        }
 
-      if (valA < valB) return sortOrder === 'asc' ? -1 : 1
-      if (valA > valB) return sortOrder === 'asc' ? 1 : -1
-      return 0
-    })
+        // Map raw API entries to the expected TimeEntry format
+        entries = entries.map(mapApiTimeEntry)
 
-    return entries
-  }, [timeEntries, dateRange, selUsers, selProjects, selTags, selTasks, selStatus, filterDesc, users, sortField, sortOrder])
+        // Final local filtering only for items the backend might not natively support via specific query keys
+        if (filterDesc) entries = entries.filter((e: any) => e.description?.toLowerCase().includes(filterDesc.toLowerCase()))
+        if (selTasks.length) entries = entries.filter((e: any) => e.taskId && selTasks.includes(e.taskId))
+
+        // Sort
+        entries.sort((a: any, b: any) => {
+          let valA: any = a[sortField as keyof typeof a]
+          let valB: any = b[sortField as keyof typeof b]
+          if (sortField === 'startTime') { valA = new Date(a.startTime).getTime(); valB = new Date(b.startTime).getTime() }
+          if (sortField === 'userName') { valA = users.find(u => u.id === a.userId)?.name || ''; valB = users.find(u => u.id === b.userId)?.name || '' }
+          if (sortField === 'duration') { valA = a.duration || 0; valB = b.duration || 0 }
+          if (sortField === 'description') { valA = a.description || ''; valB = b.description || '' }
+
+          if (valA < valB) return sortOrder === 'asc' ? -1 : 1
+          if (valA > valB) return sortOrder === 'asc' ? 1 : -1
+          return 0
+        })
+
+        setFiltered(entries)
+      })
+      .catch(err => console.error(err))
+
+    return () => { active = false }
+  }, [dateRange, selUsers, selProjects, selTags, selTasks, selStatus, filterDesc, sortField, sortOrder, users])
 
   const handleApply = (filters: any) => {
     const params = new URLSearchParams(searchParams.toString())
