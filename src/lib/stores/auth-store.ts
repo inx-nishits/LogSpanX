@@ -49,6 +49,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: async () => {
         const token = get().token
         if (!token) return
+        if (token === 'mock-designer-token') return
         try {
           const payload = await apiRequest<{ token: string }>('/auth/refresh', {
             method: 'POST',
@@ -73,6 +74,20 @@ export const useAuthStore = create<AuthState>()(
 
         // Prevent re-running if already authenticated with a valid token
         if (get().authStatus === 'authenticated' && get().user) {
+          return
+        }
+
+        if (token === 'mock-designer-token') {
+          set({
+            authStatus: 'authenticated',
+            user: {
+              id: 'designer',
+              email: 'designer@logspanx.com',
+              name: 'Designer',
+              role: 'owner'
+            },
+            error: null,
+          })
           return
         }
 
@@ -117,6 +132,21 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ error: null })
         try {
+          if (email === 'designer@logspanx.com' && password === '123456') {
+            set({
+              token: 'mock-designer-token',
+              user: {
+                id: 'designer',
+                email: 'designer@logspanx.com',
+                name: 'Designer',
+                role: 'owner'
+              },
+              authStatus: 'authenticated',
+              error: null,
+            })
+            return true
+          }
+
           const payload = await apiRequest<AuthPayload>('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),

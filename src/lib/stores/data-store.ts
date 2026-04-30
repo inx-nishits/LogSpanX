@@ -187,6 +187,28 @@ export const useDataStore = create<DataStore>((set, get) => ({
       return
     }
 
+    // Mock designer user — skip all API calls, use empty data
+    if (token === 'mock-designer-token') {
+      set({
+        users: [{
+          id: 'designer',
+          email: 'designer@logspanx.com',
+          name: 'Designer',
+          role: 'owner',
+        }],
+        groups: [],
+        clients: [],
+        projects: [],
+        tags: [],
+        timeEntries: [],
+        tasks: [],
+        isLoading: false,
+        isInitialized: true,
+        error: null,
+      })
+      return
+    }
+
     // Resolve the current user — may be null on first load if auth hasn't
     // finished initializing yet, so fall back to fetching /auth/me directly.
     let currentUser = useAuthStore.getState().user
