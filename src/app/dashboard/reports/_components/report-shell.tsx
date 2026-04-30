@@ -11,7 +11,7 @@ import { DateRangePicker } from '@/components/dashboard/date-range-picker'
 import { FilterVisibilityDropdown, FilterKey, ALL_FILTER_KEYS } from './filter-visibility-dropdown'
 import { DescriptionPill } from './description-pill'
 import { useDataStore } from '@/lib/stores/data-store'
-import { canViewAllTimeEntries } from '@/lib/rbac'
+
 import { useAuthStore } from '@/lib/stores/auth-store'
 
 export const TABS = [
@@ -54,11 +54,11 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
   // ── Build filter items from store data ──────────────────────────────────────
   const teamItems = useMemo(() => {
     const groupItems = groups.map(g => ({ id: g.id, label: g.name, group: 'Groups' }))
-    const userItems = canViewAllTimeEntries(user?.role ?? 'member')
-      ? users.map(u => ({ id: u.id, label: u.name }))
-      : [] // members only see their own data, no team filter needed
+    // Show all users the backend returned — the backend already scopes visibility
+    // per role (ADMIN sees all, TEAM_LEAD sees their team, MEMBER sees project peers)
+    const userItems = users.map(u => ({ id: u.id, label: u.name }))
     return [...groupItems, ...userItems]
-  }, [groups, users, user])
+  }, [groups, users])
 
   const leadItems = useMemo(() => {
     // Unique leads from projects that have a leadId

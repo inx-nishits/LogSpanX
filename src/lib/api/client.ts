@@ -1,5 +1,3 @@
-import { handleMockRequest } from './mock'
-
 export interface ApiEnvelope<T> {
   success: boolean
   message?: string
@@ -88,24 +86,27 @@ async function doRefresh(expiredToken: string): Promise<string> {
   isRefreshing = true
 
   try {
+    const { useAuthStore } = await import('@/lib/stores/auth-store')
+    const refreshToken = useAuthStore.getState().refreshToken
+
     const res = await fetch(buildUrl('/auth/refresh'), {
       method: 'POST',
       headers: {
         Accept: 'application/json',
-        Authorization: `Bearer ${expiredToken}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ refreshToken }),
     })
 
     if (!res.ok) throw new ApiError('Refresh failed', res.status)
 
     const raw = await res.json()
-    const unwrapped = unwrapApiPayload(raw) as { token?: string }
+    const unwrapped = unwrapApiPayload(raw) as { token?: string, refreshToken?: string }
     const newToken = unwrapped?.token
 
     if (!newToken) throw new ApiError('No token in refresh response', 500)
 
-    const { useAuthStore } = await import('@/lib/stores/auth-store')
-    useAuthStore.getState().setToken(newToken)
+    useAuthStore.getState().setToken(newToken, unwrapped.refreshToken)
 
     const queue = refreshQueue
     refreshQueue = []
@@ -130,10 +131,6 @@ export async function apiRequest<T>(
   } = {}
 ): Promise<T> {
   const { query, token, headers, ...requestInit } = options
-
-  if (process.env.NEXT_PUBLIC_USE_MOCK_API === 'true') {
-    return handleMockRequest(path, options) as Promise<T>
-  }
 
   const makeRequest = (authToken: string | null | undefined) =>
     fetch(buildUrl(path, query), {

@@ -6,13 +6,14 @@ import { User } from '@/lib/types'
 
 interface AuthState {
   token: string | null
+  refreshToken: string | null
   user: User | null
   authStatus: 'idle' | 'initializing' | 'authenticated' | 'unauthenticated'
   hasHydrated: boolean
   error: string | null
-  setToken: (token: string) => void
+  setToken: (token: string, refreshToken?: string) => void
   initialize: () => Promise<void>
-  refreshToken: () => Promise<void>
+  refreshSession: () => Promise<void>
   login: (email: string, password: string) => Promise<boolean>
   signup: (name: string, email: string, password: string) => Promise<boolean>
   forgotPassword: (email: string) => Promise<void>
@@ -26,11 +27,13 @@ interface AuthState {
 
 interface AuthPayload {
   token: string
+  refreshToken: string
   user: ApiUser
 }
 
 const initialState = {
   token: null,
+  refreshToken: null,
   user: null,
   authStatus: 'idle' as const,
   hasHydrated: false,
@@ -42,22 +45,23 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       ...initialState,
 
-      setToken: (newToken: string) => {
-        set({ token: newToken })
+      setToken: (newToken: string, newRefreshToken?: string) => {
+        if (newRefreshToken) set({ token: newToken, refreshToken: newRefreshToken })
+        else set({ token: newToken })
       },
 
-      refreshToken: async () => {
-        const token = get().token
-        if (!token) return
+      refreshSession: async () => {
+        const refreshToken = get().refreshToken
+        if (!refreshToken) return
         try {
-          const payload = await apiRequest<{ token: string }>('/auth/refresh', {
+          const payload = await apiRequest<{ token: string, refreshToken?: string }>('/auth/refresh', {
             method: 'POST',
-            token,
+            body: JSON.stringify({ refreshToken }),
           })
-          set({ token: payload.token })
+          set({ token: payload.token, ...(payload.refreshToken ? { refreshToken: payload.refreshToken } : {}) })
         } catch (err) {
           if (err instanceof Error && 'status' in err && (err as { status: number }).status === 401) {
-            set({ token: null, user: null, authStatus: 'unauthenticated' })
+            set({ token: null, refreshToken: null, user: null, authStatus: 'unauthenticated' })
           }
           throw err
         }
@@ -82,7 +86,7 @@ export const useAuthStore = create<AuthState>()(
           // Attempt token refresh — failures are non-fatal unless the token is cleared (401)
           let activeToken = token
           try {
-            await get().refreshToken()
+            await get().refreshSession()
             activeToken = get().token ?? token
           } catch {
             // If refresh cleared the token (401 expired), bail out
@@ -106,7 +110,7 @@ export const useAuthStore = create<AuthState>()(
           // Only clear session on definitive auth failures (401/403)
           // Network errors or server errors should not log the user out
           if (status === 401 || status === 403) {
-            set({ token: null, user: null, authStatus: 'unauthenticated', error: null })
+            set({ token: null, refreshToken: null, user: null, authStatus: 'unauthenticated', error: null })
           } else {
             console.error('Failed to initialize auth:', error instanceof Error ? error.message : String(error))
             set({ authStatus: 'unauthenticated', error: error instanceof Error ? error.message : 'Failed to initialize session' })
@@ -132,6 +136,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           set({
             token: null,
+            refreshToken: null,
             user: null,
             authStatus: 'unauthenticated',
             error: error instanceof Error ? error.message : 'Login failed',
@@ -158,6 +163,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           set({
             token: null,
+            refreshToken: null,
             user: null,
             authStatus: 'unauthenticated',
             error: error instanceof Error ? error.message : 'Signup failed',
@@ -197,6 +203,7 @@ export const useAuthStore = create<AuthState>()(
         } finally {
           set({
             token: null,
+            refreshToken: null,
             user: null,
             authStatus: 'unauthenticated',
             error: null,
@@ -261,6 +268,7 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         token: state.token,
+        refreshToken: state.refreshToken,
         user: state.user,
         authStatus: state.authStatus === 'authenticated' ? 'authenticated' : 'idle' as const,
       }),
@@ -269,7 +277,7 @@ export const useAuthStore = create<AuthState>()(
           state.hasHydrated = true
           // If we have a token + user persisted, treat as authenticated immediately
           // initialize() will validate/refresh in the background
-          if (state.token && state.user && state.authStatus === 'authenticated') {
+          if (state.token && state.refreshToken && state.user && state.authStatus === 'authenticated') {
             state.authStatus = 'authenticated'
           }
         }

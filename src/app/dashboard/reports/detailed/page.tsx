@@ -10,6 +10,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { TagPicker } from '@/components/tracker/tag-picker'
 import { ProjectPicker } from '@/components/tracker/project-picker'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useAuthStore } from '@/lib/stores/auth-store'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -207,6 +208,9 @@ function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defau
     setDesc('')
   }
 
+  const { user: currentUser } = useAuthStore()
+  const canManageUsers = currentUser?.role === 'owner' || currentUser?.role === 'admin'
+
   return (
     <div className="flex items-center h-[54px] bg-white border-b border-[#e4eaee] px-4 relative z-[200]">
       <div className="w-[44px] flex-shrink-0" />
@@ -218,20 +222,24 @@ function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defau
 
       <div className="flex items-center gap-4 flex-shrink-0">
         <D extra="border-none gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1.5 text-[16px] text-[#555] hover:text-[#03a9f4] cursor-pointer">
-                {users.find(u => u.id === uid)?.name || 'User'} <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[180px] bg-white border border-gray-100 shadow-xl">
-              {users.map(u => (
-                <DropdownMenuItem key={u.id} onClick={() => setUid(u.id)} className="py-2.5 px-3 cursor-pointer text-[16px]">
-                  {u.name} {u.id === uid && <Check className="h-3.5 w-3.5 ml-auto text-[#03a9f4]" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canManageUsers ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1.5 text-[16px] text-[#555] hover:text-[#03a9f4] cursor-pointer">
+                  {users.find(u => u.id === uid)?.name || 'User'} <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[180px] bg-white border border-gray-100 shadow-xl">
+                {users.map(u => (
+                  <DropdownMenuItem key={u.id} onClick={() => setUid(u.id)} className="py-2.5 px-3 cursor-pointer text-[16px]">
+                    {u.name} {u.id === uid && <Check className="h-3.5 w-3.5 ml-auto text-[#03a9f4]" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className="text-[16px] text-[#555]">{users.find(u => u.id === uid)?.name || 'User'}</span>
+          )}
         </D>
 
         <D extra="border-none">
@@ -280,6 +288,8 @@ export default function DetailedReportPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
+  const { user: currentUser } = useAuthStore()
+  const canManageUsers = currentUser?.role === 'owner' || currentUser?.role === 'admin'
 
   const paramFrom = searchParams.get('from')
   const paramTo = searchParams.get('to')
@@ -592,20 +602,24 @@ export default function DetailedReportPage() {
                         </div>
 
                         <div className="w-[150px] flex-shrink-0 flex items-center justify-end px-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="flex items-center justify-end gap-1 text-[16px] text-[#555] hover:text-[#03a9f4] cursor-pointer ml-auto max-w-[130px] truncate">
-                                {user?.name || '—'} <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[180px] bg-white border border-gray-100 shadow-xl">
-                              {users.map(u => (
-                                <DropdownMenuItem key={u.id} onClick={() => updateTimeEntry(entry.id, { userId: u.id })} className="py-2.5 px-3 cursor-pointer text-[16px]">
-                                  {u.name} {u.id === entry.userId && <Check className="h-3.5 w-3.5 ml-auto text-[#03a9f4]" />}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {canManageUsers ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="flex items-center justify-end gap-1 text-[16px] text-[#555] hover:text-[#03a9f4] cursor-pointer ml-auto max-w-[130px] truncate">
+                                  {user?.name || '—'} <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-[180px] bg-white border border-gray-100 shadow-xl">
+                                {users.map(u => (
+                                  <DropdownMenuItem key={u.id} onClick={() => updateTimeEntry(entry.id, { userId: u.id })} className="py-2.5 px-3 cursor-pointer text-[16px]">
+                                    {u.name} {u.id === entry.userId && <Check className="h-3.5 w-3.5 ml-auto text-[#03a9f4]" />}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <span className="text-[16px] text-[#555] max-w-[130px] truncate">{user?.name || '—'}</span>
+                          )}
                         </div>
 
                         <div className="w-[140px] flex-shrink-0 flex flex-col items-center justify-center leading-tight">

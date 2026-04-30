@@ -253,13 +253,17 @@ export function serializeProjectMember(member: ProjectMember) {
 }
 
 export function serializeTimeEntryPatch(entry: Partial<TimeEntry>) {
-  return {
-    description: entry.description,
-    projectId: entry.projectId ?? undefined,
-    taskId: entry.taskId ?? undefined,
-    tagIds: entry.tagIds,
-    billable: entry.billable,
-    startTime: entry.startTime?.toISOString(),
-    endTime: entry.endTime?.toISOString(),
-  }
+  const patch: Record<string, unknown> = {}
+
+  if ('description' in entry) patch.description = entry.description
+  if ('projectId' in entry) patch.projectId = entry.projectId || null
+  if ('taskId' in entry) patch.taskId = entry.taskId || null
+  if ('tagIds' in entry) patch.tagIds = (entry.tagIds ?? []).filter(id => id !== '')
+  if ('billable' in entry) patch.billable = entry.billable
+  if ('startTime' in entry && entry.startTime) patch.startTime = entry.startTime instanceof Date ? entry.startTime.toISOString() : entry.startTime
+  if ('endTime' in entry && entry.endTime) patch.endTime = entry.endTime instanceof Date ? entry.endTime.toISOString() : entry.endTime
+  if ('duration' in entry) patch.duration = entry.duration
+  if ('userId' in entry) patch.userId = entry.userId
+
+  return patch
 }
