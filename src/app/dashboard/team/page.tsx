@@ -388,10 +388,18 @@ export default function TeamPage() {
                               {member.name || '(not joined yet)'}
                             </span>
                           </td>
-                          <td className="p-4 py-3 align-top border-r border-dotted border-[#d6e5ef]">
-                            <span className="text-[#999] hover:text-[#03a9f4] cursor-pointer transition-colors break-all">
-                              {member.email}
-                            </span>
+                          <td className="p-4 py-3 align-top border-r border-dotted border-[#d6e5ef] max-w-[200px]">
+                            <div className="relative flex group/emailtooltip">
+                              <span className="text-[#999] truncate cursor-default block w-full">
+                                {member.email}
+                              </span>
+                              {/* Custom Tooltip */}
+                              <div className="absolute left-0 top-full mt-2 hidden group-hover/emailtooltip:block w-max max-w-[300px] bg-gray-900 text-white text-[12px] rounded px-3 py-2 z-[60] shadow-lg break-all">
+                                {member.email}
+                                {/* Tooltip Triangle */}
+                                <div className="absolute bottom-full left-4 w-0 h-0 border-l-[5px] border-r-[5px] border-b-[5px] border-l-transparent border-r-transparent border-b-gray-900"></div>
+                              </div>
+                            </div>
                           </td>
                           <td className="p-4 py-3 align-top border-r border-dotted border-[#d6e5ef]">
                             <div className="flex flex-wrap gap-1.5">
@@ -420,7 +428,7 @@ export default function TeamPage() {
                   </table>
                 </div>
 
-                {totalItems > 0 && !appliedSearch && (
+                {totalItems > 0 && !hasActiveFilters && (
                   <div className="pt-6 flex items-center justify-start gap-3 pb-4">
                     <div className="flex items-center border border-[#e4eaee] rounded-[2px] h-8 bg-white shadow-none">
                       <button

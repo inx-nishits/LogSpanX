@@ -160,7 +160,7 @@ export default function ProjectDetailPage() {
       setActiveTab(tabParam.toUpperCase())
     }
   }, [searchParams])
-  
+
   // TASKS States
   const [taskStatusFilter, setTaskStatusFilter] = useState('Show active')
   const [taskSearchQuery, setTaskSearchQuery] = useState('')
@@ -175,11 +175,11 @@ export default function ProjectDetailPage() {
 
   // Logic: Filtering -> Sorting -> Pagination
   const filteredTasks = mockTasks.filter(task => {
-    const matchesStatus = taskStatusFilter === 'Show all' || 
-                          (taskStatusFilter === 'Show active' && task.status === 'active') ||
-                          (taskStatusFilter === 'Show done' && task.status === 'done');
-    const matchesSearch = task.code.toLowerCase().includes(taskSearchQuery.toLowerCase()) || 
-                          (task.id && task.id.toLowerCase().includes(taskSearchQuery.toLowerCase()));
+    const matchesStatus = taskStatusFilter === 'Show all' ||
+      (taskStatusFilter === 'Show active' && task.status === 'active') ||
+      (taskStatusFilter === 'Show done' && task.status === 'done');
+    const matchesSearch = task.code.toLowerCase().includes(taskSearchQuery.toLowerCase()) ||
+      (task.id && task.id.toLowerCase().includes(taskSearchQuery.toLowerCase()));
     return matchesStatus && matchesSearch;
   })
 
@@ -203,7 +203,7 @@ export default function ProjectDetailPage() {
   const statusSortedTasks = [...filteredStatusTasks].sort((a, b) => {
     let valA = a.name.toLowerCase();
     let valB = b.name.toLowerCase();
-    
+
     if (statusSortKey === 'TRACKED') {
       // Parse "120.45h" to 120.45
       const parseH = (s: string) => parseFloat(s.replace(/[^0-9.]/g, '')) || 0;
@@ -212,7 +212,7 @@ export default function ProjectDetailPage() {
       if (statusSortOrder === 'asc') return (valA as any) - (valB as any);
       return (valB as any) - (valA as any);
     }
-    
+
     if (statusSortOrder === 'asc') return valA.localeCompare(valB)
     return valB.localeCompare(valA)
   })
@@ -235,25 +235,25 @@ export default function ProjectDetailPage() {
 
   const SortIndicator = ({ active, order }: { active: boolean, order: 'asc' | 'desc' }) => {
     return (
-      <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        width="14" 
-        height="14" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2.5" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         className="ml-1"
       >
-        <path 
-          d="m7 9 5-5 5 5" 
-          className={`transition-all duration-300 ${active && order === 'asc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} 
+        <path
+          d="m7 9 5-5 5 5"
+          className={`transition-all duration-300 ${active && order === 'asc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`}
         />
-        <path 
-          d="m7 15 5 5 5-5" 
-          className={`transition-all duration-300 ${active && order === 'desc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} 
+        <path
+          d="m7 15 5 5 5-5"
+          className={`transition-all duration-300 ${active && order === 'desc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`}
         />
       </svg>
     );
@@ -261,8 +261,8 @@ export default function ProjectDetailPage() {
 
   const SectionBar = ({ title, children }: { title: string, children?: React.ReactNode }) => (
     <div className="bg-[#f0f7fb] px-4 py-[14px] border-b border-[#d6e5ef] flex items-center justify-between">
-       <span className={sectionTitleStyle}>{title}</span>
-       {children}
+      <span className={sectionTitleStyle}>{title}</span>
+      {children}
     </div>
   )
 
@@ -272,15 +272,15 @@ export default function ProjectDetailPage() {
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <div className="mb-1">
-               <Link href="/dashboard/projects" className="text-[15px] text-[#03a9f4] hover:underline transition-colors duration-200">Projects</Link>
+              <Link href="/dashboard/projects" className="text-[15px] text-[#03a9f4] hover:underline transition-colors duration-200">Projects</Link>
             </div>
             <h1 className="text-[30px] text-[#333] font-normal leading-[1.2] mb-1 mt-4">_INX-Estimation : Non-Billable</h1>
             <p className="text-[13px] text-[#666]">Inheritx Solutions</p>
           </div>
           <div className="flex items-center mb-auto pt-4 pr-4">
-             <div className="p-2.5 border border-[#e4eaee] rounded-sm cursor-pointer hover:bg-[#f9fafb] bg-white group select-none shadow-none active:scale-95 transition-transform" onClick={() => setIsFavorited(!isFavorited)}>
-                <Star className={`h-[18px] w-[18px] transition-all duration-300 ${isFavorited ? 'text-yellow-400 fill-yellow-400 scale-110' : 'text-gray-300 group-hover:text-yellow-400'}`} />
-             </div>
+            <div className="p-2.5 border border-[#e4eaee] rounded-sm cursor-pointer hover:bg-[#f9fafb] bg-white group select-none shadow-none active:scale-95 transition-transform" onClick={() => setIsFavorited(!isFavorited)}>
+              <Star className={`h-[18px] w-[18px] transition-all duration-300 ${isFavorited ? 'text-yellow-400 fill-yellow-400 scale-110' : 'text-gray-300 group-hover:text-yellow-400'}`} />
+            </div>
           </div>
         </div>
 
@@ -295,7 +295,7 @@ export default function ProjectDetailPage() {
 
       <div className="flex-1 pl-4 pr-4 pb-8 bg-[#f2f6f8] overflow-auto">
         <div className="bg-white border border-[#e4eaee] rounded-md relative z-10 -mt-[1px] min-h-full flex flex-col shadow-sm overflow-hidden">
-          
+
           {/* TASKS VIEW */}
           {activeTab === 'TASKS' && (
             <>
@@ -311,10 +311,10 @@ export default function ProjectDetailPage() {
                   </DropdownMenu>
                   <div className="relative flex-1 max-w-[300px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#999]" />
-                    <input type="text" placeholder="Search by name" value={taskSearchQuery} onChange={e => {setTaskSearchQuery(e.target.value); setTaskCurrentPage(1)}} className="w-full pl-9 pr-4 py-[5.5px] border border-[#c6d2d9] rounded-[2px] text-[12px] outline-none h-8" />
+                    <input type="text" placeholder="Search by name" value={taskSearchQuery} onChange={e => { setTaskSearchQuery(e.target.value); setTaskCurrentPage(1) }} className="w-full pl-9 pr-4 py-[5.5px] border border-[#c6d2d9] rounded-[2px] text-[12px] outline-none h-8" />
                   </div>
                 </div>
-                
+
                 <div className="border border-[#e4eaee] rounded-[2px] overflow-hidden shadow-none bg-white">
                   <SectionBar title="Tasks" />
                   {currentTasks.length > 0 ? (
@@ -332,13 +332,13 @@ export default function ProjectDetailPage() {
                           <tr key={`${task.id || 'none'}-${idx}`} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
                             <td className="px-4 py-5 text-[13px]"><span className={task.status === 'done' ? 'line-through text-[#999]' : 'text-[#333]'}>{task.id && <span className="text-[#999] mr-1">{task.id}:</span>} {task.code}</span></td>
                             <td className="px-4 py-5">
-                               <div className="flex flex-wrap gap-1.5">
-                                 {task.assignees.map((name, i) => (
-                                   <span key={i} className={`px-2 py-0.5 text-[12px] rounded-[2px] border transition-all cursor-pointer ${task.status === 'done' ? 'bg-gray-50 text-gray-400 border-gray-200' : 'bg-[#eaf4fb] text-[#03a9f4] border-[#cce5f7] hover:bg-[#d8e8f2]'}`}>
-                                     {name}
-                                   </span>
-                                 ))}
-                               </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {task.assignees.map((name, i) => (
+                                  <span key={i} className={`px-2 py-0.5 text-[12px] rounded-[2px] border transition-all cursor-pointer ${task.status === 'done' ? 'bg-gray-50 text-gray-400 border-gray-200' : 'bg-[#eaf4fb] text-[#03a9f4] border-[#cce5f7] hover:bg-[#d8e8f2]'}`}>
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -353,32 +353,32 @@ export default function ProjectDetailPage() {
                 {!taskSearchQuery && (
                   <div className="pt-6 flex items-center justify-start gap-3 pb-4 transition-all">
                     <div className="flex items-center border border-[#e4eaee] rounded-[2px] h-8 bg-white shadow-none">
-                      <button 
-                        onClick={() => setTaskCurrentPage(Math.max(1, taskCurrentPage - 1))} 
-                        disabled={taskCurrentPage === 1} 
+                      <button
+                        onClick={() => setTaskCurrentPage(Math.max(1, taskCurrentPage - 1))}
+                        disabled={taskCurrentPage === 1}
                         className="px-2 border-r border-[#e4eaee] h-full hover:bg-gray-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        <ChevronLeft className={`h-4 w-4 ${taskCurrentPage === 1 ? 'text-gray-200' : 'text-[#666]'}`}/>
+                        <ChevronLeft className={`h-4 w-4 ${taskCurrentPage === 1 ? 'text-gray-200' : 'text-[#666]'}`} />
                       </button>
                       <div className="px-4 text-[13px] text-[#666] select-none min-w-[100px] text-center">
                         {startIndex + 1}-{endIndex} of {sortedTasks.length}
                       </div>
-                      <button 
-                        onClick={() => setTaskCurrentPage(Math.min(totalPages, taskCurrentPage + 1))} 
-                        disabled={taskCurrentPage === totalPages || totalPages === 0} 
+                      <button
+                        onClick={() => setTaskCurrentPage(Math.min(totalPages, taskCurrentPage + 1))}
+                        disabled={taskCurrentPage === totalPages || totalPages === 0}
                         className="px-2 border-l border-[#e4eaee] h-full hover:bg-gray-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        <ChevronRight className={`h-4 w-4 ${taskCurrentPage === totalPages || totalPages === 0 ? 'text-gray-200' : 'text-[#666]'}`}/>
+                        <ChevronRight className={`h-4 w-4 ${taskCurrentPage === totalPages || totalPages === 0 ? 'text-gray-200' : 'text-[#666]'}`} />
                       </button>
                     </div>
                     <div className="flex items-center gap-2 h-8">
                       <DropdownMenu modal={false}>
                         <DropdownMenuTrigger className="px-3 border border-[#e4eaee] rounded-[2px] h-full flex items-center gap-2 hover:bg-gray-50 outline-none focus:ring-0">
                           <span className="text-[13px] text-[#666]">{taskItemsPerPage}</span>
-                          <ChevronDown className="h-3.5 w-3.5 text-[#999]"/>
+                          <ChevronDown className="h-3.5 w-3.5 text-[#999]" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-[80px] p-0 shadow-xl bg-white border border-[#e4eaee]">
-                          {[50, 100, 200].map(s => <DropdownMenuItem key={s} onClick={() => {setTaskItemsPerPage(s); setTaskCurrentPage(1)}} className={`py-2 px-4 cursor-pointer text-[13px] focus:bg-[#eaf4fb] ${taskItemsPerPage === s ? 'bg-[#f0f3f5]' : ''}`}>{s}</DropdownMenuItem>)}
+                          {[50, 100, 200].map(s => <DropdownMenuItem key={s} onClick={() => { setTaskItemsPerPage(s); setTaskCurrentPage(1) }} className={`py-2 px-4 cursor-pointer text-[13px] focus:bg-[#eaf4fb] ${taskItemsPerPage === s ? 'bg-[#f0f3f5]' : ''}`}>{s}</DropdownMenuItem>)}
                         </DropdownMenuContent>
                       </DropdownMenu>
                       <span className="text-[13px] text-[#999]">Items per page</span>
@@ -392,173 +392,173 @@ export default function ProjectDetailPage() {
           {/* ACCESS VIEW */}
           {activeTab === 'ACCESS' && (
             <div className="flex-1 p-[16px_20px] bg-white space-y-8 animate-in fade-in duration-300">
-               <div className="border border-[#e4eaee] rounded-[2px] overflow-hidden shadow-none bg-white">
-                  <SectionBar title="Users" />
-                  <table className="w-full border-collapse bg-white">
-                    <thead>
-                      <tr className="text-left border-b border-[#e4eaee] bg-white">
-                        <th className="p-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest w-[50%]">NAME</th>
-                        <th className="p-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest">ROLE</th>
+              <div className="border border-[#e4eaee] rounded-[2px] overflow-hidden shadow-none bg-white">
+                <SectionBar title="Users" />
+                <table className="w-full border-collapse bg-white">
+                  <thead>
+                    <tr className="text-left border-b border-[#e4eaee] bg-white">
+                      <th className="p-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest w-[50%]">NAME</th>
+                      <th className="p-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest">ROLE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockAccessUsers.map((user, idx) => (
+                      <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
+                        <td className="px-4 py-5 text-[13px]"><span className={user.status === 'inactive' ? 'line-through text-[#999]' : 'text-[#333]'}>{user.name}</span></td>
+                        <td className="px-4 py-5 text-[13px] text-[#333]">{user.role}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {mockAccessUsers.map((user, idx) => (
-                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
-                          <td className="px-4 py-5 text-[13px]"><span className={user.status === 'inactive' ? 'line-through text-[#999]' : 'text-[#333]'}>{user.name}</span></td>
-                          <td className="px-4 py-5 text-[13px] text-[#333]">{user.role}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-               </div>
-               <div className="border border-[#e4eaee] rounded-[2px] overflow-hidden shadow-none bg-white">
-                  <SectionBar title="Groups" />
-                  <table className="w-full border-collapse bg-white">
-                    <thead>
-                      <tr className="text-left border-b border-[#e4eaee] bg-white">
-                        <th className="p-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest">NAME</th>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="border border-[#e4eaee] rounded-[2px] overflow-hidden shadow-none bg-white">
+                <SectionBar title="Groups" />
+                <table className="w-full border-collapse bg-white">
+                  <thead>
+                    <tr className="text-left border-b border-[#e4eaee] bg-white">
+                      <th className="p-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest">NAME</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockGroups.map((group, idx) => (
+                      <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
+                        <td className="px-4 py-5 text-[13px]"><span className="font-bold text-[#333]">{group.name}</span><span className="text-[#999] ml-2">- {group.members}</span></td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {mockGroups.map((group, idx) => (
-                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
-                          <td className="px-4 py-5 text-[13px]"><span className="font-bold text-[#333]">{group.name}</span><span className="text-[#999] ml-2">- {group.members}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-               </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
           {/* STATUS VIEW */}
           {activeTab === 'STATUS' && (
             <div className="flex-1 p-[16px_20px] bg-white animate-in slide-in-from-right duration-300 overflow-auto">
-               
-               {/* SUMMARY CARDS SECTION */}
-               <div className="flex gap-5 mb-8 mt-2 h-[260px]">
-                  {/* Left Card: Tracked Stats */}
-                  <div className="w-[480px] border border-[#e4eaee] rounded-[2px] bg-white p-7 flex flex-col shadow-none">
-                    <div className="flex items-baseline justify-between mb-2">
-                      <span className="text-[13px] font-normal text-[#999999] uppercase tracking-[0.1em]">Tracked</span>
-                      <span className="text-[26px] font-bold text-[#333333]">4,837.45 h</span>
-                    </div>
-                    <div className="h-[1px] bg-[#e4eaee] mb-5" />
-                    <div className="flex flex-col gap-4 flex-1 justify-center">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-[13px] font-normal text-[#999999] uppercase tracking-widest">Billable</span>
-                        <span className="text-[18px] font-bold text-[#333333]">4.25 h</span>
-                      </div>
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-[13px] font-normal text-[#999999] uppercase tracking-widest">Non-billable</span>
-                        <span className="text-[18px] font-bold text-[#333333]">4,833.20 h</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Right Card: Donut Chart */}
-                  <div className="flex-1 border border-[#e4eaee] rounded-[2px] bg-white flex flex-col items-center justify-between p-6 pb-5 shadow-none relative">
-                      <div className="flex-1 flex flex-col items-center justify-center relative w-full pt-2">
-                         <div className="relative w-[180px] h-[180px]">
-                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                {/* Non-billable segment (Base circle) */}
-                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#add891" strokeWidth="20" />
-                                {/* Billable segment (Tiny arc) */}
-                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#7faf5c" strokeWidth="20" strokeDasharray="1.2 238" strokeDashoffset="0" />
-                                {/* White gap at the top to separate segments */}
-                                <rect x="78" y="49" width="20" height="2" fill="white" />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-[16px] font-bold text-[#333]">4,837.45 h</span>
-                            </div>
-                         </div>
-                      </div>
-                      <div className="flex items-center gap-6 mt-4">
-                         <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-[#7faf5c] rounded-[2px]" />
-                            <span className="text-[13px] text-[#666]">Billable</span>
-                         </div>
-                         <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-[#add891] rounded-[2px]" />
-                            <span className="text-[13px] text-[#666]">Non-billable</span>
-                         </div>
-                      </div>
-                  </div>
-               </div>
 
-               <div className="border border-[#e4eaee] rounded-[2px] overflow-hidden shadow-none bg-white">
-                  <SectionBar title="Tasks">
+              {/* SUMMARY CARDS SECTION */}
+              <div className="flex gap-5 mb-8 mt-2 h-[260px]">
+                {/* Left Card: Tracked Stats */}
+                <div className="w-[480px] border border-[#e4eaee] rounded-[2px] bg-white p-7 flex flex-col shadow-none">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <span className="text-[13px] font-normal text-[#999999] uppercase tracking-[0.1em]">Tracked</span>
+                    <span className="text-[26px] font-bold text-[#333333]">4,837.45 h</span>
+                  </div>
+                  <div className="h-[1px] bg-[#e4eaee] mb-5" />
+                  <div className="flex flex-col gap-4 flex-1 justify-center">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[13px] font-normal text-[#999999] uppercase tracking-widest">Billable</span>
+                      <span className="text-[18px] font-bold text-[#333333]">4.25 h</span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[13px] font-normal text-[#999999] uppercase tracking-widest">Non-billable</span>
+                      <span className="text-[18px] font-bold text-[#333333]">4,833.20 h</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Card: Donut Chart */}
+                <div className="flex-1 border border-[#e4eaee] rounded-[2px] bg-white flex flex-col items-center justify-between p-6 pb-5 shadow-none relative">
+                  <div className="flex-1 flex flex-col items-center justify-center relative w-full pt-2">
+                    <div className="relative w-[180px] h-[180px]">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        {/* Non-billable segment (Base circle) */}
+                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#add891" strokeWidth="20" />
+                        {/* Billable segment (Tiny arc) */}
+                        <circle cx="50" cy="50" r="38" fill="transparent" stroke="#7faf5c" strokeWidth="20" strokeDasharray="1.2 238" strokeDashoffset="0" />
+                        {/* White gap at the top to separate segments */}
+                        <rect x="78" y="49" width="20" height="2" fill="white" />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-[16px] font-bold text-[#333]">4,837.45 h</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6 mt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-[#7faf5c] rounded-[2px]" />
+                      <span className="text-[13px] text-[#666]">Billable</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-[#add891] rounded-[2px]" />
+                      <span className="text-[13px] text-[#666]">Non-billable</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border border-[#e4eaee] rounded-[2px] overflow-hidden shadow-none bg-white">
+                <SectionBar title="Tasks">
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1 bg-white border border-[#c6d2d9] rounded-[2px] text-[12px] text-[#666] outline-none hover:border-[#03a9f4]">
+                      {statusViewFilter} <ChevronDown className="h-3.5 w-3.5 text-[#999]" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[120px] p-0 shadow-xl bg-white border border-[#e4eaee] z-50">
+                      {['Show all', 'Show active', 'Show done'].map(o => (
+                        <DropdownMenuItem key={o} onClick={() => setStatusViewFilter(o)} className={`py-2.5 px-4 cursor-pointer text-[12px] focus:bg-[#eaf4fb] ${statusViewFilter === o ? 'bg-[#f0f3f5]' : ''}`}>{o}</DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </SectionBar>
+                <table className="w-full border-collapse bg-white">
+                  <thead>
+                    <tr className="text-left border-b border-[#e4eaee] bg-white">
+                      <th className="p-4 py-3 text-[12px] font-normal uppercase tracking-widest w-[40%] cursor-pointer text-[#666] transition-colors select-none" onClick={() => handleStatusSort('NAME')}>
+                        <div className="flex items-center gap-0.5">NAME <SortIndicator active={statusSortKey === 'NAME'} order={statusSortOrder} /></div>
+                      </th>
+                      <th className="p-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest border-l border-dotted border-[#e4eaee]">ASSIGNEES</th>
+                      <th className="p-4 py-3 text-[12px] font-normal uppercase tracking-widest w-[140px] border-l border-dotted border-[#e4eaee] cursor-pointer text-[#666] transition-colors select-none" onClick={() => handleStatusSort('TRACKED')}>
+                        <div className="flex items-center justify-end gap-0.5 pr-2">TRACKED <SortIndicator active={statusSortKey === 'TRACKED'} order={statusSortOrder} /></div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentStatusTasks.map((task, idx) => (
+                      <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
+                        <td className="px-4 py-4 text-[12px]">
+                          <span className={task.status === 'done' ? 'line-through text-[#999]' : 'text-[#333]'}>{task.name}</span>
+                        </td>
+                        <td className="px-4 py-4 text-[12px] text-[#666] border-l border-dotted border-[#e4eaee]">{task.assignees}</td>
+                        <td className="px-4 py-4 text-[12px] text-[#999] text-right pr-6 border-l border-dotted border-[#e4eaee]">{task.tracked}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* STATUS PAGINATION FOOTER */}
+                <div className="pt-6 flex items-center justify-start gap-3 pb-4 transition-all px-4 bg-white border-t border-[#e4eaee]">
+                  <div className="flex items-center border border-[#e4eaee] rounded-[2px] h-8 bg-white shadow-none">
+                    <button
+                      onClick={() => setStatusCurrentPage(Math.max(1, statusCurrentPage - 1))}
+                      disabled={statusCurrentPage === 1}
+                      className="px-2 border-r border-[#e4eaee] h-full hover:bg-gray-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className={`h-4 w-4 ${statusCurrentPage === 1 ? 'text-gray-200' : 'text-[#666]'}`} />
+                    </button>
+                    <div className="px-4 text-[13px] text-[#666] select-none min-w-[100px] text-center">
+                      {statusStartIndex + 1}-{statusEndIndex} of {filteredStatusTasks.length}
+                    </div>
+                    <button
+                      onClick={() => setStatusCurrentPage(Math.min(statusTotalPages, statusCurrentPage + 1))}
+                      disabled={statusCurrentPage === statusTotalPages || statusTotalPages === 0}
+                      className="px-2 border-l border-[#e4eaee] h-full hover:bg-gray-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className={`h-4 w-4 ${statusCurrentPage === statusTotalPages || statusTotalPages === 0 ? 'text-gray-200' : 'text-[#666]'}`} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 h-8">
                     <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1 bg-white border border-[#c6d2d9] rounded-[2px] text-[12px] text-[#666] outline-none hover:border-[#03a9f4]">
-                        {statusViewFilter} <ChevronDown className="h-3.5 w-3.5 text-[#999]" />
+                      <DropdownMenuTrigger className="px-3 border border-[#e4eaee] rounded-[2px] h-full flex items-center gap-2 hover:bg-gray-50 outline-none focus:ring-0">
+                        <span className="text-[13px] text-[#666]">{statusItemsPerPage}</span>
+                        <ChevronDown className="h-3.5 w-3.5 text-[#999]" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[120px] p-0 shadow-xl bg-white border border-[#e4eaee] z-50">
-                        {['Show all', 'Show active', 'Show done'].map(o => (
-                          <DropdownMenuItem key={o} onClick={() => setStatusViewFilter(o)} className={`py-2.5 px-4 cursor-pointer text-[12px] focus:bg-[#eaf4fb] ${statusViewFilter === o ? 'bg-[#f0f3f5]' : ''}`}>{o}</DropdownMenuItem>
-                        ))}
+                      <DropdownMenuContent align="start" className="w-[80px] p-0 shadow-xl bg-white border border-[#e4eaee] z-50">
+                        {[50, 100, 200].map(s => <DropdownMenuItem key={s} onClick={() => { setStatusItemsPerPage(s); setStatusCurrentPage(1) }} className={`py-2 px-4 cursor-pointer text-[13px] focus:bg-[#eaf4fb] ${statusItemsPerPage === s ? 'bg-[#f0f3f5]' : ''}`}>{s}</DropdownMenuItem>)}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </SectionBar>
-                  <table className="w-full border-collapse bg-white">
-                    <thead>
-                      <tr className="text-left border-b border-[#e4eaee] bg-white">
-                        <th className="p-4 py-3 text-[12px] font-normal uppercase tracking-widest w-[40%] cursor-pointer text-[#666] transition-colors select-none" onClick={() => handleStatusSort('NAME')}>
-                          <div className="flex items-center gap-0.5">NAME <SortIndicator active={statusSortKey === 'NAME'} order={statusSortOrder} /></div>
-                        </th>
-                        <th className="p-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest border-l border-dotted border-[#e4eaee]">ASSIGNEES</th>
-                        <th className="p-4 py-3 text-[12px] font-normal uppercase tracking-widest w-[140px] border-l border-dotted border-[#e4eaee] cursor-pointer text-[#666] transition-colors select-none" onClick={() => handleStatusSort('TRACKED')}>
-                          <div className="flex items-center justify-end gap-0.5 pr-2">TRACKED <SortIndicator active={statusSortKey === 'TRACKED'} order={statusSortOrder} /></div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentStatusTasks.map((task, idx) => (
-                        <tr key={idx} className="border-b border-[#f1f4f7] hover:bg-[#f9fafb] transition-colors bg-white">
-                          <td className="px-4 py-4 text-[12px]">
-                            <span className={task.status === 'done' ? 'line-through text-[#999]' : 'text-[#333]'}>{task.name}</span>
-                          </td>
-                          <td className="px-4 py-4 text-[12px] text-[#666] border-l border-dotted border-[#e4eaee]">{task.assignees}</td>
-                          <td className="px-4 py-4 text-[12px] text-[#999] text-right pr-6 border-l border-dotted border-[#e4eaee]">{task.tracked}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  
-                  {/* STATUS PAGINATION FOOTER */}
-                  <div className="pt-6 flex items-center justify-start gap-3 pb-4 transition-all px-4 bg-white border-t border-[#e4eaee]">
-                    <div className="flex items-center border border-[#e4eaee] rounded-[2px] h-8 bg-white shadow-none">
-                      <button 
-                        onClick={() => setStatusCurrentPage(Math.max(1, statusCurrentPage - 1))} 
-                        disabled={statusCurrentPage === 1} 
-                        className="px-2 border-r border-[#e4eaee] h-full hover:bg-gray-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronLeft className={`h-4 w-4 ${statusCurrentPage === 1 ? 'text-gray-200' : 'text-[#666]'}`}/>
-                      </button>
-                      <div className="px-4 text-[13px] text-[#666] select-none min-w-[100px] text-center">
-                        {statusStartIndex + 1}-{statusEndIndex} of {filteredStatusTasks.length}
-                      </div>
-                      <button 
-                        onClick={() => setStatusCurrentPage(Math.min(statusTotalPages, statusCurrentPage + 1))} 
-                        disabled={statusCurrentPage === statusTotalPages || statusTotalPages === 0} 
-                        className="px-2 border-l border-[#e4eaee] h-full hover:bg-gray-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronRight className={`h-4 w-4 ${statusCurrentPage === statusTotalPages || statusTotalPages === 0 ? 'text-gray-200' : 'text-[#666]'}`}/>
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2 h-8">
-                      <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger className="px-3 border border-[#e4eaee] rounded-[2px] h-full flex items-center gap-2 hover:bg-gray-50 outline-none focus:ring-0">
-                          <span className="text-[13px] text-[#666]">{statusItemsPerPage}</span>
-                          <ChevronDown className="h-3.5 w-3.5 text-[#999]"/>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-[80px] p-0 shadow-xl bg-white border border-[#e4eaee] z-50">
-                          {[50, 100, 200].map(s => <DropdownMenuItem key={s} onClick={() => {setStatusItemsPerPage(s); setStatusCurrentPage(1)}} className={`py-2 px-4 cursor-pointer text-[13px] focus:bg-[#eaf4fb] ${statusItemsPerPage === s ? 'bg-[#f0f3f5]' : ''}`}>{s}</DropdownMenuItem>)}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <span className="text-[13px] text-[#999]">Items per page</span>
-                    </div>
+                    <span className="text-[13px] text-[#999]">Items per page</span>
                   </div>
-               </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
