@@ -205,14 +205,20 @@ export function mapApiTag(tag: ApiTag): Tag {
 
 export function mapApiTimeEntry(entry: ApiTimeEntry): TimeEntry {
   // userId may be a populated object
-  const userId = typeof entry.userId === 'object' && entry.userId !== null
-    ? (entry.userId._id ?? entry.userId.id ?? '')
+  const isUserObj = typeof entry.userId === 'object' && entry.userId !== null
+  const userIdObj = isUserObj ? (entry.userId as any) : null
+  const userId = isUserObj
+    ? (userIdObj._id ?? userIdObj.id ?? '')
     : entry.userId as string
+  const userName = isUserObj ? userIdObj.name : undefined
 
   // projectId may be a populated object
-  const projectId = typeof entry.projectId === 'object' && entry.projectId !== null
-    ? (entry.projectId.id ?? entry.projectId._id ?? undefined)
+  const isProjObj = typeof entry.projectId === 'object' && entry.projectId !== null
+  const projObj = isProjObj ? (entry.projectId as any) : null
+  const projectId = isProjObj
+    ? (projObj.id ?? projObj._id ?? undefined)
     : (entry.projectId ?? undefined)
+  const projectName = isProjObj ? projObj.name : undefined
 
   // tags may be populated objects; fall back to tagIds string array
   const tagIds = entry.tags?.length
@@ -223,11 +229,13 @@ export function mapApiTimeEntry(entry: ApiTimeEntry): TimeEntry {
     id: resolveId(entry),
     description: entry.description,
     projectId,
+    projectName,
     clientId: entry.clientId ?? undefined,
     taskId: entry.taskId ?? undefined,
     tagIds,
     billable: entry.billable,
     userId,
+    userName,
     startTime: new Date(entry.startTime),
     endTime: entry.endTime ? new Date(entry.endTime) : undefined,
     duration: entry.duration ?? undefined,

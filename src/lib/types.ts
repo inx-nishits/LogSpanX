@@ -54,11 +54,13 @@ export interface TimeEntry {
   id: string
   description: string
   projectId?: string
+  projectName?: string
   clientId?: string
   taskId?: string
   tagIds?: string[]
   billable: boolean
   userId: string
+  userName?: string
   startTime: Date
   endTime?: Date
   duration?: number

@@ -250,7 +250,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
         error: null,
       })
     } catch (error) {
-      console.error('Failed to initialize data store', error)
+      console.error('Failed to initialize data store:', error instanceof Error ? error.message : String(error))
       set({
         isLoading: false,
         isInitialized: false,
@@ -292,62 +292,80 @@ export const useDataStore = create<DataStore>((set, get) => ({
   },
 
   updateTimeEntry: async (id, updates) => {
-    const token = useAuthStore.getState().token
-    const payload = await apiRequest<{ id: string; description?: string; endTime?: string }>(`/time-entries/${id}`, {
-      method: 'PATCH',
-      token,
-      body: JSON.stringify(serializeTimeEntryPatch(updates)),
-    })
+    try {
+      const token = useAuthStore.getState().token
+      const payload = await apiRequest<{ id: string; description?: string; endTime?: string }>(`/time-entries/${id}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify(serializeTimeEntryPatch(updates)),
+      })
 
-    set((state) => ({
-      timeEntries: state.timeEntries.map((entry) => {
-        if (entry.id !== id) return entry
-        const merged: TimeEntry = {
-          ...entry,
-          ...updates,
-          description: payload.description ?? updates.description ?? entry.description,
-          endTime: payload.endTime ? new Date(payload.endTime) : (updates.endTime ?? entry.endTime),
-          updatedAt: new Date(),
-        }
-        if (merged.startTime && merged.endTime) {
-          merged.duration = Math.max(
-            0,
-            Math.floor((new Date(merged.endTime).getTime() - new Date(merged.startTime).getTime()) / 1000)
-          )
-        }
-        return merged
-      }),
-    }))
+      set((state) => ({
+        timeEntries: state.timeEntries.map((entry) => {
+          if (entry.id !== id) return entry
+          const merged: TimeEntry = {
+            ...entry,
+            ...updates,
+            description: payload.description ?? updates.description ?? entry.description,
+            endTime: payload.endTime ? new Date(payload.endTime) : (updates.endTime ?? entry.endTime),
+            updatedAt: new Date(),
+          }
+          if (merged.startTime && merged.endTime) {
+            merged.duration = Math.max(
+              0,
+              Math.floor((new Date(merged.endTime).getTime() - new Date(merged.startTime).getTime()) / 1000)
+            )
+          }
+          return merged
+        }),
+      }))
+    } catch (err) {
+      console.error('Update failed:', err instanceof Error ? err.message : String(err))
+      const message = err instanceof Error ? err.message : 'An error occurred'
+      if (typeof window !== 'undefined') window.alert(message)
+    }
   },
 
   deleteTimeEntry: async (id) => {
-    const token = useAuthStore.getState().token
-    const entryToDelete = get().timeEntries.find((entry) => entry.id === id)
-    if (!entryToDelete) return
+    try {
+      const token = useAuthStore.getState().token
+      const entryToDelete = get().timeEntries.find((entry) => entry.id === id)
+      if (!entryToDelete) return
 
-    await apiRequest(`/time-entries/${id}`, { method: 'DELETE', token })
+      await apiRequest(`/time-entries/${id}`, { method: 'DELETE', token })
 
-    set((state) => ({
-      lastDeletedEntries: [entryToDelete],
-      timeEntries: state.timeEntries.filter((entry) => entry.id !== id),
-    }))
+      set((state) => ({
+        lastDeletedEntries: [entryToDelete],
+        timeEntries: state.timeEntries.filter((entry) => entry.id !== id),
+      }))
+    } catch (err) {
+      console.error('Delete failed:', err instanceof Error ? err.message : String(err))
+      const message = err instanceof Error ? err.message : 'An error occurred'
+      if (typeof window !== 'undefined') window.alert(message)
+    }
   },
 
   deleteTimeEntries: async (ids) => {
-    const token = useAuthStore.getState().token
-    const entriesToDelete = get().timeEntries.filter((entry) => ids.includes(entry.id))
-    if (entriesToDelete.length === 0) return
+    try {
+      const token = useAuthStore.getState().token
+      const entriesToDelete = get().timeEntries.filter((entry) => ids.includes(entry.id))
+      if (entriesToDelete.length === 0) return
 
-    await apiRequest('/time-entries/bulk', {
-      method: 'DELETE',
-      token,
-      body: JSON.stringify({ ids }),
-    })
+      await apiRequest('/time-entries/bulk', {
+        method: 'DELETE',
+        token,
+        body: JSON.stringify({ ids }),
+      })
 
-    set((state) => ({
-      lastDeletedEntries: entriesToDelete,
-      timeEntries: state.timeEntries.filter((entry) => !ids.includes(entry.id)),
-    }))
+      set((state) => ({
+        lastDeletedEntries: entriesToDelete,
+        timeEntries: state.timeEntries.filter((entry) => !ids.includes(entry.id)),
+      }))
+    } catch (err) {
+      console.error('Bulk delete failed:', err instanceof Error ? err.message : String(err))
+      const message = err instanceof Error ? err.message : 'An error occurred'
+      if (typeof window !== 'undefined') window.alert(message)
+    }
   },
 
   updateTimeEntries: async (ids, updates) => {

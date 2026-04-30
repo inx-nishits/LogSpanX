@@ -108,7 +108,7 @@ export const useAuthStore = create<AuthState>()(
           if (status === 401 || status === 403) {
             set({ token: null, user: null, authStatus: 'unauthenticated', error: null })
           } else {
-            console.error('Failed to initialize auth', error)
+            console.error('Failed to initialize auth:', error instanceof Error ? error.message : String(error))
             set({ authStatus: 'unauthenticated', error: error instanceof Error ? error.message : 'Failed to initialize session' })
           }
         }
@@ -193,7 +193,7 @@ export const useAuthStore = create<AuthState>()(
             })
           }
         } catch (error) {
-          console.error('Logout API failed, clearing local state anyway', error)
+          console.error('Logout API failed, clearing local state anyway:', error instanceof Error ? error.message : String(error))
         } finally {
           set({
             token: null,

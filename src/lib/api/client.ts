@@ -1,3 +1,5 @@
+import { handleMockRequest } from './mock'
+
 export interface ApiEnvelope<T> {
   success: boolean
   message?: string
@@ -128,6 +130,10 @@ export async function apiRequest<T>(
   } = {}
 ): Promise<T> {
   const { query, token, headers, ...requestInit } = options
+
+  if (process.env.NEXT_PUBLIC_USE_MOCK_API === 'true') {
+    return handleMockRequest(path, options) as Promise<T>
+  }
 
   const makeRequest = (authToken: string | null | undefined) =>
     fetch(buildUrl(path, query), {
