@@ -280,9 +280,9 @@ export default function ProjectsPage() {
   const [accessStatusFilter, setAccessStatusFilter] = useState('Active')
 
   const SortIndicator = ({ active, order }: { active: boolean; order: 'asc' | 'desc' }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
-      <path d="m7 9 5-5 5 5" className={`transition-all duration-300 ${active && order === 'asc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} />
-      <path d="m7 15 5 5 5-5" className={`transition-all duration-300 ${active && order === 'desc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} />
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1.5">
+      <path d="m7 9 5-5 5 5" className={`transition-all duration-300 ${active && order === 'asc' ? 'text-[#344054] opacity-100' : 'text-[#98a2b3] opacity-30'}`} />
+      <path d="m7 15 5 5 5-5" className={`transition-all duration-300 ${active && order === 'desc' ? 'text-[#344054] opacity-100' : 'text-[#98a2b3] opacity-30'}`} />
     </svg>
   )
 
@@ -584,36 +584,43 @@ export default function ProjectsPage() {
             {/* Table */}
             <div className="relative z-0">
               <div className="bg-white border border-[#e4eaee] rounded-md shadow-sm overflow-hidden relative">
+                {/* Decorative Header Bar */}
+                <div className="bg-[#f9fafb] border-b border-[#eaecf0] px-6 py-[12px]">
+                  <span className="text-[13px] text-[#344054] font-semibold uppercase tracking-[0.5px]">Projects</span>
+                </div>
+                
                 <table className="border-collapse table-fixed w-full">
+                  <colgroup>
+                    <col style={{ width: '48px' }} />
+                    <col style={{ width: '28%' }} />
+                    <col style={{ width: '22%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '20%' }} />
+                  </colgroup>
                   <thead>
-                    <tr className="bg-[#f0f7fb] border-b border-[#d6e5ef]">
-                      <th colSpan={6} className="p-4 py-[14px] text-[16px] text-[#5c7b91] font-bold uppercase tracking-tight text-left">
-                        Projects
-                      </th>
-                    </tr>
                     <tr className="border-b border-[#e4eaee] text-left select-none bg-white">
                       {!isReadOnly && (
-                        <th className="w-[42px] pl-5 pr-6 py-3">
-                          <div className={`w-[14px] h-[14px] border ${allVisibleProjectsSelected ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center`} onClick={toggleSelectAllProjects}>
+                        <th className="pl-6 pr-0 py-4">
+                          <div className={`w-[16px] h-[16px] border ${allVisibleProjectsSelected ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-[#d0d5dd]'} rounded-[4px] cursor-pointer flex items-center justify-center transition-colors`} onClick={toggleSelectAllProjects}>
                             {allVisibleProjectsSelected && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                           </div>
                         </th>
                       )}
-                      {isReadOnly && <th className="w-[42px]" />}
+                      {isReadOnly && <th className="pl-6 pr-0 py-4" />}
                       {[
-                        { label: 'NAME', width: '35%' },
-                        { label: 'PROJECT LEAD', width: '20%' },
-                        { label: 'TRACKED', width: '12%' },
-                        { label: 'PROGRESS', width: '13%' },
-                        { label: 'ACCESS', width: '15%' }
+                        { label: 'NAME' },
+                        { label: 'PROJECT LEAD' },
+                        { label: 'TRACKED' },
+                        { label: 'PROGRESS' },
+                        { label: 'ACCESS' }
                       ].map((col) => (
                         <th
                           key={col.label}
-                          style={{ width: col.width }}
-                          className="p-4 py-3 text-[16px] font-normal uppercase tracking-widest cursor-pointer text-[#666] transition-colors"
+                          className="p-4 py-4 text-[14px] font-semibold uppercase tracking-[0.3px] cursor-pointer text-[#344054] transition-colors hover:bg-[#f9fafb]"
                           onClick={() => handleSort(col.label)}
                         >
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-1.5">
                             {col.label}
                             {!isReadOnly && col.label === 'NAME' && selectedProjectIds.length > 0 && (
                               <div className="flex items-center ml-4 gap-3">
@@ -621,25 +628,24 @@ export default function ProjectsPage() {
                                 <button onClick={handleArchiveProjects} className="text-[#03a9f4] text-[12px] font-bold normal-case hover:underline">Archive</button>
                               </div>
                             )}
-                            <div className="flex-1" />
                             <SortIndicator active={sortKey === col.label} order={sortOrder} />
                           </div>
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-[#f2f4f7]">
                     {sortedProjects.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="py-16 text-center text-[#999] text-[15px]">No projects found.</td>
+                        <td colSpan={6} className="py-16 text-center text-[#98a2b3] text-[14px]">No projects found.</td>
                       </tr>
                     )}
                     {sortedProjects.map((project) => (
-                      <tr key={project.id} className={`hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''}`}>
-                        <td className="pl-5 pr-0 py-4">
+                      <tr key={project.id} className={`hover:bg-[#f9fafb] group transition-colors h-[72px] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''}`}>
+                        <td className="pl-6 pr-0 py-4">
                           {!isReadOnly && (
                             <div
-                              className={`w-[14px] h-[14px] border ${selectedProjectIds.includes(project.id) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center`}
+                              className={`w-[16px] h-[16px] border ${selectedProjectIds.includes(project.id) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-[#d0d5dd]'} rounded-[4px] cursor-pointer flex items-center justify-center transition-colors`}
                               onClick={() => toggleProjectSelection(project.id)}
                             >
                               {selectedProjectIds.includes(project.id) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
@@ -647,41 +653,41 @@ export default function ProjectsPage() {
                           )}
                         </td>
                         {/* Name */}
-                        <td className="p-4 pl-1 whitespace-nowrap overflow-hidden">
+                        <td className="p-4 pl-4 whitespace-nowrap overflow-hidden">
                           <div className="flex items-center">
                             <div className="w-[8px] h-[8px] rounded-full mr-3 shrink-0" style={{ backgroundColor: project.color }} />
-                            <Link href={`/dashboard/projects/${project.id}`} className="text-[15px] text-[#333] font-normal truncate hover:underline cursor-pointer">
+                            <Link href={`/dashboard/projects/${project.id}`} className="text-[14px] text-[#101828] font-medium truncate hover:underline cursor-pointer">
                               {project.name}
                             </Link>
                           </div>
                         </td>
                         {/* Lead */}
-                        <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[15px] text-[#666] font-normal">{project.lead}</span>
+                        <td className="p-4 whitespace-nowrap">
+                          <span className="text-[14px] text-[#344054] font-normal">{project.lead}</span>
                         </td>
                         {/* Tracked */}
-                        <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[15px] text-[#666] font-normal">{project.tracked}</span>
+                        <td className="p-4 whitespace-nowrap">
+                          <span className="text-[14px] text-[#344054] font-normal">{project.tracked}</span>
                         </td>
                         {/* Progress */}
-                        <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[15px] text-[#666]">-</span>
+                        <td className="p-4 whitespace-nowrap">
+                          <span className="text-[14px] text-[#344054] font-normal">-</span>
                         </td>
                         {/* Access + actions */}
-                        <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
+                        <td className="p-4 whitespace-nowrap">
                           <div className="flex items-center justify-between w-full">
-                            <span className="text-[15px] text-[#666] font-normal">{project.access}</span>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="h-4 w-[1px] border-l border-[#e4eaee] mx-1" />
+                            <span className="text-[14px] text-[#344054] font-normal">{project.access}</span>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="h-4 w-[1px] border-l border-[#eaecf0] mx-1" />
                               <Star
                                 onClick={() => toggleFavorite(project.name)}
-                                className={`h-[18px] w-[18px] cursor-pointer transition-all mt-[2px] ${favorites.includes(project.name) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#d6e5ef] hover:text-[#f5a623]'}`}
+                                className={`h-[18px] w-[18px] cursor-pointer transition-all ${favorites.includes(project.name) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#d0d5dd] hover:text-[#f5a623]'}`}
                               />
                               {!isReadOnly && (
                                 <button
                                   onClick={() => handleDeleteProject(project.id)}
                                   disabled={deletingId === project.id}
-                                  className="ml-1 text-[#ccc] hover:text-red-500 transition-colors disabled:opacity-50"
+                                  className="ml-1 text-[#98a2b3] hover:text-red-500 transition-colors disabled:opacity-50"
                                   title="Delete project"
                                 >
                                   <Trash2 className="h-[16px] w-[16px]" />
