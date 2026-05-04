@@ -83,8 +83,8 @@ const getMenuItems = (role: User['role']) => {
     { label: 'Tags',         icon: Tag,        href: '/dashboard/tags'         },
   ]
 
-  const filteredManage = (role === 'member')
-    ? manageItems.filter(i => !['Project Lead'].includes(i.label))
+  const filteredManage = (role === 'admin' || role === 'member')
+    ? manageItems.filter(i => !['Projects', 'Tags', 'Project Lead'].includes(i.label))
     : manageItems
 
   return { topItems, analyzeItems, manageItems: filteredManage }

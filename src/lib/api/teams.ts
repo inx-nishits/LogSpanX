@@ -81,3 +81,13 @@ export function updateGroup(id: string, data: { name?: string; memberIds?: strin
 export function deleteGroup(id: string) {
   return apiRequest<Record<string, never>>(`/groups/${id}`, { method: 'DELETE', token: token() })
 }
+
+// ─── Users ────────────────────────────────────────────────────────────────
+
+export function updateUserRole(userId: string, role: string) {
+  return apiRequest<{ _id: string; role: string }>(`/users/${userId}/role`, {
+    method: 'PATCH',
+    token: token(),
+    body: JSON.stringify({ role }),
+  })
+}

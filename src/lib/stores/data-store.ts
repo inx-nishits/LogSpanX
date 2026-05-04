@@ -402,17 +402,18 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   updateProject: async (id, updates) => {
     const token = useAuthStore.getState().token
+    const existing = get().projects.find(p => p.id === id)
     const payload = await apiRequest<ApiProject>(`/projects/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       token,
       body: JSON.stringify({
-        name: updates.name,
-        color: updates.color,
-        clientName: updates.clientName,
-        leadId: updates.leadId,
-        billable: updates.billable,
-        archived: updates.archived,
-        members: updates.members?.map((m) => (typeof m === 'string' ? m : m.userId)),
+        name: updates.name ?? existing?.name,
+        color: updates.color ?? existing?.color,
+        clientName: updates.clientName ?? existing?.clientName,
+        leadId: updates.leadId ?? existing?.leadId,
+        billable: updates.billable ?? existing?.billable,
+        archived: updates.archived ?? existing?.archived,
+        members: (updates.members ?? existing?.members)?.map((m) => (typeof m === 'string' ? m : m.userId)),
       }),
     })
 

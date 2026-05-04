@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Search, ChevronDown, Check, Star, Plus, X, Trash2 } from 'lucide-react'
+import { Search, ChevronDown, Check, Star, Plus, X, MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import {
@@ -37,6 +37,7 @@ interface NewProjectModalProps {
     clientName?: string
     leadId?: string
     billable: boolean
+    memberIds: string[]
   }) => Promise<void>
 }
 
@@ -46,126 +47,163 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
   const [clientName, setClientName] = useState('')
   const [leadId, setLeadId] = useState('')
   const [billable, setBillable] = useState(true)
+  const [memberIds, setMemberIds] = useState<string[]>([])
+  const [memberSearch, setMemberSearch] = useState('')
+  const [memberDropOpen, setMemberDropOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const memberRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (memberRef.current && !memberRef.current.contains(e.target as Node)) setMemberDropOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const filteredUsers = users.filter(u => !memberSearch || u.name.toLowerCase().includes(memberSearch.toLowerCase()))
+  const toggleMember = (id: string) => setMemberIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) { setError('Project name is required.'); return }
-    setSaving(true)
-    setError(null)
+    setSaving(true); setError(null)
     try {
-      await onSubmit({
-        name: name.trim(),
-        color,
-        clientName: clientName || undefined,
-        leadId: leadId || undefined,
-        billable,
-      })
+      await onSubmit({ name: name.trim(), color, clientName: clientName || undefined, leadId: leadId || undefined, billable, memberIds })
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project.')
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-[440px] mx-4">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-[560px] mx-4 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4eaee]">
-          <h2 className="text-[17px] font-semibold text-[#333]">New Project</h2>
-          <button onClick={onClose} className="text-[#999] hover:text-[#333] transition-colors">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4eaee] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+            <h2 className="text-[16px] font-semibold text-[#333]">New Project</h2>
+          </div>
+          <button onClick={onClose} className="text-[#bbb] hover:text-[#555] transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-5">
-          {/* Name */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-bold text-[#999] uppercase tracking-widest">Name *</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Project name"
-              className="w-full px-3 py-2 text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]"
-            />
-          </div>
-
-          {/* Color */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-bold text-[#999] uppercase tracking-widest">Color</label>
-            <div className="flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-full transition-all ${color === c ? 'ring-2 ring-offset-2 ring-[#03a9f4]' : ''}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
+        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
+          {/* Name + Color row */}
+          <div className="flex gap-4">
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest">Project Name *</label>
+              <input
+                autoFocus
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Website Redesign"
+                className="w-full px-3 py-2.5 text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] transition-colors"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest">Color</label>
+              <div className="flex flex-wrap gap-1.5 max-w-[120px]">
+                {PROJECT_COLORS.map((c) => (
+                  <button key={c} type="button" onClick={() => setColor(c)}
+                    className={`w-6 h-6 rounded-full transition-all shrink-0 ${color === c ? 'ring-2 ring-offset-1 ring-[#03a9f4]' : 'hover:scale-110'}`}
+                    style={{ backgroundColor: c }} />
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Client */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-bold text-[#999] uppercase tracking-widest">Client</label>
-            <select
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              className="w-full px-3 py-2 text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-white"
-            >
-              <option value="">— No client —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.name}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Lead */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-bold text-[#999] uppercase tracking-widest">Project Lead</label>
-            <select
-              value={leadId}
-              onChange={(e) => setLeadId(e.target.value)}
-              className="w-full px-3 py-2 text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-white"
-            >
-              <option value="">— No lead —</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Billable */}
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setBillable(!billable)}
-                className={`w-10 h-5 rounded-full transition-colors relative ${billable ? 'bg-[#03a9f4]' : 'bg-[#ccc]'}`}
-              >
-                <span
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${billable ? 'translate-x-5' : 'translate-x-0.5'}`}
-                />
-              </button>
-              <span className="text-[15px] text-[#666]">Billable</span>
+          {/* Client + Lead row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest">Client</label>
+              <select value={clientName} onChange={(e) => setClientName(e.target.value)}
+                className="w-full px-3 py-2.5 text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-white transition-colors">
+                <option value="">— No client —</option>
+                {clients.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest">Project Lead</label>
+              <select value={leadId} onChange={(e) => setLeadId(e.target.value)}
+                className="w-full px-3 py-2.5 text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-white transition-colors">
+                <option value="">— No lead —</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
             </div>
           </div>
 
-          {error && <p className="text-[13px] text-red-500">{error}</p>}
+          {/* Members */}
+          <div className="flex flex-col gap-1.5" ref={memberRef}>
+            <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest">Members</label>
+            <div
+              onClick={() => setMemberDropOpen(o => !o)}
+              className="w-full min-h-[40px] px-3 py-2 text-[13px] border border-[#c6d2d9] rounded-sm cursor-pointer flex items-center flex-wrap gap-1.5 focus-within:border-[#03a9f4] transition-colors hover:border-[#aaa]"
+            >
+              {memberIds.length === 0 ? (
+                <span className="text-[#bbb]">Select members…</span>
+              ) : (
+                memberIds.map(id => {
+                  const u = users.find(u => u.id === id)
+                  return u ? (
+                    <span key={id} className="inline-flex items-center gap-1 bg-[#eaf4fb] text-[#0288d1] text-[12px] px-2 py-0.5 rounded-sm border border-[#d6e5ef]">
+                      {u.name}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); toggleMember(id) }} className="hover:text-red-400">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ) : null
+                })
+              )}
+              <ChevronDown className="h-3.5 w-3.5 text-[#aaa] ml-auto shrink-0" />
+            </div>
+            {memberDropOpen && (
+              <div className="border border-[#ddd] rounded-sm shadow-lg bg-white z-50">
+                <div className="flex items-center border-b border-[#eee] px-3 py-2">
+                  <Search className="h-3.5 w-3.5 text-[#bbb] shrink-0" />
+                  <input autoFocus placeholder="Search members…" value={memberSearch}
+                    onChange={e => setMemberSearch(e.target.value)}
+                    className="flex-1 ml-2 text-[13px] outline-none placeholder:text-[#bbb]" />
+                </div>
+                <div className="max-h-[180px] overflow-y-auto py-1">
+                  {filteredUsers.length === 0 ? (
+                    <div className="px-3 py-2 text-[12px] text-[#aaa]">No users found</div>
+                  ) : filteredUsers.map(u => (
+                    <label key={u.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#f0f4f8] cursor-pointer">
+                      <input type="checkbox" checked={memberIds.includes(u.id)}
+                        onChange={() => toggleMember(u.id)}
+                        className="accent-[#03a9f4] w-[14px] h-[14px]" />
+                      <span className="text-[13px] text-[#333]">{u.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Billable toggle */}
+          <div className="flex items-center gap-3 py-1">
+            <button type="button" onClick={() => setBillable(!billable)}
+              className={`w-10 h-5 rounded-full transition-colors relative shrink-0 inline-flex items-center ${billable ? 'bg-[#03a9f4]' : 'bg-[#ddd]'}`}>
+              <span className={`absolute w-4 h-4 rounded-full bg-white shadow transition-transform ${billable ? 'translate-x-[22px]' : 'translate-x-[2px]'}`} />
+            </button>
+            <span className="text-[13px] text-[#555]">Billable project</span>
+          </div>
+
+          {error && <p className="text-[13px] text-red-500 bg-red-50 px-3 py-2 rounded-sm border border-red-200">{error}</p>}
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-1">
-            <Button type="button" onClick={onClose} variant="outline" className="text-[#666] border-[#c6d2d9] hover:bg-[#f2f6f8]">
+          <div className="flex justify-end gap-3 pt-2 border-t border-[#f0f0f0]">
+            <button type="button" onClick={onClose}
+              className="px-5 py-2 text-[13px] text-[#666] border border-[#c6d2d9] rounded-sm hover:bg-[#f2f6f8] transition-colors">
               Cancel
-            </Button>
-            <Button type="submit" disabled={saving} className="bg-[#03a9f4] hover:bg-[#0288d1] text-white">
+            </button>
+            <button type="submit" disabled={saving}
+              className="px-6 py-2 text-[13px] font-bold text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm transition-colors disabled:opacity-60 uppercase tracking-widest">
               {saving ? 'Creating…' : 'Create Project'}
-            </Button>
+            </button>
           </div>
         </form>
       </div>
@@ -175,12 +213,27 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function ProjectsPage() {
-  const { projects: storeProjects, users, clients, timeEntries, addProject, updateProjects, deleteProject } = useDataStore()
+  const { projects: storeProjects, users, clients, timeEntries, addProject, updateProject, updateProjects, deleteProject } = useDataStore()
   const { user } = useAuthStore()
   const isReadOnly = user?.role === 'member'
 
   const [showNewModal, setShowNewModal] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-menu]')) setOpenMenuId(null)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const handleArchiveSingle = async (id: string, currentArchived: boolean) => {
+    try {
+      await updateProject(id, { archived: !currentArchived })
+    } catch (err) { console.error(err) }
+  }
 
   // Derived leads from store
   const leadItems = useMemo(() => users.map(u => ({ id: u.id, name: u.name, status: 'active' })), [users])
@@ -338,16 +391,6 @@ export default function ProjectsPage() {
     setSelectedProjectIds([])
   }
 
-  const handleDeleteProject = async (id: string) => {
-    if (!confirm('Delete this project? This cannot be undone.')) return
-    setDeletingId(id)
-    try {
-      await deleteProject(id)
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
   const filteredGroups = groupItems.filter(g => {
     const matchesSearch = g.name.toLowerCase().includes(accessSearchQuery.toLowerCase())
     if (accessStatusFilter === 'Active') return matchesSearch && g.status === 'active'
@@ -372,7 +415,11 @@ export default function ProjectsPage() {
           clients={clientItems}
           users={leadItems}
           onClose={() => setShowNewModal(false)}
-          onSubmit={(data) => addProject({ ...data, members: [], archived: false })}
+          onSubmit={(data) => addProject({
+            ...data,
+            members: data.memberIds.map(id => ({ userId: id, role: 'member' as const })),
+            archived: false,
+          })}
         />
       )}
 
@@ -382,7 +429,7 @@ export default function ProjectsPage() {
         {!isReadOnly && (
           <Button
             onClick={() => setShowNewModal(true)}
-            className="bg-[#03a9f4] hover:bg-[#0288d1] text-white flex items-center gap-1.5 text-[13px] font-bold tracking-widest uppercase h-9 px-4 rounded-sm shadow"
+            className="bg-[#03a9f4] hover:bg-[#0288d1] text-white flex items-center gap-1.5 text-[14px] font-bold tracking-widest uppercase h-9 px-4 rounded-sm shadow"
           >
             <Plus className="h-4 w-4" />
             New Project
@@ -396,20 +443,20 @@ export default function ProjectsPage() {
 
             {/* Filter Bar */}
             <div className="relative z-[100] mb-6">
-              <div className="flex bg-white border border-[#e4eaee] items-center h-[64px] rounded-md shadow-sm text-[15px] px-2">
+              <div className="flex bg-white border border-[#e4eaee] items-center h-[64px] rounded-md shadow-sm text-[14px] px-2">
                 <div className="flex items-center pl-4 pr-3 h-full">
-                  <span className="text-[13px] font-bold text-[#999999] uppercase tracking-widest">Filter</span>
+                  <span className="text-[14px] font-bold text-[#999999] uppercase tracking-widest">Filter</span>
                 </div>
 
                 <div className="h-8 w-[1px] border-l border-dotted border-[#c6d2d9]" />
                 <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="flex items-center px-4 h-full cursor-pointer text-[#666666] outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4]">
+                  <DropdownMenuTrigger className={`flex items-center px-4 h-full cursor-pointer outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] ${statusFilter !== 'Active' ? 'text-[#03a9f4] font-semibold' : 'text-[#666666]'}`}>
                     <span>{statusFilter}</span>
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-[160px] bg-white rounded-sm shadow-xl border border-[#e4eaee] py-1 z-[200]">
                     {['Active', 'Archived', 'All'].map(s => (
-                      <DropdownMenuItem key={s} onClick={() => setStatusFilter(s)} className="py-2.5 px-4 cursor-pointer text-gray-700 text-[15px] focus:bg-[#eaf4fb] transition-colors">{s}</DropdownMenuItem>
+                      <DropdownMenuItem key={s} onClick={() => setStatusFilter(s)} className={`py-2.5 px-4 cursor-pointer text-[14px] transition-colors ${statusFilter === s ? 'bg-[#eaf4fb] text-[#03a9f4] font-semibold' : 'text-gray-700 focus:bg-[#eaf4fb]'}`}>{s}</DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -417,11 +464,11 @@ export default function ProjectsPage() {
                 <div className="h-8 w-[1px] border-l border-dotted border-[#c6d2d9]" />
                 {/* Project Lead Dropdown */}
                 <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="flex items-center px-4 h-full cursor-pointer text-[#666666] outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] relative">
+                  <DropdownMenuTrigger className={`flex items-center px-4 h-full cursor-pointer outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] relative ${selectedLeadNames.length > 0 || includeWithoutLead ? "text-[#03a9f4] font-semibold" : "text-[#666666]"}`}>
                     <span>Project Lead</span>
                     <ChevronDown className="ml-2 h-4 w-4" />
                     {(selectedLeadNames.length + (includeWithoutLead ? 1 : 0)) > 0 && (
-                      <div className="absolute top-[4px] right-[6px] bg-[#03a9f4] text-white text-[10px] h-[18px] min-w-[18px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white shadow-sm">
+                      <div className="absolute top-[4px] right-[6px] bg-[#03a9f4] text-white text-[14px] h-[18px] min-w-[18px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white shadow-sm">
                         {selectedLeadNames.length + (includeWithoutLead ? 1 : 0)}
                       </div>
                     )}
@@ -430,25 +477,25 @@ export default function ProjectsPage() {
                     <div className="p-3 border-b border-[#e4eaee]">
                       <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999]" />
-                        <input type="text" placeholder="Search Project Lead" value={leadSearchQuery} onChange={(e) => setLeadSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-[7px] text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
+                        <input type="text" placeholder="Search Project Lead" value={leadSearchQuery} onChange={(e) => setLeadSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-[7px] text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
                       </div>
                     </div>
                     <div className="flex flex-col border-b border-[#e4eaee]">
                       <div className="flex items-center justify-between px-4 py-[11px] cursor-pointer hover:bg-[#fcfdfe]" onClick={(e) => { e.stopPropagation(); setIsLeadStatusFilterOpen(!isLeadStatusFilterOpen) }}>
-                        <span className="text-[13px] font-bold text-[#999] uppercase tracking-widest">Show</span>
-                        <div className="flex items-center gap-1 text-[15px] text-[#666]">
+                        <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">Show</span>
+                        <div className="flex items-center gap-1 text-[14px] text-[#666]">
                           {leadStatusFilter} <ChevronDown className={`h-3.5 w-3.5 text-[#999] transition-transform ${isLeadStatusFilterOpen ? 'rotate-180' : ''}`} />
                         </div>
                       </div>
                       {isLeadStatusFilterOpen && (
                         <div className="bg-[#fcfdfe] py-1 border-t border-[#e4eaee]/50">
                           {['Active & Archived', 'Active', 'Archived'].map(opt => (
-                            <div key={opt} onClick={(e) => { e.stopPropagation(); setLeadStatusFilter(opt); setIsLeadStatusFilterOpen(false) }} className={`py-2 px-10 text-[15px] cursor-pointer transition-colors ${leadStatusFilter === opt ? 'bg-[#eaf4fb] text-[#333]' : 'text-[#666] hover:bg-[#eaf4fb]'}`}>{opt}</div>
+                            <div key={opt} onClick={(e) => { e.stopPropagation(); setLeadStatusFilter(opt); setIsLeadStatusFilterOpen(false) }} className={`py-2 px-10 text-[14px] cursor-pointer transition-colors ${leadStatusFilter === opt ? 'bg-[#eaf4fb] text-[#333]' : 'text-[#666] hover:bg-[#eaf4fb]'}`}>{opt}</div>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="max-h-[220px] overflow-y-auto py-2 scrollbar-hide text-[15px]">
+                    <div className="max-h-[220px] overflow-y-auto py-2 scrollbar-hide text-[14px]">
                       {!leadSearchQuery && (
                         <>
                           <div className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={toggleAllLeads}>
@@ -480,11 +527,11 @@ export default function ProjectsPage() {
                 <div className="h-8 w-[1px] border-l border-dotted border-[#c6d2d9]" />
                 {/* Access Dropdown */}
                 <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="flex items-center px-4 h-full cursor-pointer text-[#666666] outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] relative">
+                  <DropdownMenuTrigger className={`flex items-center px-4 h-full cursor-pointer outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] relative ${selectedAccessGroups.length + selectedAccessUsers.length > 0 ? "text-[#03a9f4] font-semibold" : "text-[#666666]"}`}>
                     <span>Access</span>
                     <ChevronDown className="ml-2 h-4 w-4" />
                     {(selectedAccessGroups.length + selectedAccessUsers.length) > 0 && (
-                      <div className="absolute top-[4px] right-[6px] bg-[#03a9f4] text-white text-[10px] h-[18px] min-w-[18px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white shadow-sm">
+                      <div className="absolute top-[4px] right-[6px] bg-[#03a9f4] text-white text-[14px] h-[18px] min-w-[18px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white shadow-sm">
                         {selectedAccessGroups.length + selectedAccessUsers.length}
                       </div>
                     )}
@@ -493,26 +540,26 @@ export default function ProjectsPage() {
                     <div className="p-3 border-b border-[#e4eaee]">
                       <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999]" />
-                        <input type="text" placeholder="Search users or groups" value={accessSearchQuery} onChange={(e) => setAccessSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-[7px] text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
+                        <input type="text" placeholder="Search users or groups" value={accessSearchQuery} onChange={(e) => setAccessSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-[7px] text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
                       </div>
                     </div>
                     <div className="flex flex-col border-b border-[#e4eaee]">
                       <div className="flex items-center justify-between px-4 py-[11px] cursor-pointer hover:bg-[#fcfdfe]" onClick={(e) => { e.stopPropagation(); setIsAccessStatusFilterOpen(!isAccessStatusFilterOpen) }}>
-                        <span className="text-[13px] font-bold text-[#999] uppercase tracking-widest">Show</span>
-                        <div className="flex items-center gap-1 text-[15px] text-[#666]">
+                        <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">Show</span>
+                        <div className="flex items-center gap-1 text-[14px] text-[#666]">
                           {accessStatusFilter} <ChevronDown className={`h-3.5 w-3.5 text-[#999] transition-transform ${isAccessStatusFilterOpen ? 'rotate-180' : ''}`} />
                         </div>
                       </div>
                       {isAccessStatusFilterOpen && (
                         <div className="bg-[#fcfdfe] py-1 border-t border-[#e4eaee]/50">
                           {['All', 'Active', 'Inactive'].map(opt => (
-                            <div key={opt} onClick={(e) => { e.stopPropagation(); setAccessStatusFilter(opt); setIsAccessStatusFilterOpen(false) }} className={`py-2 px-10 text-[15px] cursor-pointer transition-colors ${accessStatusFilter === opt ? 'bg-[#eaf4fb] text-[#333]' : 'text-[#666] hover:bg-[#eaf4fb]'}`}>{opt}</div>
+                            <div key={opt} onClick={(e) => { e.stopPropagation(); setAccessStatusFilter(opt); setIsAccessStatusFilterOpen(false) }} className={`py-2 px-10 text-[14px] cursor-pointer transition-colors ${accessStatusFilter === opt ? 'bg-[#eaf4fb] text-[#333]' : 'text-[#666] hover:bg-[#eaf4fb]'}`}>{opt}</div>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="max-h-[280px] overflow-y-auto py-2 scrollbar-hide text-[15px]">
-                      <div className="px-4 py-2 pt-3 uppercase text-[13px] font-bold text-[#999] tracking-widest">Groups</div>
+                    <div className="max-h-[280px] overflow-y-auto py-2 scrollbar-hide text-[14px]">
+                      <div className="px-4 py-2 pt-3 uppercase text-[14px] font-bold text-[#999] tracking-widest">Groups</div>
                       {filteredGroups.map(group => (
                         <div key={group.name} className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleAccessGroup(group.name)}>
                           <div className={`w-[14px] h-[14px] border ${selectedAccessGroups.includes(group.name) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] mr-3 flex items-center justify-center`}>
@@ -521,7 +568,7 @@ export default function ProjectsPage() {
                           {group.name}
                         </div>
                       ))}
-                      <div className="px-4 py-2 pt-4 uppercase text-[13px] font-bold text-[#999] tracking-widest">Users</div>
+                      <div className="px-4 py-2 pt-4 uppercase text-[14px] font-bold text-[#999] tracking-widest">Users</div>
                       {filteredAccessUsers.map(user => (
                         <div key={user.id} className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleAccessUser(user.name)}>
                           <div className={`w-[14px] h-[14px] border ${selectedAccessUsers.includes(user.name) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] mr-3 flex items-center justify-center`}>
@@ -537,11 +584,11 @@ export default function ProjectsPage() {
                 <div className="h-8 w-[1px] border-l border-dotted border-[#c6d2d9]" />
                 {/* Billing Dropdown */}
                 <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="flex items-center px-4 h-full cursor-pointer text-[#666666] outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] relative">
+                  <DropdownMenuTrigger className={`flex items-center px-4 h-full cursor-pointer outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] relative ${selectedBillingStatuses.length > 0 ? "text-[#03a9f4] font-semibold" : "text-[#666666]"}`}>
                     <span>Billing</span>
                     <ChevronDown className="ml-2 h-4 w-4" />
                     {selectedBillingStatuses.length > 0 && (
-                      <div className="absolute top-[4px] right-[6px] bg-[#03a9f4] text-white text-[10px] h-[18px] min-w-[18px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white shadow-sm">
+                      <div className="absolute top-[4px] right-[6px] bg-[#03a9f4] text-white text-[14px] h-[18px] min-w-[18px] px-1 rounded-full flex items-center justify-center font-bold border-2 border-white shadow-sm">
                         {selectedBillingStatuses.length}
                       </div>
                     )}
@@ -570,21 +617,21 @@ export default function ProjectsPage() {
                   />
                 </div>
                 <div className="flex items-center pr-4 pl-2">
-                  <Button onClick={handleApplyFilter} className="bg-[#03a9f4] hover:bg-[#0288d1] text-[13px] font-bold tracking-widest px-4 h-8 rounded-sm shadow-md uppercase text-white transition-all">APPLY FILTER</Button>
+                  <Button onClick={handleApplyFilter} className="bg-[#03a9f4] hover:bg-[#0288d1] text-[14px] font-bold tracking-widest px-4 h-8 rounded-sm shadow-md uppercase text-white transition-all">APPLY FILTER</Button>
                 </div>
               </div>
             </div>
 
             {hasActiveFilters && (
               <div className="flex justify-end pr-1 py-3 -mt-2">
-                <button onClick={handleClearFilters} className="text-[#03a9f4] hover:underline text-[15px] font-medium transition-all">Clear filters</button>
+                <button onClick={handleClearFilters} className="text-[#03a9f4] hover:underline text-[14px] font-medium transition-all">Clear filters</button>
               </div>
             )}
 
             {/* Table */}
             <div className="relative z-0">
               <div className="bg-white border border-[#e4eaee] rounded-md shadow-sm overflow-hidden relative">
-                <table className="border-collapse table-fixed w-full">
+                <table className="border-collapse table-auto w-full">
                   <thead>
                     <tr className="bg-[#f0f7fb] border-b border-[#d6e5ef]">
                       <th colSpan={6} className="p-4 py-[14px] text-[16px] text-[#5c7b91] font-bold uppercase tracking-tight text-left">
@@ -592,33 +639,31 @@ export default function ProjectsPage() {
                       </th>
                     </tr>
                     <tr className="border-b border-[#e4eaee] text-left select-none bg-white">
-                      {!isReadOnly && (
-                        <th className="w-[42px] pl-5 pr-6 py-3">
-                          <div className={`w-[14px] h-[14px] border ${allVisibleProjectsSelected ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center`} onClick={toggleSelectAllProjects}>
-                            {allVisibleProjectsSelected && <Check className="w-3 h-3 text-white stroke-[3px]" />}
-                          </div>
-                        </th>
-                      )}
-                      {isReadOnly && <th className="w-[42px]" />}
                       {[
-                        { label: 'NAME', width: '35%' },
+                        { label: 'NAME', width: '30%' },
                         { label: 'PROJECT LEAD', width: '20%' },
-                        { label: 'TRACKED', width: '12%' },
-                        { label: 'PROGRESS', width: '13%' },
-                        { label: 'ACCESS', width: '15%' }
+                        { label: 'TRACKED', width: '15%' },
+                        { label: 'PROGRESS', width: '15%' },
+                        { label: 'ACCESS', width: 'auto' }
                       ].map((col) => (
                         <th
                           key={col.label}
                           style={{ width: col.width }}
-                          className="p-4 py-3 text-[16px] font-normal uppercase tracking-widest cursor-pointer text-[#666] transition-colors"
+                          className="pl-4 pr-3 py-3 text-[16px] font-normal uppercase tracking-widest cursor-pointer text-[#666] transition-colors"
                           onClick={() => handleSort(col.label)}
                         >
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-2">
+                            {!isReadOnly && col.label === 'NAME' && (
+                              <div className={`w-[14px] h-[14px] border ${allVisibleProjectsSelected ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center shrink-0`}
+                                onClick={e => { e.stopPropagation(); toggleSelectAllProjects() }}>
+                                {allVisibleProjectsSelected && <Check className="w-3 h-3 text-white stroke-[3px]" />}
+                              </div>
+                            )}
                             {col.label}
                             {!isReadOnly && col.label === 'NAME' && selectedProjectIds.length > 0 && (
-                              <div className="flex items-center ml-4 gap-3">
-                                <button className="text-[#03a9f4] text-[12px] font-bold normal-case hover:underline">Bulk Edit</button>
-                                <button onClick={handleArchiveProjects} className="text-[#03a9f4] text-[12px] font-bold normal-case hover:underline">Archive</button>
+                              <div className="flex items-center ml-2 gap-3">
+                                <button className="text-[#03a9f4] text-[14px] font-bold normal-case hover:underline">Bulk Edit</button>
+                                <button onClick={handleArchiveProjects} className="text-[#03a9f4] text-[14px] font-bold normal-case hover:underline">Archive</button>
                               </div>
                             )}
                             <div className="flex-1" />
@@ -631,61 +676,68 @@ export default function ProjectsPage() {
                   <tbody>
                     {sortedProjects.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="py-16 text-center text-[#999] text-[15px]">No projects found.</td>
+                        <td colSpan={5} className="py-16 text-center text-[#999] text-[14px]">No projects found.</td>
                       </tr>
                     )}
                     {sortedProjects.map((project) => (
-                      <tr key={project.id} className={`hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''}`}>
-                        <td className="pl-5 pr-0 py-4">
-                          {!isReadOnly && (
-                            <div
-                              className={`w-[14px] h-[14px] border ${selectedProjectIds.includes(project.id) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center`}
-                              onClick={() => toggleProjectSelection(project.id)}
-                            >
-                              {selectedProjectIds.includes(project.id) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
-                            </div>
-                          )}
-                        </td>
+                      <tr key={project.id} className={`hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7] h-[56px] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''}`}>
                         {/* Name */}
-                        <td className="p-4 pl-1 whitespace-nowrap overflow-hidden">
-                          <div className="flex items-center">
-                            <div className="w-[8px] h-[8px] rounded-full mr-3 shrink-0" style={{ backgroundColor: project.color }} />
-                            <Link href={`/dashboard/projects/${project.id}`} className="text-[15px] text-[#333] font-normal truncate hover:underline cursor-pointer">
+                        <td className="pl-4 pr-3 py-4 whitespace-nowrap overflow-hidden">
+                          <div className="flex items-center gap-4">
+                            {!isReadOnly && (
+                              <div
+                                className={`w-[14px] h-[14px] border ${selectedProjectIds.includes(project.id) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center shrink-0`}
+                                onClick={() => toggleProjectSelection(project.id)}
+                              >
+                                {selectedProjectIds.includes(project.id) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
+                              </div>
+                            )}
+                            <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: project.color }} />
+                            <Link href={`/dashboard/projects/${project.id}`} className={`text-[14px] font-normal truncate hover:underline cursor-pointer ${project.archived ? 'line-through text-[#aaa]' : 'text-[#333]'}`}>
                               {project.name}
                             </Link>
                           </div>
                         </td>
                         {/* Lead */}
                         <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[15px] text-[#666] font-normal">{project.lead}</span>
+                          <span className="text-[14px] text-[#666] font-normal">{project.lead}</span>
                         </td>
                         {/* Tracked */}
                         <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[15px] text-[#666] font-normal">{project.tracked}</span>
+                          <span className="text-[14px] text-[#666] font-normal">{project.tracked}</span>
                         </td>
                         {/* Progress */}
                         <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[15px] text-[#666]">-</span>
+                          <span className="text-[14px] text-[#666]">-</span>
                         </td>
                         {/* Access + actions */}
                         <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
                           <div className="flex items-center justify-between w-full">
-                            <span className="text-[15px] text-[#666] font-normal">{project.access}</span>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="h-4 w-[1px] border-l border-[#e4eaee] mx-1" />
+                            <span className="text-[14px] text-[#666] font-normal">{project.access}</span>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Star
                                 onClick={() => toggleFavorite(project.name)}
-                                className={`h-[18px] w-[18px] cursor-pointer transition-all mt-[2px] ${favorites.includes(project.name) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#d6e5ef] hover:text-[#f5a623]'}`}
+                                className={`h-[18px] w-[18px] cursor-pointer transition-all ${favorites.includes(project.name) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#d6e5ef] hover:text-[#f5a623]'}`}
                               />
                               {!isReadOnly && (
-                                <button
-                                  onClick={() => handleDeleteProject(project.id)}
-                                  disabled={deletingId === project.id}
-                                  className="ml-1 text-[#ccc] hover:text-red-500 transition-colors disabled:opacity-50"
-                                  title="Delete project"
-                                >
-                                  <Trash2 className="h-[16px] w-[16px]" />
-                                </button>
+                                <div className="relative" data-menu onClick={e => e.stopPropagation()}>
+                                  <button
+                                    onClick={() => setOpenMenuId(openMenuId === project.id ? null : project.id)}
+                                    className="text-[#ccc] hover:text-[#666] transition-colors p-0.5"
+                                  >
+                                    <MoreVertical className="h-[16px] w-[16px]" />
+                                  </button>
+                                  {openMenuId === project.id && (
+                                    <div className="absolute right-0 top-full mt-0.5 bg-white border border-[#ddd] shadow-lg z-[100] min-w-[140px] rounded-sm py-0.5">
+                                      <button
+                                        onClick={() => { handleArchiveSingle(project.id, project.archived); setOpenMenuId(null) }}
+                                        className="w-full text-left px-4 py-2 text-[13px] text-[#555] hover:bg-[#f0f4f8] transition-colors"
+                                      >
+                                        {project.archived ? 'Unarchive' : 'Archive'}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>

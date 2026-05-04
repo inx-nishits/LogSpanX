@@ -77,7 +77,7 @@ export default function ProjectDetailPage() {
       <div className="min-h-full flex items-center justify-center bg-[#f2f6f8]">
         <div className="flex items-center gap-3 text-[#999]">
           <div className="w-5 h-5 border-2 border-[#03a9f4] border-t-transparent rounded-full animate-spin" />
-          <span className="text-[15px]">Loading…</span>
+          <span className="text-[14px]">Loading…</span>
         </div>
       </div>
     )
@@ -89,7 +89,7 @@ export default function ProjectDetailPage() {
         <p className="text-[17px] text-[#999]">Project not found</p>
         <button
           onClick={() => router.push('/dashboard/projects')}
-          className="text-[#03a9f4] hover:underline text-[15px]"
+          className="text-[#03a9f4] hover:underline text-[14px]"
         >
           ← Back to Projects
         </button>
@@ -110,7 +110,7 @@ export default function ProjectDetailPage() {
         <div className="px-6 pt-5 pb-1">
           <Link
             href="/dashboard/projects"
-            className="text-[#03a9f4] hover:underline text-[13px] font-medium"
+            className="text-[#03a9f4] hover:underline text-[14px] font-medium"
           >
             Projects
           </Link>
@@ -129,7 +129,7 @@ export default function ProjectDetailPage() {
                   </span>
                 </span>
               </h1>
-              <p className="text-[13px] text-[#999] mt-0.5">
+              <p className="text-[14px] text-[#999] mt-0.5">
                 {lead?.name || project.leadName || 'No lead assigned'}
               </p>
             </div>
@@ -160,7 +160,7 @@ export default function ProjectDetailPage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2.5 text-[13px] font-semibold uppercase tracking-widest transition-colors border-b-2 ${activeTab === tab
+              className={`px-5 py-2.5 text-[14px] font-semibold uppercase tracking-widest transition-colors border-b-2 ${activeTab === tab
                 ? 'text-[#333] border-[#333]'
                 : 'text-[#999] border-transparent hover:text-[#666]'
                 }`}
@@ -330,7 +330,7 @@ function TasksTab({
           <button
             onClick={handleAddTask}
             disabled={adding || !newTaskName.trim()}
-            className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[13px] font-bold uppercase tracking-widest px-5 py-[7px] rounded-sm transition-colors disabled:opacity-50"
+            className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[14px] font-bold uppercase tracking-widest px-5 py-[7px] rounded-sm transition-colors disabled:opacity-50"
           >
             {adding ? '…' : 'ADD'}
           </button>
@@ -340,18 +340,18 @@ function TasksTab({
       {/* Tasks table */}
       <div className="bg-white border border-t-0 border-[#e4eaee] rounded-b-md overflow-hidden">
         <div className="bg-[#f0f7fb] px-5 py-2.5 border-b border-[#d6e5ef]">
-          <span className="text-[13px] font-bold text-[#5c7b91] uppercase tracking-widest">
+          <span className="text-[14px] font-bold text-[#5c7b91] uppercase tracking-widest">
             Tasks
           </span>
         </div>
 
         <div className="flex items-center border-b border-[#e4eaee] px-5 py-2.5">
           <div className="flex-1 flex items-center gap-1 cursor-pointer">
-            <span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">NAME</span>
+            <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">NAME</span>
             <ChevronDown className="h-3 w-3 text-[#ccc]" />
           </div>
           <div className="w-[300px]">
-            <span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">ASSIGNEES</span>
+            <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">ASSIGNEES</span>
           </div>
           <div className="w-[40px]" />
         </div>
@@ -405,7 +405,7 @@ function TasksTab({
 
               {/* Assignees */}
               <div className="w-[300px]">
-                <span className="inline-flex items-center gap-1 bg-[#e8f5fd] text-[#03a9f4] text-[13px] font-medium px-3 py-1 rounded-sm">
+                <span className="inline-flex items-center gap-1 bg-[#e8f5fd] text-[#03a9f4] text-[14px] font-medium px-3 py-1 rounded-sm">
                   Anyone
                   <ChevronDown className="h-3 w-3" />
                 </span>
@@ -474,13 +474,13 @@ function TaskActionMenu({
     >
       <button
         onClick={onRename}
-        className="w-full text-left px-4 py-2 text-[13px] text-[#666] hover:bg-[#eaf4fb] transition-colors"
+        className="w-full text-left px-4 py-2 text-[14px] text-[#666] hover:bg-[#eaf4fb] transition-colors"
       >
         Rename task
       </button>
       <button
         onClick={onToggleComplete}
-        className="w-full text-left px-4 py-2 text-[13px] text-[#666] hover:bg-[#eaf4fb] transition-colors"
+        className="w-full text-left px-4 py-2 text-[14px] text-[#666] hover:bg-[#eaf4fb] transition-colors"
       >
         {isCompleted ? 'Mark as active' : 'Mark as done'}
       </button>
@@ -489,7 +489,7 @@ function TaskActionMenu({
           <div className="h-[1px] bg-[#e4eaee] my-1" />
           <button
             onClick={onDelete}
-            className="w-full text-left px-4 py-2 text-[13px] text-red-500 hover:bg-red-50 transition-colors"
+            className="w-full text-left px-4 py-2 text-[14px] text-red-500 hover:bg-red-50 transition-colors"
           >
             Delete
           </button>
@@ -552,8 +552,8 @@ function AccessTab({
     <div className="bg-white border border-[#e4eaee] rounded-md overflow-hidden">
       {/* Visibility */}
       <div className="px-6 py-5 border-b border-[#e4eaee]">
-        <h3 className="text-[15px] font-semibold text-[#333] mb-1">Visibility</h3>
-        <p className="text-[13px] text-[#999] mb-3">
+        <h3 className="text-[14px] font-semibold text-[#333] mb-1">Visibility</h3>
+        <p className="text-[14px] text-[#999] mb-3">
           Only people you add to the Project can track time on it.
         </p>
         <div className="flex items-center gap-6">
@@ -599,13 +599,13 @@ function AccessTab({
                 placeholder="Search users"
                 value={addSearch}
                 onChange={(e) => setAddSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-[5px] text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]"
+                className="w-full pl-8 pr-3 py-[5px] text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]"
                 autoFocus
               />
             </div>
             <div className="max-h-[200px] overflow-y-auto">
               {availableUsers.length === 0 ? (
-                <p className="text-[13px] text-[#999] py-2 text-center">No users available</p>
+                <p className="text-[14px] text-[#999] py-2 text-center">No users available</p>
               ) : (
                 availableUsers.map((user) => (
                   <button
@@ -614,10 +614,10 @@ function AccessTab({
                     disabled={assigning === user.id}
                     className="flex items-center gap-2.5 w-full px-2 py-2 text-left hover:bg-[#eaf4fb] rounded-sm transition-colors disabled:opacity-50"
                   >
-                    <div className="w-7 h-7 rounded-full bg-[#e4eaee] flex items-center justify-center text-[11px] font-semibold text-[#666] uppercase shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-[#e4eaee] flex items-center justify-center text-[14px] font-semibold text-[#666] uppercase shrink-0">
                       {user.name.charAt(0)}
                     </div>
-                    <span className="text-[13px] text-[#666]">{user.name}</span>
+                    <span className="text-[14px] text-[#666]">{user.name}</span>
                     {assigning === user.id && (
                       <div className="ml-auto w-3.5 h-3.5 border-2 border-[#03a9f4] border-t-transparent rounded-full animate-spin" />
                     )}
@@ -632,19 +632,19 @@ function AccessTab({
       {/* Members table */}
       <div>
         <div className="bg-[#f0f7fb] px-6 py-2.5 border-b border-[#d6e5ef]">
-          <span className="text-[13px] font-bold text-[#5c7b91] uppercase tracking-widest">
+          <span className="text-[14px] font-bold text-[#5c7b91] uppercase tracking-widest">
             Users
           </span>
         </div>
         <div className="flex items-center border-b border-[#e4eaee] px-6 py-2.5 bg-white">
           <div className="flex-1">
-            <span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">NAME</span>
+            <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">NAME</span>
           </div>
           <div className="w-[250px] text-center">
-            <span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">BILLABLE RATE (USD)</span>
+            <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">BILLABLE RATE (USD)</span>
           </div>
           <div className="w-[120px] text-right">
-            <span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">ROLE</span>
+            <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">ROLE</span>
           </div>
           <div className="w-[40px]" />
         </div>
@@ -669,7 +669,7 @@ function AccessTab({
                   className="w-[80px] px-2 py-1 text-[14px] text-center border border-[#e4eaee] rounded-sm outline-none focus:border-[#03a9f4] bg-[#f8fafb]"
                   readOnly
                 />
-                <button className="text-[#03a9f4] text-[13px] font-medium hover:underline">
+                <button className="text-[#03a9f4] text-[14px] font-medium hover:underline">
                   Change
                 </button>
               </div>
@@ -727,22 +727,22 @@ function StatusTab({
         <div className="bg-white border border-[#e4eaee] rounded-md p-6">
           <div className="border-b border-[#e4eaee] pb-4 mb-4">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-bold text-[#999] uppercase tracking-widest">TRACKED</span>
+              <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">TRACKED</span>
               <span className="text-[18px] font-semibold text-[#333]">{fmtHours(totalSeconds)}</span>
             </div>
           </div>
           <div className="space-y-2 border-b border-[#e4eaee] pb-4 mb-4">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-bold text-[#03a9f4] uppercase tracking-widest">BILLABLE</span>
+              <span className="text-[14px] font-bold text-[#03a9f4] uppercase tracking-widest">BILLABLE</span>
               <span className="text-[16px] font-semibold text-[#333]">{fmtHours(billableSeconds)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[12px] text-[#999] uppercase tracking-widest">NON-BILLABLE</span>
+              <span className="text-[14px] text-[#999] uppercase tracking-widest">NON-BILLABLE</span>
               <span className="text-[16px] text-[#666]">{fmtHours(nonBillableSeconds)}</span>
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[12px] font-bold text-[#999] uppercase tracking-widest">AMOUNT</span>
+            <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">AMOUNT</span>
             <span className="text-[18px] font-semibold text-[#333]">{amount} USD</span>
           </div>
         </div>
@@ -775,11 +775,11 @@ function StatusTab({
           <div className="ml-6 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-sm bg-[#8bc34a]" />
-              <span className="text-[13px] text-[#666]">Billable</span>
+              <span className="text-[14px] text-[#666]">Billable</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-sm bg-[#c5e1a5]" />
-              <span className="text-[13px] text-[#666]">Non-billable</span>
+              <span className="text-[14px] text-[#666]">Non-billable</span>
             </div>
           </div>
         </div>
@@ -788,13 +788,13 @@ function StatusTab({
       {/* Tasks breakdown */}
       <div className="bg-white border border-[#e4eaee] rounded-md overflow-hidden">
         <div className="bg-[#f0f7fb] px-5 py-2.5 border-b border-[#d6e5ef] flex items-center justify-between">
-          <span className="text-[13px] font-bold text-[#5c7b91] uppercase tracking-widest">Tasks</span>
+          <span className="text-[14px] font-bold text-[#5c7b91] uppercase tracking-widest">Tasks</span>
         </div>
         <div className="flex items-center border-b border-[#e4eaee] px-5 py-2.5">
-          <div className="flex-1"><span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">NAME</span></div>
-          <div className="w-[200px]"><span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">ASSIGNEES</span></div>
-          <div className="w-[120px] text-right"><span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">TRACKED</span></div>
-          <div className="w-[100px] text-right"><span className="text-[11px] font-bold text-[#999] uppercase tracking-widest">AMOUNT</span></div>
+          <div className="flex-1"><span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">NAME</span></div>
+          <div className="w-[200px]"><span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">ASSIGNEES</span></div>
+          <div className="w-[120px] text-right"><span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">TRACKED</span></div>
+          <div className="w-[100px] text-right"><span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">AMOUNT</span></div>
         </div>
         {tasks.length === 0 ? (
           <div className="px-5 py-10 text-center text-[#999] text-[14px]">No tasks</div>
@@ -827,7 +827,7 @@ function NoteTab() {
         className="w-full h-[200px] p-3 text-[14px] text-[#333] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] resize-y"
       />
       <div className="flex justify-end mt-3">
-        <button className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[13px] font-bold uppercase tracking-widest px-5 py-2 rounded-sm transition-colors">
+        <button className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[14px] font-bold uppercase tracking-widest px-5 py-2 rounded-sm transition-colors">
           Save Note
         </button>
       </div>
@@ -884,12 +884,12 @@ function SettingsTab({
       <div className="px-6 py-6 max-w-[500px] flex flex-col gap-7">
         {/* Name */}
         <div>
-          <h3 className="text-[15px] font-semibold text-[#333] mb-1">Name</h3>
+          <h3 className="text-[14px] font-semibold text-[#333] mb-1">Name</h3>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]"
+            className="w-full px-3 py-2 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]"
           />
         </div>
 
@@ -897,13 +897,13 @@ function SettingsTab({
 
         {/* Project Lead */}
         <div>
-          <h3 className="text-[15px] font-semibold text-[#333] mb-1">Project Lead</h3>
-          <p className="text-[13px] text-[#999] mb-2">Used for grouping similar Projects together.</p>
+          <h3 className="text-[14px] font-semibold text-[#333] mb-1">Project Lead</h3>
+          <p className="text-[14px] text-[#999] mb-2">Used for grouping similar Projects together.</p>
           <div className="relative">
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="w-full px-3 py-2 text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-white appearance-none pr-8 cursor-pointer"
+              className="w-full px-3 py-2 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-white appearance-none pr-8 cursor-pointer"
             >
               <option value="">— No lead —</option>
               {users.map((u) => (
@@ -918,8 +918,8 @@ function SettingsTab({
 
         {/* Color */}
         <div>
-          <h3 className="text-[15px] font-semibold text-[#333] mb-1">Color</h3>
-          <p className="text-[13px] text-[#999] mb-2">Use color to visually differentiate Projects.</p>
+          <h3 className="text-[14px] font-semibold text-[#333] mb-1">Color</h3>
+          <p className="text-[14px] text-[#999] mb-2">Use color to visually differentiate Projects.</p>
           <div className="relative">
             <button
               onClick={() => setShowColorPicker(!showColorPicker)}
@@ -947,8 +947,8 @@ function SettingsTab({
 
         {/* Billable */}
         <div>
-          <h3 className="text-[15px] font-semibold text-[#333] mb-1">Billable by default</h3>
-          <p className="text-[13px] text-[#999] mb-3">
+          <h3 className="text-[14px] font-semibold text-[#333] mb-1">Billable by default</h3>
+          <p className="text-[14px] text-[#999] mb-3">
             All new entries on this Project will be initially set as billable.
           </p>
           <div className="flex items-center gap-3">
@@ -966,18 +966,18 @@ function SettingsTab({
 
         {/* Hourly rate */}
         <div>
-          <h3 className="text-[15px] font-semibold text-[#333] mb-1">Project billable rate</h3>
-          <p className="text-[13px] text-[#999] mb-2">Billable rate used for calculating billable amount for this Project.</p>
-          <p className="text-[13px] text-[#666] mb-2">Hourly rate (USD)</p>
+          <h3 className="text-[14px] font-semibold text-[#333] mb-1">Project billable rate</h3>
+          <p className="text-[14px] text-[#999] mb-2">Billable rate used for calculating billable amount for this Project.</p>
+          <p className="text-[14px] text-[#666] mb-2">Hourly rate (USD)</p>
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={hourlyRate}
               onChange={(e) => setHourlyRate(e.target.value)}
               placeholder="—"
-              className="w-[100px] px-3 py-1.5 text-[15px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-[#f8fafb]"
+              className="w-[100px] px-3 py-1.5 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-[#f8fafb]"
             />
-            <button className="text-[#03a9f4] text-[13px] font-medium hover:underline">Set rate</button>
+            <button className="text-[#03a9f4] text-[14px] font-medium hover:underline">Set rate</button>
           </div>
         </div>
 
@@ -985,8 +985,8 @@ function SettingsTab({
 
         {/* Estimate */}
         <div>
-          <h3 className="text-[15px] font-semibold text-[#333] mb-1">Project estimate</h3>
-          <p className="text-[13px] text-[#999] mb-2">Choose how you wish to track Project progress (time or fixed fee budget).</p>
+          <h3 className="text-[14px] font-semibold text-[#333] mb-1">Project estimate</h3>
+          <p className="text-[14px] text-[#999] mb-2">Choose how you wish to track Project progress (time or fixed fee budget).</p>
           <div className="relative">
             <select className="w-[200px] px-3 py-2 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] bg-white appearance-none pr-8 cursor-pointer">
               <option>No estimate</option>
@@ -999,11 +999,11 @@ function SettingsTab({
 
         {/* Save */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          {saved && <span className="text-[13px] text-[#4caf50]">✓ Saved</span>}
+          {saved && <span className="text-[14px] text-[#4caf50]">✓ Saved</span>}
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[13px] font-bold uppercase tracking-widest px-6 py-2 rounded-sm transition-colors disabled:opacity-50"
+            className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[14px] font-bold uppercase tracking-widest px-6 py-2 rounded-sm transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
@@ -1019,7 +1019,7 @@ function SettingsTab({
 function PlaceholderTab({ name }: { name: string }) {
   return (
     <div className="bg-white border border-[#e4eaee] rounded-md px-6 py-16 text-center">
-      <p className="text-[15px] text-[#999]">{name} — Coming soon</p>
+      <p className="text-[14px] text-[#999]">{name} — Coming soon</p>
     </div>
   )
 }

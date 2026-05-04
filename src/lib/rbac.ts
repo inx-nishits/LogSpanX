@@ -14,6 +14,9 @@ export const getDashboardRoute = (_role: User['role']): string => {
 const restrictedRoutes: Array<{ prefix: string; allowedRoles: User['role'][] }> = [
   { prefix: '/dashboard/pm', allowedRoles: ['owner'] },
   { prefix: '/dashboard/tl', allowedRoles: ['owner', 'admin'] },
+  { prefix: '/dashboard/projects', allowedRoles: ['owner'] },
+  { prefix: '/dashboard/tags', allowedRoles: ['owner'] },
+  { prefix: '/dashboard/project-lead', allowedRoles: ['owner'] },
 ]
 
 export const isPathAllowedForRole = (path: string, role: User['role']): boolean => {
@@ -32,5 +35,5 @@ export const canManageProjects = (role: User['role']) => role === 'owner' || rol
 export const canInviteMembers = (role: User['role']) => role === 'owner' || role === 'admin'
 export const canDeleteProject = (role: User['role']) => role === 'owner'
 export const canDeleteUser = (role: User['role']) => role === 'owner'
-export const canChangeUserRole = (role: User['role']) => role === 'owner'
+export const canChangeUserRole = (role: User['role']) => role === 'owner' || role === 'admin'
 export const canViewAllTimeEntries = (role: User['role']) => role === 'owner' || role === 'admin'
