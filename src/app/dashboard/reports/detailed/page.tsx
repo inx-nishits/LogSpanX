@@ -397,18 +397,30 @@ export default function DetailedReportPage() {
     else { setSortField(field); setSortOrder('desc') }
   }
 
+  const updateEntry = (id: string, updates: Partial<typeof filtered[0]>) => {
+    updateTimeEntry(id, updates)
+    setFiltered(prev => prev.map(e => {
+      if (e.id !== id) return e
+      const merged = { ...e, ...updates }
+      if (merged.startTime && merged.endTime) {
+        merged.duration = Math.max(0, Math.floor((new Date(merged.endTime).getTime() - new Date(merged.startTime).getTime()) / 1000))
+      }
+      return merged
+    }))
+  }
+
   const onTimeChange = (id: string, field: 'startTime' | 'endTime', nd: Date) => {
-    const e = timeEntries.find(x => x.id === id); if (!e) return
+    const e = filtered.find(x => x.id === id); if (!e) return
     const s = field === 'startTime' ? nd : new Date(e.startTime)
     const en = field === 'endTime' ? nd : (e.endTime ? new Date(e.endTime) : nd)
-    updateTimeEntry(id, { [field]: nd, duration: Math.max(0, Math.floor((en.getTime() - s.getTime()) / 1000)) })
+    updateEntry(id, { [field]: nd, duration: Math.max(0, Math.floor((en.getTime() - s.getTime()) / 1000)) })
   }
 
   const onDateChange = (id: string, newDay: Date) => {
-    const e = timeEntries.find(x => x.id === id); if (!e) return
+    const e = filtered.find(x => x.id === id); if (!e) return
     const os = new Date(e.startTime)
     const ns = new Date(newDay); ns.setHours(os.getHours(), os.getMinutes(), 0, 0)
-    updateTimeEntry(id, { startTime: ns, endTime: new Date(ns.getTime() + (e.duration ?? 0) * 1000) })
+    updateEntry(id, { startTime: ns, endTime: new Date(ns.getTime() + (e.duration ?? 0) * 1000) })
   }
 
   const onDup = (e: typeof filtered[0]) => {
@@ -444,16 +456,16 @@ export default function DetailedReportPage() {
 
         <div className="flex items-center justify-between mb-4 px-6 pt-6">
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-3 h-[32px] text-[16px] text-[#555] bg-white border border-[#d0d8de] rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm">
+            <button className="flex items-center gap-1.5 px-3 h-[32px] text-[14px] text-[#555] bg-white border border-[#d0d8de] rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm">
               Time audit <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
             </button>
-            <button onClick={() => setShowEntryBar(!showEntryBar)} className={cn("flex items-center gap-1.5 px-3 h-[32px] text-[16px] text-[#555] border rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm transition-colors", showEntryBar ? "bg-[#f2f6f8] border-[#03a9f4] text-[#03a9f4]" : "bg-white border-[#d0d8de]")}>
+            <button onClick={() => setShowEntryBar(!showEntryBar)} className={cn("flex items-center gap-1.5 px-3 h-[32px] text-[14px] text-[#555] border rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm transition-colors", showEntryBar ? "bg-[#f2f6f8] border-[#03a9f4] text-[#03a9f4]" : "bg-white border-[#d0d8de]")}>
               Add time for others <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
             </button>
           </div>
         </div>
 
-        <div className="mx-6 mb-8 bg-white border border-[#e4e8ec] shadow-sm rounded-sm overflow-hidden flex flex-col">
+        <div className="mx-6 mb-8 bg-white border border-[#e4e8ec] shadow-sm rounded-sm flex flex-col">
           {/* Inline Manual Entry */}
           {showEntryBar && <InlineEntryBar onAdd={addTimeEntry} defaultDate={dateRange.from} />}
 
@@ -475,14 +487,14 @@ export default function DetailedReportPage() {
                 <div onClick={() => setRounding(!rounding)} className={cn("relative inline-flex h-3.5 w-8 items-center rounded-full cursor-pointer transition-colors", rounding ? "bg-[#03a9f4]" : "bg-gray-200")}>
                   <span className={cn("inline-block h-2.5 w-2.5 rounded-full bg-white transition-transform", rounding ? "translate-x-4.5" : "translate-x-1")} />
                 </div>
-                <span className="text-[16px]">Rounding</span>
+                <span className="text-[14px]">Rounding</span>
               </div>
-              <button className="hover:text-[#03a9f4] cursor-pointer flex items-center gap-1 text-[15px]">Show amount <ChevronDown className="h-3.5 w-3.5" /></button>
+              <button className="hover:text-[#03a9f4] cursor-pointer flex items-center gap-1 text-[14px]">Show amount <ChevronDown className="h-3.5 w-3.5" /></button>
             </div>
           </div>
 
           {/* Table header / Bulk Actions */}
-          <div className={cn("flex items-center h-[42px] border-b border-[#e4eaee] px-4 text-[15px] font-bold uppercase tracking-wider flex-shrink-0", selIds.size > 0 ? "bg-[#333] text-white" : "bg-[#f5f7f9] text-[#aaa]")}>
+          <div className={cn("flex items-center h-[42px] border-b border-[#e4eaee] px-0 text-[15px] font-bold uppercase tracking-wider flex-shrink-0", selIds.size > 0 ? "bg-[#333] text-white" : "bg-[#f5f7f9] text-[#aaa]")}>
             <div className="w-[44px] flex-shrink-0 flex items-center justify-center">
               <input type="checkbox" checked={selIds.size === filtered.length && filtered.length > 0} onChange={toggleAll} className="h-4 w-4 rounded-sm accent-[#03a9f4] cursor-pointer" />
             </div>
@@ -526,7 +538,7 @@ export default function DetailedReportPage() {
           {/* Rows */}
           <div className="bg-white">
             {filtered.length === 0 ? (
-              <div className="py-16 text-center text-[16px] text-[#aaa]">No entries for selected range</div>
+              <div className="py-16 text-center text-[14px] text-[#aaa]">No entries for selected range</div>
             ) : (
               Object.entries(
                 filtered.reduce((acc, entry) => {
@@ -540,12 +552,12 @@ export default function DetailedReportPage() {
               ).map(([dateLabel, entries]) => (
                 <div key={dateLabel}>
                   {sortField === 'startTime' && (
-                    <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2.5 text-[16px] font-bold text-[#777] flex items-center">
+                    <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2.5 text-[14px] font-bold text-[#777] flex items-center">
                       <span>{dateLabel}</span>
                       <div className="flex-1 min-w-0" />
-                      <div className="w-[80px] text-right flex-shrink-0 px-2 flex items-center justify-end text-[16px] font-bold text-[#333] tabular-nums">
+                      {/* <div className="w-[80px] text-right flex-shrink-0 px-2 flex items-center justify-end text-[16px] font-bold text-[#333] tabular-nums">
                         {dispDur(entries.reduce((a, e) => a + (e.duration ?? 0), 0))}
-                      </div>
+                      </div> */}
                       <div className="w-[480px] flex-shrink-0" />
                     </div>
                   )}
@@ -565,15 +577,15 @@ export default function DetailedReportPage() {
                         <div className="flex-1 min-w-0 flex items-center px-4 py-2 group/entry">
                           <div className="flex-1 min-w-0 flex items-center gap-1.5">
                             <input type="text" defaultValue={entry.description}
-                              onBlur={e => updateTimeEntry(entry.id, { description: e.target.value })}
+                              onBlur={e => updateEntry(entry.id, { description: e.target.value })}
                               placeholder="Add description"
-                              className="text-[16px] text-[#333] outline-none bg-transparent placeholder-[#bbb] truncate flex-initial w-auto min-w-[120px]"
+                              className="text-[14px] text-[#333] outline-none bg-transparent placeholder-[#bbb] truncate flex-initial w-auto min-w-[120px]"
                             />
                             <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0">
                               <span className="text-gray-300 flex-shrink-0">•</span>
                               <ProjectPicker selectedProjectId={entry.projectId}
-                                onSelect={pid => updateTimeEntry(entry.id, { projectId: pid })}
-                                onClear={() => updateTimeEntry(entry.id, { projectId: undefined })}
+                                onSelect={pid => updateEntry(entry.id, { projectId: pid })}
+                                onClear={() => updateEntry(entry.id, { projectId: undefined })}
                                 customTrigger={proj ? (
                                   <div className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
                                     <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
@@ -588,14 +600,14 @@ export default function DetailedReportPage() {
                             </div>
                           </div>
                           <div className="flex-shrink-0 ml-auto">
-                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={tagIds => updateTimeEntry(entry.id, { tagIds })} />
+                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={tagIds => updateEntry(entry.id, { tagIds })} />
                           </div>
                         </div>
 
-                        <div className="w-[80px] flex-shrink-0 flex items-center justify-end px-2 text-[16px] text-[#aaa] tabular-nums">0.00</div>
+                        <div className="w-[80px] flex-shrink-0 flex items-center justify-end px-2 text-[14px] text-[#aaa] tabular-nums">0.00</div>
 
                         <div className="w-[40px] flex-shrink-0 flex items-center justify-center">
-                          <button onClick={() => updateTimeEntry(entry.id, { billable: !entry.billable })}
+                          <button onClick={() => updateEntry(entry.id, { billable: !entry.billable })}
                             className={cn('cursor-pointer transition-colors', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc]')}>
                             <DollarSign style={{ width: 18, height: 18 }} />
                           </button>
@@ -605,36 +617,36 @@ export default function DetailedReportPage() {
                           {canManageUsers ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <button className="flex items-center justify-end gap-1 text-[16px] text-[#555] hover:text-[#03a9f4] cursor-pointer ml-auto max-w-[130px] truncate">
+                                <button className="flex items-center justify-end gap-1 text-[14px] text-[#555] hover:text-[#03a9f4] cursor-pointer ml-auto max-w-[130px] truncate">
                                   {user?.name || '—'} <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-[180px] bg-white border border-gray-100 shadow-xl">
                                 {users.map(u => (
-                                  <DropdownMenuItem key={u.id} onClick={() => updateTimeEntry(entry.id, { userId: u.id })} className="py-2.5 px-3 cursor-pointer text-[16px]">
+                                  <DropdownMenuItem key={u.id} onClick={() => updateEntry(entry.id, { userId: u.id })} className="py-2.5 px-3 cursor-pointer text-[14px]">
                                     {u.name} {u.id === entry.userId && <Check className="h-3.5 w-3.5 ml-auto text-[#03a9f4]" />}
                                   </DropdownMenuItem>
                                 ))}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           ) : (
-                            <span className="text-[16px] text-[#555] max-w-[130px] truncate">{user?.name || '—'}</span>
+                            <span className="text-[14px] text-[#555] max-w-[130px] truncate">{user?.name || '—'}</span>
                           )}
                         </div>
 
                         <div className="w-[140px] flex-shrink-0 flex flex-col items-center justify-center leading-tight">
                           <div className="flex items-center gap-1">
                             <TimeCell date={start} onChange={d => onTimeChange(entry.id, 'startTime', d)} />
-                            <span className="text-[#bbb] text-[16px]">-</span>
+                            <span className="text-[#bbb] text-[14px]">-</span>
                             {end && <TimeCell date={end} onChange={d => onTimeChange(entry.id, 'endTime', d)} />}
                           </div>
-                          <span className="text-[16px] text-[#aaa] mt-1">
+                          <span className="text-[14px] text-[#aaa] mt-1">
                             {isSameDay(start, new Date()) ? 'Today' : isSameDay(start, addDays(new Date(), -1)) ? 'Yesterday' : format(start, 'dd/MM/yyyy')}
                           </span>
                         </div>
 
                         <div className="w-[90px] flex-shrink-0 flex items-center justify-center">
-                          <DurCell dur={entry.duration ?? 0} onSave={s => updateTimeEntry(entry.id, { duration: s, endTime: new Date(start.getTime() + s * 1000) })} />
+                          <DurCell dur={entry.duration ?? 0} onSave={s => updateEntry(entry.id, { duration: s, endTime: new Date(start.getTime() + s * 1000) })} />
                         </div>
 
                         <div className="w-[100px] flex-shrink-0 flex items-center justify-end pr-4 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -651,8 +663,8 @@ export default function DetailedReportPage() {
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-[140px] shadow-xl bg-white border border-gray-100 rounded-sm">
-                              <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[16px] cursor-pointer">Duplicate</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => deleteTimeEntry(entry.id)} className="py-2.5 text-[16px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => deleteTimeEntry(entry.id)} className="py-2.5 text-[14px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>

@@ -262,7 +262,6 @@ export function serializeTimeEntryPatch(entry: Partial<TimeEntry>) {
   if ('billable' in entry) patch.billable = entry.billable
   if ('startTime' in entry && entry.startTime) patch.startTime = entry.startTime instanceof Date ? entry.startTime.toISOString() : entry.startTime
   if ('endTime' in entry && entry.endTime) patch.endTime = entry.endTime instanceof Date ? entry.endTime.toISOString() : entry.endTime
-  if ('duration' in entry) patch.duration = entry.duration
   if ('userId' in entry) patch.userId = entry.userId
 
   return patch

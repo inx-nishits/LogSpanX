@@ -132,7 +132,6 @@ export function TimerBar() {
     const dateStr = format(selectedDate, 'yyyy-MM-dd')
     const start = new Date(`${dateStr}T${startTime}:00`)
     const end = new Date(`${dateStr}T${endTime}:00`)
-    const duration = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000))
     try {
       await addTimeEntry({
         description,
@@ -143,7 +142,6 @@ export function TimerBar() {
         userId: user.id,
         startTime: start,
         endTime: end,
-        duration,
       })
       setDescription('')
       setProjectId('')
