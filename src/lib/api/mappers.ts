@@ -256,7 +256,7 @@ export function serializeTimeEntryPatch(entry: Partial<TimeEntry>) {
   const patch: Record<string, unknown> = {}
 
   if ('description' in entry) patch.description = entry.description
-  if ('projectId' in entry) patch.projectId = entry.projectId || null
+  if ('projectId' in entry) patch.projectId = entry.projectId || undefined
   if ('taskId' in entry) patch.taskId = entry.taskId || null
   if ('tagIds' in entry) patch.tagIds = (entry.tagIds ?? []).filter(id => id !== '')
   if ('billable' in entry) patch.billable = entry.billable
@@ -265,4 +265,9 @@ export function serializeTimeEntryPatch(entry: Partial<TimeEntry>) {
   if ('userId' in entry) patch.userId = entry.userId
 
   return patch
+}
+
+// Used only for POST /time-entries
+export function serializeTimeEntryCreate(entry: Partial<TimeEntry>) {
+  return serializeTimeEntryPatch(entry)
 }

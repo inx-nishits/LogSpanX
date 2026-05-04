@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, subMonths, addMonths } from 'date-fns'
-import { ChevronDown, DollarSign, MoreVertical, Printer, Share2, ChevronLeft, ChevronRight, Calendar, Play, Check, Copy, ArrowUp, ArrowDown, Trash2, X, Plus } from 'lucide-react'
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, format, parseISO } from 'date-fns'
+import { ChevronDown, DollarSign, MoreVertical, Printer, Share2, Play, Check, ArrowUp, ArrowDown, Plus } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { cn } from '@/lib/utils'
 import { ReportShell, DateRange } from '../_components/report-shell'
@@ -19,27 +19,6 @@ const fmtDur = (s: number, round?: boolean) => {
   const h = Math.floor(finalSecs / 3600)
   const m = Math.floor((finalSecs % 3600) / 60)
   return `${h}:${String(m).padStart(2, '0')}`
-}
-
-const fmtTime = (d: Date) =>
-  d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-
-const toHHMM = (d: Date) =>
-  `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-
-function parseTimeInput(raw: string): string {
-  const s = raw.replace(/[^0-9:]/g, '').trim()
-  if (!s) return ''
-  if (/^\d{1,2}:\d{2}$/.test(s)) {
-    const [h, m] = s.split(':').map(Number)
-    if (h > 23 || m > 59) return ''
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-  }
-  const digits = s.replace(':', '')
-  if (digits.length === 1) return `0${digits}:00`
-  if (digits.length === 2) { const h = parseInt(digits); if (h > 23) return ''; return `${String(h).padStart(2, '0')}:00` }
-  if (digits.length === 4) { const h = parseInt(digits.slice(0, 2)), m = parseInt(digits.slice(2)); if (h > 23 || m > 59) return ''; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
-  return ''
 }
 
 // ─── Shared Components ────────────────────────────────────────────────────────
@@ -61,35 +40,6 @@ function D({ children, extra = '' }: { children: React.ReactNode; extra?: string
     <div className={`flex items-center justify-center border-l border-dotted border-[#e0e0e0] px-4 my-[10px] ${extra}`}>
       {children}
     </div>
-  )
-}
-
-function TimeCell({ date, onChange, className = "" }: { date: Date; onChange: (d: Date) => void; className?: string }) {
-  const [editing, setEditing] = useState(false)
-  const [val, setVal] = useState(toHHMM(date))
-  useEffect(() => { if (!editing) setVal(toHHMM(date)) }, [date, editing])
-
-  const commit = (v: string) => {
-    setEditing(false)
-    const parsed = parseTimeInput(v)
-    if (!parsed) { setVal(toHHMM(date)); return }
-    const [h, min] = parsed.split(':').map(Number)
-    const nd = new Date(date); nd.setHours(h, min, 0, 0); onChange(nd)
-  }
-
-  if (editing) return (
-    <input autoFocus type="text" value={val} maxLength={5} placeholder="HH:MM"
-      onChange={e => setVal(e.target.value)}
-      onBlur={e => commit(e.target.value)}
-      onKeyDown={e => e.key === 'Enter' && commit(val)}
-      className={cn("w-[50px] text-[15px] text-[#555] bg-transparent border-none outline-none tabular-nums text-center p-0 m-0", className)}
-    />
-  )
-  return (
-    <span onClick={() => setEditing(true)}
-      className={cn("text-[15px] text-[#555] tabular-nums cursor-pointer w-[50px] inline-block text-center hover:text-[#03a9f4] p-0 m-0 leading-none", className)}>
-      {fmtTime(date)}
-    </span>
   )
 }
 
@@ -123,69 +73,6 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
   )
 }
 
-function CalPicker({ date, onChange, onClose, align = 'right' }: { date: Date; onChange: (d: Date) => void; onClose: () => void; align?: 'left' | 'right' }) {
-  const [view, setView] = useState(startOfMonth(date))
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
-    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
-  }, [onClose])
-  const days = eachDayOfInterval({
-    start: startOfWeek(startOfMonth(view), { weekStartsOn: 1 }),
-    end: endOfWeek(endOfMonth(view), { weekStartsOn: 1 }),
-  })
-  return (
-    <div ref={ref} className="absolute z-[400] bg-white border border-gray-200 shadow-2xl rounded-sm p-3 w-[240px]"
-      style={{ top: 'calc(100% + 4px)', [align]: 0 }} onClick={e => e.stopPropagation()}>
-      <div className="flex items-center justify-between mb-2">
-        <button onClick={() => setView(subMonths(view, 1))} className="p-1 hover:bg-gray-100 rounded cursor-pointer">
-          <ChevronLeft className="h-4 w-4 text-gray-500" />
-        </button>
-        <span className="text-[15px] font-semibold text-gray-700">{format(view, 'MMM yyyy')}</span>
-        <button onClick={() => setView(addMonths(view, 1))} className="p-1 hover:bg-gray-100 rounded cursor-pointer">
-          <ChevronRight className="h-4 w-4 text-gray-500" />
-        </button>
-      </div>
-      <div className="grid grid-cols-7 mb-1">
-        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
-          <div key={d} className="text-center text-[13px] font-bold text-gray-400 py-1">{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-y-0.5">
-        {days.map((day, i) => {
-          const sel = isSameDay(day, date), cur = isSameMonth(day, view), tod = isSameDay(day, new Date())
-          return (
-            <button key={i} onClick={() => { onChange(day); onClose() }}
-              className={cn('h-8 w-full flex items-center justify-center text-[16px] rounded cursor-pointer transition-colors',
-                !cur && 'text-gray-300',
-                cur && !sel && 'text-gray-700 hover:bg-gray-100',
-                tod && !sel && 'text-[#03a9f4] font-bold',
-                sel && 'bg-[#03a9f4] text-white font-bold')}>
-              {format(day, 'd')}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function CalBtn({ date, onChange, align = 'right' }: { date: Date; onChange: (d: Date) => void; align?: 'left' | 'right' }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="relative">
-      <Tip label={format(date, 'MMM d, yyyy')}>
-        <button onClick={() => setOpen(o => !o)} className="text-[#ccc] hover:text-[#03a9f4] transition-colors cursor-pointer">
-          <Calendar style={{ width: 20, height: 20 }} strokeWidth={1.5} />
-        </button>
-      </Tip>
-      {open && <CalPicker date={date} align={align}
-        onChange={d => { const nd = new Date(d); nd.setHours(date.getHours(), date.getMinutes(), 0, 0); onChange(nd); setOpen(false) }}
-        onClose={() => setOpen(false)} />}
-    </div>
-  )
-}
-
 // ─── Inline Entry Bar ────────────────────────────────────────────────────────
 
 function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defaultDate: Date }) {
@@ -195,17 +82,40 @@ function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defau
   const [tagIds, setTagIds] = useState<string[]>([])
   const [billable, setBillable] = useState(false)
   const [uid, setUid] = useState(users[0]?.id || '')
-  const [start, setStart] = useState(new Date())
-  const [end, setEnd] = useState(new Date(new Date().getTime() + 3600 * 1000))
+  const [durInput, setDurInput] = useState('00:00:00')
+
+  function parseDur(raw: string): number | null {
+    const s = raw.trim()
+    if (!s) return null
+    if (s.includes(':')) {
+      const parts = s.split(':').map(Number)
+      if (parts.some(isNaN)) return null
+      if (parts.length === 2) { const [h, m] = parts; if (m > 59) return null; return h * 3600 + m * 60 }
+      if (parts.length === 3) { const [h, m, sec] = parts; if (m > 59 || sec > 59) return null; return h * 3600 + m * 60 + sec }
+      return null
+    }
+    const digits = s.replace(/\D/g, '')
+    if (digits.length === 1) return parseInt(digits) * 60
+    if (digits.length === 2) { const m = parseInt(digits); if (m > 59) return null; return m * 60 }
+    if (digits.length === 3) { const h = parseInt(digits[0]), m = parseInt(digits.slice(1)); if (m > 59) return null; return h * 3600 + m * 60 }
+    if (digits.length === 4) { const h = parseInt(digits.slice(0, 2)), m = parseInt(digits.slice(2)); if (m > 59) return null; return h * 3600 + m * 60 }
+    return null
+  }
+
+  const fmtDurInline = (s: number) => {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+  }
 
   const handleAdd = () => {
     if (!uid) return
-    onAdd({
-      description: desc, projectId: pid || undefined, tagIds, billable,
-      userId: uid, startTime: start, endTime: end,
-      duration: Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000))
-    })
+    const secs = parseDur(durInput)
+    if (!secs) return
+    const endTime = new Date()
+    const startTime = new Date(endTime.getTime() - secs * 1000)
+    onAdd({ description: desc, projectId: pid || undefined, tagIds, billable, userId: uid, startTime, endTime, duration: secs })
     setDesc('')
+    setDurInput('00:00:00')
   }
 
   const { user: currentUser } = useAuthStore()
@@ -256,23 +166,13 @@ function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defau
 
         <div className="w-px h-6 border-l border-dotted border-[#d0d8de]" />
 
-        <div className="flex items-center gap-1">
-          <TimeCell date={start} className="w-[55px] text-[15px]" onChange={setStart} />
-          <span className="text-[#bbb]">-</span>
-          <TimeCell date={end} className="w-[55px] text-[15px]" onChange={setEnd} />
-        </div>
-
-        <CalBtn date={start} onChange={d => {
-          const ns = new Date(d); ns.setHours(start.getHours(), start.getMinutes(), 0, 0)
-          const ne = new Date(d); ne.setHours(end.getHours(), end.getMinutes(), 0, 0)
-          setStart(ns); setEnd(ne)
-        }} align="right" />
-
-        <span className="text-[16px] text-[#777]">Today</span>
-
-        <span className="min-w-[50px] text-right font-bold text-[#333] text-[16px] tabular-nums">
-          {fmtDur(Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000)))}
-        </span>
+        <input
+          type="text" value={durInput}
+          onChange={e => setDurInput(e.target.value)}
+          onBlur={e => { const s = parseDur(e.target.value); setDurInput(s != null ? fmtDurInline(s) : '00:00:00') }}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          className="text-[16px] font-bold tabular-nums text-[#333] bg-transparent border-none outline-none w-[90px] text-center cursor-text hover:text-[#03a9f4] transition-colors"
+        />
 
         <button onClick={handleAdd} className="px-5 h-[32px] bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[16px] font-bold rounded-sm cursor-pointer transition-colors uppercase tracking-wide">ADD</button>
       </div>
@@ -307,7 +207,7 @@ export default function DetailedReportPage() {
   }))
 
   const [selIds, setSelIds] = useState<Set<string>>(new Set())
-  const [sortField, setSortField] = useState<string>('startTime')
+  const [sortField, setSortField] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [rounding, setRounding] = useState(false)
   const [showEntryBar, setShowEntryBar] = useState(false)
@@ -348,7 +248,7 @@ export default function DetailedReportPage() {
         entries.sort((a: any, b: any) => {
           let valA: any = a[sortField as keyof typeof a]
           let valB: any = b[sortField as keyof typeof b]
-          if (sortField === 'startTime') { valA = new Date(a.startTime).getTime(); valB = new Date(b.startTime).getTime() }
+          if (sortField === 'createdAt') { valA = new Date(a.createdAt).getTime(); valB = new Date(b.createdAt).getTime() }
           if (sortField === 'userName') { valA = users.find(u => u.id === a.userId)?.name || ''; valB = users.find(u => u.id === b.userId)?.name || '' }
           if (sortField === 'duration') { valA = a.duration || 0; valB = b.duration || 0 }
           if (sortField === 'description') { valA = a.description || ''; valB = b.description || '' }
@@ -399,37 +299,12 @@ export default function DetailedReportPage() {
 
   const updateEntry = (id: string, updates: Partial<typeof filtered[0]>) => {
     updateTimeEntry(id, updates)
-    setFiltered(prev => prev.map(e => {
-      if (e.id !== id) return e
-      const merged = { ...e, ...updates }
-      if (merged.startTime && merged.endTime) {
-        merged.duration = Math.max(0, Math.floor((new Date(merged.endTime).getTime() - new Date(merged.startTime).getTime()) / 1000))
-      }
-      return merged
-    }))
-  }
-
-  const onTimeChange = (id: string, field: 'startTime' | 'endTime', nd: Date) => {
-    const e = filtered.find(x => x.id === id); if (!e) return
-    const s = field === 'startTime' ? nd : new Date(e.startTime)
-    const en = field === 'endTime' ? nd : (e.endTime ? new Date(e.endTime) : nd)
-    updateEntry(id, { [field]: nd, duration: Math.max(0, Math.floor((en.getTime() - s.getTime()) / 1000)) })
-  }
-
-  const onDateChange = (id: string, newDay: Date) => {
-    const e = filtered.find(x => x.id === id); if (!e) return
-    const os = new Date(e.startTime)
-    const ns = new Date(newDay); ns.setHours(os.getHours(), os.getMinutes(), 0, 0)
-    updateEntry(id, { startTime: ns, endTime: new Date(ns.getTime() + (e.duration ?? 0) * 1000) })
+    setFiltered(prev => prev.map(e => e.id !== id ? e : { ...e, ...updates }))
   }
 
   const onDup = (e: typeof filtered[0]) => {
     const { id, createdAt, updatedAt, ...rest } = e
-    addTimeEntry({
-      ...rest,
-      startTime: new Date(e.startTime),
-      endTime: e.endTime ? new Date(e.endTime) : undefined
-    })
+    addTimeEntry({ ...rest, startTime: new Date() })
   }
 
   const bulkDelete = () => { if (confirm(`Delete ${selIds.size} entries?`)) { deleteTimeEntries(Array.from(selIds)); setSelIds(new Set()) } }
@@ -524,9 +399,6 @@ export default function DetailedReportPage() {
                 <div className="w-[150px] text-right flex-shrink-0 px-2 flex items-center justify-end cursor-pointer hover:text-[#555]" onClick={() => handleSort('userName')}>
                   User <SortIcon field="userName" />
                 </div>
-                <div className="w-[140px] text-center flex-shrink-0 px-2 flex items-center justify-center cursor-pointer hover:text-[#555]" onClick={() => handleSort('startTime')}>
-                  Time <SortIcon field="startTime" />
-                </div>
                 <div className="w-[90px] text-center flex-shrink-0 px-2 flex items-center justify-center cursor-pointer hover:text-[#555]" onClick={() => handleSort('duration')}>
                   Duration <SortIcon field="duration" />
                 </div>
@@ -542,8 +414,8 @@ export default function DetailedReportPage() {
             ) : (
               Object.entries(
                 filtered.reduce((acc, entry) => {
-                  const dateKey = sortField === 'startTime'
-                    ? format(new Date(entry.startTime), 'EEE, MMM d')
+                  const dateKey = sortField === 'createdAt'
+                    ? format(new Date(entry.createdAt), 'EEE, MMM d')
                     : 'Results'
                   if (!acc[dateKey]) acc[dateKey] = []
                   acc[dateKey].push(entry)
@@ -551,7 +423,7 @@ export default function DetailedReportPage() {
                 }, {} as Record<string, typeof filtered>)
               ).map(([dateLabel, entries]) => (
                 <div key={dateLabel}>
-                  {sortField === 'startTime' && (
+                  {sortField === 'createdAt' && (
                     <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2.5 text-[14px] font-bold text-[#777] flex items-center">
                       <span>{dateLabel}</span>
                       <div className="flex-1 min-w-0" />
@@ -564,8 +436,6 @@ export default function DetailedReportPage() {
                   {entries.map(entry => {
                     const proj = projects.find(p => p.id === entry.projectId)
                     const user = users.find(u => u.id === entry.userId)
-                    const start = new Date(entry.startTime)
-                    const end = entry.endTime ? new Date(entry.endTime) : null
 
                     return (
                       <div key={entry.id} className={cn("flex items-stretch min-h-[56px] bg-white border-b border-[#f0f0f0] transition-colors group relative", selIds.has(entry.id) ? "bg-[#f2f9ff]" : "hover:bg-[#fafbfc]")}>
@@ -634,24 +504,12 @@ export default function DetailedReportPage() {
                           )}
                         </div>
 
-                        <div className="w-[140px] flex-shrink-0 flex flex-col items-center justify-center leading-tight">
-                          <div className="flex items-center gap-1">
-                            <TimeCell date={start} onChange={d => onTimeChange(entry.id, 'startTime', d)} />
-                            <span className="text-[#bbb] text-[14px]">-</span>
-                            {end && <TimeCell date={end} onChange={d => onTimeChange(entry.id, 'endTime', d)} />}
-                          </div>
-                          <span className="text-[14px] text-[#aaa] mt-1">
-                            {isSameDay(start, new Date()) ? 'Today' : isSameDay(start, addDays(new Date(), -1)) ? 'Yesterday' : format(start, 'dd/MM/yyyy')}
-                          </span>
-                        </div>
-
                         <div className="w-[90px] flex-shrink-0 flex items-center justify-center">
-                          <DurCell dur={entry.duration ?? 0} onSave={s => updateEntry(entry.id, { duration: s, endTime: new Date(start.getTime() + s * 1000) })} />
+                          <DurCell dur={entry.duration ?? 0} onSave={s => updateEntry(entry.id, { duration: s })} />
                         </div>
 
                         <div className="w-[100px] flex-shrink-0 flex items-center justify-end pr-4 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <CalBtn date={start} onChange={d => onDateChange(entry.id, d)} />
-                          <Tip label="Continue tracking">
+                          <Tip label="Duplicate">
                             <button className="text-[#ccc] hover:text-[#03a9f4] cursor-pointer transition-colors p-1" onClick={() => onDup(entry)}>
                               <Play style={{ width: 16, height: 16 }} />
                             </button>

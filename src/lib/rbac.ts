@@ -7,12 +7,8 @@ export const normalizeRole = (role: string | undefined | null): User['role'] => 
   return 'member'
 }
 
-export const getDashboardRoute = (role: User['role']): string => {
-  switch (role) {
-    case 'owner': return '/dashboard/pm'
-    case 'admin': return '/dashboard/tl'
-    default: return '/dashboard/member'
-  }
+export const getDashboardRoute = (_role: User['role']): string => {
+  return '/dashboard/tracker'
 }
 
 const restrictedRoutes: Array<{ prefix: string; allowedRoles: User['role'][] }> = [

@@ -17,6 +17,7 @@ import {
   mapApiTimeEntry,
   mapApiUser,
   serializeTimeEntryPatch,
+  serializeTimeEntryCreate,
 } from '@/lib/api/mappers'
 import { Client, Group, Project, Tag, Task, TimeEntry, User, ReportFilters } from '@/lib/types'
 
@@ -268,7 +269,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
     const payload = await apiRequest<{ id: string; description?: string; duration?: number; userId?: string }>('/time-entries', {
       method: 'POST',
       token,
-      body: JSON.stringify(serializeTimeEntryPatch(entry)),
+      body: JSON.stringify(serializeTimeEntryCreate(entry)),
     })
 
     const now = new Date()
@@ -294,35 +295,20 @@ export const useDataStore = create<DataStore>((set, get) => ({
   updateTimeEntry: async (id, updates) => {
     try {
       const token = useAuthStore.getState().token
-      const payload = await apiRequest<{ id: string; description?: string; endTime?: string }>(`/time-entries/${id}`, {
+      const payload = await apiRequest<ApiTimeEntry>(`/time-entries/${id}`, {
         method: 'PATCH',
         token,
         body: JSON.stringify(serializeTimeEntryPatch(updates)),
       })
 
+      const synced = mapApiTimeEntry(payload)
       set((state) => ({
-        timeEntries: state.timeEntries.map((entry) => {
-          if (entry.id !== id) return entry
-          const merged: TimeEntry = {
-            ...entry,
-            ...updates,
-            description: payload.description ?? updates.description ?? entry.description,
-            endTime: payload.endTime ? new Date(payload.endTime) : (updates.endTime ?? entry.endTime),
-            updatedAt: new Date(),
-          }
-          if (merged.startTime && merged.endTime) {
-            merged.duration = Math.max(
-              0,
-              Math.floor((new Date(merged.endTime).getTime() - new Date(merged.startTime).getTime()) / 1000)
-            )
-          }
-          return merged
-        }),
+        timeEntries: state.timeEntries.map((entry) =>
+          entry.id !== id ? entry : { ...entry, ...updates, ...synced }
+        ),
       }))
     } catch (err) {
       console.error('Update failed:', err instanceof Error ? err.message : String(err))
-      const message = err instanceof Error ? err.message : 'An error occurred'
-      if (typeof window !== 'undefined') window.alert(message)
     }
   },
 

@@ -63,7 +63,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
     <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
       <DropdownMenuTrigger asChild>
         {customTrigger ? (
-          <div className="w-full">{customTrigger}</div>
+          <div>{customTrigger}</div>
         ) : (
           <div role="button" className={cn(
             "flex items-center space-x-2 text-sm transition-colors w-full text-left cursor-pointer group",
@@ -100,6 +100,17 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
         </div>
 
         <div className="overflow-y-auto py-1 scrollbar-hide flex-1">
+
+          {/* No project — always visible at top */}
+          <div
+            onClick={() => { onClear(); setDropdownOpen(false) }}
+            className={cn(
+              'flex items-center px-4 py-2.5 cursor-pointer transition-colors border-b border-gray-100',
+              !selectedProjectId ? 'text-[#03a9f4] font-medium bg-blue-50/30' : 'text-gray-500 hover:bg-gray-50'
+            )}
+          >
+            <span className="text-[13px]">No Project</span>
+          </div>
 
           {Object.entries(groupedByLead).map(([leadId, leadProjects]) => {
             const lead = users.find(u => u.id === leadId)

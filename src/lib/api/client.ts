@@ -89,6 +89,9 @@ async function doRefresh(expiredToken: string): Promise<string> {
     const { useAuthStore } = await import('@/lib/stores/auth-store')
     const refreshToken = useAuthStore.getState().refreshToken
 
+    // No refresh token stored — nothing to attempt
+    if (!refreshToken) throw new ApiError('No refresh token available', 401)
+
     const res = await fetch(buildUrl('/auth/refresh'), {
       method: 'POST',
       headers: {
@@ -106,7 +109,7 @@ async function doRefresh(expiredToken: string): Promise<string> {
 
     if (!newToken) throw new ApiError('No token in refresh response', 500)
 
-    useAuthStore.getState().setToken(newToken, unwrapped.refreshToken)
+    useAuthStore.getState().setToken(newToken, unwrapped.refreshToken ?? refreshToken)
 
     const queue = refreshQueue
     refreshQueue = []
@@ -151,9 +154,16 @@ export async function apiRequest<T>(
       const newToken = await doRefresh(token)
       response = await makeRequest(newToken)
     } catch {
-      // Refresh failed — force logout
+      // Refresh failed — clear session silently without calling logout API
+      // (logout API would also 401 with an expired token, causing a second error)
       const { useAuthStore } = await import('@/lib/stores/auth-store')
-      useAuthStore.getState().logout()
+      useAuthStore.setState({
+        token: null,
+        refreshToken: null,
+        user: null,
+        authStatus: 'unauthenticated',
+        error: null,
+      })
       throw new ApiError('Session expired. Please log in again.', 401)
     }
   }

@@ -189,15 +189,11 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        const token = get().token
         try {
-          if (token) {
-            await apiRequest('/auth/logout', {
-              method: 'POST',
-              token,
-              credentials: 'include',
-            })
-          }
+          await apiRequest('/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+          })
         } catch (error) {
           console.error('Logout API failed, clearing local state anyway:', error instanceof Error ? error.message : String(error))
         } finally {

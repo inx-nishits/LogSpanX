@@ -100,9 +100,18 @@ function DescriptionFilter({ value, onChange }: { value: string; onChange: (v: s
 
 function SimpleDropdown({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-1 px-2.5 h-[28px] text-[15px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] transition-colors cursor-pointer"
@@ -319,7 +328,7 @@ export default function SummaryReportPage() {
     const days = eachDayOfInterval({ start: from, end: to })
 
     const buildDay = (date: Date) => {
-      const day = filtered.filter(e => isSameDay(new Date(e.startTime), date))
+      const day = filtered.filter(e => isSameDay(new Date(e.createdAt), date))
       const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
       const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
       const base = { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
@@ -335,7 +344,7 @@ export default function SummaryReportPage() {
     if (groupBy === 'Month') {
       const monthMap: Record<string, { b: number; nb: number;[k: string]: number }> = {}
       filtered.forEach(e => {
-        const key = format(new Date(e.startTime), 'MMM yyyy')
+        const key = format(new Date(e.createdAt), 'MMM yyyy')
         if (!monthMap[key]) { monthMap[key] = { b: 0, nb: 0 }; projects.forEach(p => { monthMap[key][p.id] = 0 }) }
         const hrs = (e.duration ?? 0) / 3600
         if (e.billable) monthMap[key].b += hrs; else monthMap[key].nb += hrs
@@ -351,7 +360,7 @@ export default function SummaryReportPage() {
     if (groupBy === 'Week') {
       const weekMap: Record<string, { b: number; nb: number;[k: string]: number }> = {}
       filtered.forEach(e => {
-        const key = `Week of ${format(new Date(e.startTime), 'MMM d')}`
+        const key = `Week of ${format(new Date(e.createdAt), 'MMM d')}`
         if (!weekMap[key]) { weekMap[key] = { b: 0, nb: 0 }; projects.forEach(p => { weekMap[key][p.id] = 0 }) }
         const hrs = (e.duration ?? 0) / 3600
         if (e.billable) weekMap[key].b += hrs; else weekMap[key].nb += hrs
@@ -448,7 +457,7 @@ export default function SummaryReportPage() {
       if (subGroupBy === 'Month') {
         const map: Record<string, { duration: number; count: number }> = {}
         entries.forEach(e => {
-          const key = format(new Date(e.startTime), 'MMMM yyyy')
+          const key = format(new Date(e.createdAt), 'MMMM yyyy')
           if (!map[key]) map[key] = { duration: 0, count: 0 }
           map[key].duration += e.duration ?? 0
           map[key].count++
@@ -461,7 +470,7 @@ export default function SummaryReportPage() {
       if (subGroupBy === 'Week') {
         const map: Record<string, { duration: number; count: number }> = {}
         entries.forEach(e => {
-          const key = `Week of ${format(new Date(e.startTime), 'MMM d, yyyy')}`
+          const key = `Week of ${format(new Date(e.createdAt), 'MMM d, yyyy')}`
           if (!map[key]) map[key] = { duration: 0, count: 0 }
           map[key].duration += e.duration ?? 0
           map[key].count++
@@ -474,7 +483,7 @@ export default function SummaryReportPage() {
       if (subGroupBy === 'Date') {
         const map: Record<string, { duration: number; count: number }> = {}
         entries.forEach(e => {
-          const key = format(new Date(e.startTime), 'EEE, MMM d yyyy')
+          const key = format(new Date(e.createdAt), 'EEE, MMM d yyyy')
           if (!map[key]) map[key] = { duration: 0, count: 0 }
           map[key].duration += e.duration ?? 0
           map[key].count++
@@ -559,7 +568,7 @@ export default function SummaryReportPage() {
     if (groupBy === 'Month') {
       const monthMap: Record<string, { duration: number; count: number; entries: typeof filtered }> = {}
       filtered.forEach(e => {
-        const key = format(new Date(e.startTime), 'MMMM yyyy')
+        const key = format(new Date(e.createdAt), 'MMMM yyyy')
         if (!monthMap[key]) monthMap[key] = { duration: 0, count: 0, entries: [] }
         monthMap[key].duration += e.duration ?? 0
         monthMap[key].count++
@@ -574,7 +583,7 @@ export default function SummaryReportPage() {
     if (groupBy === 'Week') {
       const weekMap: Record<string, { duration: number; count: number; entries: typeof filtered }> = {}
       filtered.forEach(e => {
-        const key = `Week of ${format(new Date(e.startTime), 'MMM d, yyyy')}`
+        const key = `Week of ${format(new Date(e.createdAt), 'MMM d, yyyy')}`
         if (!weekMap[key]) weekMap[key] = { duration: 0, count: 0, entries: [] }
         weekMap[key].duration += e.duration ?? 0
         weekMap[key].count++
@@ -589,7 +598,7 @@ export default function SummaryReportPage() {
     if (groupBy === 'Date') {
       const dateMap: Record<string, { duration: number; count: number; entries: typeof filtered }> = {}
       filtered.forEach(e => {
-        const key = format(new Date(e.startTime), 'EEE, MMM d yyyy')
+        const key = format(new Date(e.createdAt), 'EEE, MMM d yyyy')
         if (!dateMap[key]) dateMap[key] = { duration: 0, count: 0, entries: [] }
         dateMap[key].duration += e.duration ?? 0
         dateMap[key].count++

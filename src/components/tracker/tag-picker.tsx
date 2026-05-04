@@ -22,7 +22,7 @@ export function TagPicker({ selectedTagIds, onChange, iconSize = 19, children }:
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (
         ref.current && !ref.current.contains(e.target as Node) &&
         dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
@@ -31,12 +31,13 @@ export function TagPicker({ selectedTagIds, onChange, iconSize = 19, children }:
         setSearch('')
       }
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
   }, [])
 
-  const openDropdown = (e: React.MouseEvent) => {
+  const openDropdown = (e: React.PointerEvent) => {
     e.stopPropagation()
+    e.preventDefault()
     if (!open && ref.current) {
       const rect = ref.current.getBoundingClientRect()
       setDropdownPos({
@@ -68,11 +69,11 @@ export function TagPicker({ selectedTagIds, onChange, iconSize = 19, children }:
     <div className="relative" ref={ref}>
       {/* Trigger: chip if tags selected, icon if not */}
       {children ? (
-        <div onClick={openDropdown}>{children}</div>
+        <div onPointerDown={openDropdown}>{children}</div>
       ) : hasSelected ? (
         <button
           type="button"
-          onClick={openDropdown}
+          onPointerDown={openDropdown}
           className="flex items-center gap-1 bg-[#e8f4fd] border border-[#b3d9f5] rounded px-2 py-0.5 max-w-[200px] hover:bg-[#d4ecf7] transition-colors cursor-pointer"
         >
           <span className="text-[12px] text-[#03a9f4] truncate max-w-[180px]">{selectedNames}</span>
@@ -80,7 +81,7 @@ export function TagPicker({ selectedTagIds, onChange, iconSize = 19, children }:
       ) : (
         <button
           type="button"
-          onClick={openDropdown}
+          onPointerDown={openDropdown}
           title="Tags"
           className="relative flex items-center justify-center text-gray-300 hover:text-gray-500 transition-colors cursor-pointer"
         >
@@ -114,7 +115,7 @@ export function TagPicker({ selectedTagIds, onChange, iconSize = 19, children }:
                 return (
                   <div
                     key={tag.id}
-                    onClick={() => toggle(tag.id)}
+                    onPointerDown={e => { e.stopPropagation(); e.preventDefault(); toggle(tag.id) }}
                     className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     <div className={cn(
