@@ -436,16 +436,30 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   toggleProjectArchive: async (id) => {
     const token = useAuthStore.getState().token
-    const payload = await apiRequest<{ success: boolean; data: ApiProject }>(`/projects/${id}/archive`, {
-      method: 'PATCH',
-      token,
-    })
+    const existing = get().projects.find(p => p.id === id)
+    if (!existing) return
 
-    if (payload.data) {
-      const updatedProject = mapApiProject(payload.data)
+    // Optimistic update
+    set((state) => ({
+      projects: state.projects.map(p => p.id === id ? { ...p, archived: !p.archived } : p)
+    }))
+
+    try {
+      const payload = await apiRequest<ApiProject>(`/projects/${id}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({ name: existing.name, archived: !existing.archived }),
+      })
+      const updated = mapApiProject(payload)
       set((state) => ({
-        projects: state.projects.map((project) => (project.id === id ? updatedProject : project)),
+        projects: state.projects.map(p => p.id === id ? updated : p)
       }))
+    } catch (err) {
+      // Rollback on failure
+      set((state) => ({
+        projects: state.projects.map(p => p.id === id ? existing : p)
+      }))
+      throw err
     }
   },
 

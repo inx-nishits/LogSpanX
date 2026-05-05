@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { AppBootstrap } from "@/components/app-bootstrap";
+import { GlobalToast } from "@/components/ui/global-toast";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -31,6 +32,7 @@ export default function RootLayout({
     >
       <body className={`${roboto.className} min-h-full flex flex-col`} suppressHydrationWarning>
         <AppBootstrap />
+        <GlobalToast />
         {children}
       </body>
     </html>

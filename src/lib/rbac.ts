@@ -16,6 +16,7 @@ const restrictedRoutes: Array<{ prefix: string; allowedRoles: User['role'][] }> 
   { prefix: '/dashboard/tl', allowedRoles: ['owner', 'admin'] },
   { prefix: '/dashboard/tags', allowedRoles: ['owner'] },
   { prefix: '/dashboard/project-lead', allowedRoles: ['owner'] },
+  { prefix: '/dashboard/projects/', allowedRoles: ['owner', 'admin'] },
 ]
 
 export const isPathAllowedForRole = (path: string, role: User['role']): boolean => {

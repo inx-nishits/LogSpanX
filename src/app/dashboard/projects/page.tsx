@@ -220,8 +220,14 @@ export default function ProjectsPage() {
   const [showNewModal, setShowNewModal] = useState(false)
 
   const handleArchiveSingle = async (id: string) => {
+    const project = storeProjects.find(p => p.id === id)
     try {
       await toggleProjectArchive(id)
+      const { useToastStore } = await import('@/lib/stores/toast-store')
+      useToastStore.getState().show(
+        `Project ${project?.archived ? 'unarchived' : 'archived'} successfully`,
+        'success'
+      )
     } catch (err) { console.error(err) }
   }
 
@@ -702,9 +708,15 @@ export default function ProjectsPage() {
                               </div>
                             )}
                             <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: project.color, opacity: project.archived ? 0.5 : 1 }} />
-                            <Link href={`/dashboard/projects/${project.id}`} className={`text-[14px] font-normal truncate hover:underline cursor-pointer ${project.archived ? 'line-through text-[#999]' : 'text-[#333]'}`}>
-                              {project.name}
-                            </Link>
+                            {isReadOnly ? (
+                              <span className={`text-[14px] font-normal truncate ${project.archived ? 'line-through text-[#999]' : 'text-[#333]'}`}>
+                                {project.name}
+                              </span>
+                            ) : (
+                              <Link href={`/dashboard/projects/${project.id}`} className={`text-[14px] font-normal truncate hover:underline cursor-pointer ${project.archived ? 'line-through text-[#999]' : 'text-[#333]'}`}>
+                                {project.name}
+                              </Link>
+                            )}
                           </div>
                         </td>
                         {/* Lead */}

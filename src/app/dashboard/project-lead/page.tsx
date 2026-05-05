@@ -4,7 +4,8 @@ import { useEffect, useState, useRef } from 'react'
 import { getGroups, updateGroup, updateUserRole, ApiGroup } from '@/lib/api/teams'
 import { apiRequest } from '@/lib/api/client'
 import { useAuthStore } from '@/lib/stores/auth-store'
-import { Search, ChevronDown, Pencil, MoreVertical } from 'lucide-react'
+import { useToastStore } from '@/lib/stores/toast-store'
+import { Search, ChevronDown, Pencil, MoreVertical, X, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface RawUser { _id: string; id?: string; name: string; email: string; archived?: boolean }
@@ -28,6 +29,44 @@ export default function ProjectLeadPage() {
   }, [])
   const [adding, setAdding] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [editingUser, setEditingUser] = useState<RawUser | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const handleArchiveToggle = async (user: RawUser) => {
+    try {
+      await apiRequest(`/users/${user._id}`, {
+        method: 'PUT',
+        token,
+        body: JSON.stringify({ archived: !user.archived }),
+      })
+      setRawUsers(prev => prev.map(u => u._id === user._id ? { ...u, archived: !u.archived } : u))
+      useToastStore.getState().show(`User ${user.archived ? 'activated' : 'archived'} successfully`, 'success')
+    } catch (err) { console.error(err) }
+    setOpenMenuId(null)
+  }
+
+  const handleEditSave = async () => {
+    if (!editingUser || !editName.trim()) return
+    try {
+      await apiRequest(`/users/${editingUser._id}`, {
+        method: 'PUT',
+        token,
+        body: JSON.stringify({ name: editName.trim(), email: editEmail.trim() }),
+      })
+      setRawUsers(prev => prev.map(u => u._id === editingUser._id ? { ...u, name: editName.trim(), email: editEmail.trim() } : u))
+      useToastStore.getState().show('User updated successfully', 'success')
+      setEditingUser(null)
+    } catch (err) { console.error(err) }
+  }
   const statusRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -98,6 +137,7 @@ export default function ProjectLeadPage() {
   const statusLabel = statusFilter === 'active' ? 'Show active' : statusFilter === 'inactive' ? 'Show inactive' : 'Show all'
 
   return (
+    <>
     <div className="min-h-full flex flex-col bg-[#f2f6f8] font-sans antialiased">
       <div className="w-full px-5 pt-4 pb-3">
         <h1 className="text-lg text-[#333] font-normal">Project Lead</h1>
@@ -216,13 +256,32 @@ export default function ProjectLeadPage() {
                   <td className="px-4 py-2 text-[14px] text-[#999]">—</td>
                   <td className="px-4 py-2 text-[14px] text-[#333]">USD</td>
                   <td className="px-4 py-2">
-                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="text-[#ccc] hover:text-[#03a9f4] transition-colors">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuRef}>
+                      <button
+                        onClick={() => { setEditingUser(m); setEditName(m.name); setEditEmail(m.email) }}
+                        className="text-[#ccc] hover:text-[#03a9f4] transition-colors"
+                        title="Edit user"
+                      >
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button className="text-[#ccc] hover:text-[#666] transition-colors">
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === m._id ? null : m._id)}
+                          className="text-[#ccc] hover:text-[#666] transition-colors"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {openMenuId === m._id && (
+                          <div className="absolute right-0 top-full mt-0.5 bg-white border border-[#ddd] shadow-lg z-50 min-w-[140px] rounded-sm py-0.5">
+                            <button
+                              onClick={() => handleArchiveToggle(m)}
+                              className="w-full text-left px-4 py-2 text-[13px] text-[#555] hover:bg-[#f0f4f8] transition-colors"
+                            >
+                              {m.archived ? 'Unarchive' : 'Archive'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -232,5 +291,42 @@ export default function ProjectLeadPage() {
         </div>
       </div>
     </div>
+
+    {/* Edit User Modal */}
+    {editingUser && (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-sm shadow-2xl w-full max-w-[420px] mx-4">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4eaee]">
+            <h2 className="text-[16px] font-semibold text-[#333]">Edit Project Lead</h2>
+            <button onClick={() => setEditingUser(null)} className="text-[#bbb] hover:text-[#555]">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="px-6 py-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[12px] font-bold text-[#999] uppercase tracking-widest">Name</label>
+              <input value={editName} onChange={e => setEditName(e.target.value)}
+                className="w-full px-3 py-2.5 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[12px] font-bold text-[#999] uppercase tracking-widest">Email</label>
+              <input value={editEmail} onChange={e => setEditEmail(e.target.value)}
+                className="w-full px-3 py-2.5 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#e4eaee]">
+            <button onClick={() => setEditingUser(null)}
+              className="px-5 py-2 text-[13px] text-[#666] border border-[#c6d2d9] rounded-sm hover:bg-[#f2f6f8]">
+              Cancel
+            </button>
+            <button onClick={handleEditSave}
+              className="px-6 py-2 text-[13px] font-bold text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm uppercase tracking-widest">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   )
 }

@@ -56,6 +56,10 @@ export function deleteTeam(id: string) {
   return apiRequest<Record<string, never>>(`/teams/${id}`, { method: 'DELETE', token: token() })
 }
 
+export function getTeamMembers(teamId: string) {
+  return apiRequest<ApiTeamMember[]>(`/teams/${teamId}/members`, { method: 'GET', token: token() })
+}
+
 export function addTeamMember(teamId: string, userId: string) {
   return apiRequest<ApiTeam>(`/teams/${teamId}/members`, { method: 'POST', token: token(), body: JSON.stringify({ userId }) })
 }

@@ -184,7 +184,13 @@ export async function apiRequest<T>(
     const unwrapped = unwrapApiPayload(payload)
 
     if (!response.ok) {
-      throw new ApiError(getMessage(payload, `Request failed with status ${response.status}`), response.status, payload)
+      const message = getMessage(payload, `Request failed with status ${response.status}`)
+      // Show toast for permission errors
+      if (response.status === 403) {
+        const { useToastStore } = await import('@/lib/stores/toast-store')
+        useToastStore.getState().show('You do not have permission to perform this action', 'error')
+      }
+      throw new ApiError(message, response.status, payload)
     }
 
     if (payload && typeof payload === 'object' && 'success' in payload && payload.success === false) {

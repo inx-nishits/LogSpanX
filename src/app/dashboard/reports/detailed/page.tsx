@@ -14,6 +14,7 @@ import { useAuthStore } from '@/lib/stores/auth-store'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TimeEntry, Project, User, Tag } from '@/lib/types'
 import { getTimeEntries, TimeEntryParams } from '@/lib/api/time-entries'
+import { getTeamMembers, ApiTeamMember } from '@/lib/api/teams'
 import { ApiTimeEntry, mapApiTimeEntry } from '@/lib/api/mappers'
 import { extractArray } from '@/lib/api/utils'
 
@@ -206,7 +207,7 @@ const SortIcon = ({ field, sortField, sortOrder }: { field: string; sortField: s
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function DetailedReportPage() {
-  const { projects, users, tasks, timeEntries, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
+  const { projects, users, groups, tasks, timeEntries, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -238,6 +239,7 @@ export default function DetailedReportPage() {
   const paramTo = searchParams.get('to')
 
   const selUsers = useMemo(() => searchParams.get('users')?.split(',').filter(Boolean) || [], [searchParams])
+  const selLeads = useMemo(() => searchParams.get('lead')?.split(',').filter(Boolean) || [], [searchParams])
   const selProjects = useMemo(() => searchParams.get('projects')?.split(',').filter(Boolean) || [], [searchParams])
   const selTags = useMemo(() => searchParams.get('tags')?.split(',').filter(Boolean) || [], [searchParams])
   const selTasks = useMemo(() => searchParams.get('tasks')?.split(',').filter(Boolean) || [], [searchParams])
@@ -271,28 +273,90 @@ export default function DetailedReportPage() {
     let active = true
 
     const params: TimeEntryParams = {
-      startDate: dateRange.from.toISOString(),
-      endDate: dateRange.to.toISOString(),
+      startDate: format(dateRange.from, 'yyyy-MM-dd'),
+      endDate: format(dateRange.to, 'yyyy-MM-dd'),
     }
-    if (selUsers.length) params.userId = selUsers[0]
-    if (selProjects.length) params.projectId = selProjects[0]
-    if (selTags.length) params.tagId = selTags[0]
-    if (selStatus.length === 1 && selStatus.includes('billable')) params.billable = 'true'
-    if (selStatus.length === 1 && selStatus.includes('non-billable')) params.billable = 'false'
+    // Send filters to API where supported (single values only; multi-select handled client-side)
+    if (selUsers.length === 1 && !selUsers.includes('__without__')) params.userId = selUsers[0]
+    if (selProjects.length === 1 && !selProjects.includes('__without__')) params.projectId = selProjects[0]
+    if (selTags.length === 1 && !selTags.includes('__without__')) params.tagId = selTags[0]
 
     const timer = setTimeout(() => setLoading(true), 0)
     getTimeEntries(params)
-      .then((res: unknown) => {
+      .then(async (res: unknown) => {
         if (!active) return
 
         const entriesRaw = extractArray<ApiTimeEntry>(res)
         let mapped = entriesRaw.map(mapApiTimeEntry)
 
+        // Client-side filters
+        if (selLeads.length > 0) {
+          const wantWithout = selLeads.includes('__without__')
+          const leadIds = selLeads.filter(l => l !== '__without__')
+          const matchingProjectIds = new Set(
+            projects
+              .filter(p => wantWithout ? !p.leadId : leadIds.includes(p.leadId ?? ''))
+              .map(p => p.id)
+          )
+          mapped = mapped.filter(e => {
+            if (!e.projectId) return wantWithout
+            return matchingProjectIds.has(e.projectId)
+          })
+        }
+        if (selUsers.length > 0) {
+          // Separate plain user IDs from group/team IDs
+          const plainUserIds = selUsers.filter(id => groups.find(g => g.id === id) === undefined)
+          const groupIds = selUsers.filter(id => groups.find(g => g.id === id) !== undefined)
+
+          // Fetch members for each selected group from the API
+          const groupMemberIds = await Promise.all(
+            groupIds.map(gid =>
+              getTeamMembers(gid)
+                .then(res => extractArray<ApiTeamMember>(res).map(m => m._id))
+                .catch(() => [])
+            )
+          )
+
+          const expandedUserIds = new Set<string>([
+            ...plainUserIds,
+            ...groupMemberIds.flat(),
+          ])
+          mapped = mapped.filter(e => expandedUserIds.has(e.userId))
+        }
+        if (selProjects.length > 0) {
+          const wantWithout = selProjects.includes('__without__')
+          const projectIds = selProjects.filter(p => p !== '__without__')
+          mapped = mapped.filter(e => {
+            if (!e.projectId) return wantWithout
+            return projectIds.length === 0 ? wantWithout : projectIds.includes(e.projectId)
+          })
+        }
+        if (selTags.length > 0) {
+          const wantWithout = selTags.includes('__without__')
+          const tagIds = selTags.filter(t => t !== '__without__')
+          mapped = mapped.filter(e => {
+            if (!e.tagIds?.length) return wantWithout
+            return tagIds.length === 0 ? wantWithout : e.tagIds.some(t => tagIds.includes(t))
+          })
+        }
+        const hasBillable = selStatus.includes('billable')
+        const hasNonBillable = selStatus.includes('non-billable')
+        if (hasBillable && !hasNonBillable) mapped = mapped.filter(e => e.billable === true)
+        else if (hasNonBillable && !hasBillable) mapped = mapped.filter(e => e.billable !== true)
         if (filterDesc) {
-          mapped = mapped.filter((e) => e.description?.toLowerCase().includes(filterDesc.toLowerCase()))
+          if (filterDesc === '__without__') {
+            mapped = mapped.filter(e => !e.description?.trim())
+          } else {
+            mapped = mapped.filter(e => e.description?.toLowerCase().includes(filterDesc.toLowerCase()))
+          }
         }
         if (selTasks.length) {
-          mapped = mapped.filter((e) => e.taskId && selTasks.includes(e.taskId))
+          const wantWithout = selTasks.includes('__without__')
+          const taskIds = selTasks.filter(t => t !== '__without__')
+          mapped = mapped.filter(e => {
+            if (!e.taskId) return wantWithout
+            return taskIds.length === 0 ? wantWithout : taskIds.includes(e.taskId)
+          })
         }
 
         setFiltered(mapped)
@@ -306,7 +370,7 @@ export default function DetailedReportPage() {
       active = false
       clearTimeout(timer)
     }
-  }, [dateRange, selUsers, selProjects, selTags, selTasks, selStatus, filterDesc])
+  }, [dateRange, selUsers, selLeads, selProjects, selTags, selTasks, selStatus, filterDesc, projects, groups])
 
   const sorted = useMemo(() => {
     const list = [...filtered]
@@ -342,24 +406,33 @@ export default function DetailedReportPage() {
 
   const handleApply = (newFilters: {
     team: string[];
+    lead: string[];
     project: string[];
+    tasks: string[];
     tags: string[];
+    status: string[];
     description: string
   }) => {
     const params = new URLSearchParams(searchParams.toString())
     if (newFilters.team.length) params.set('users', newFilters.team.join(','))
     else params.delete('users')
+    if (newFilters.lead.length) params.set('lead', newFilters.lead.join(','))
+    else params.delete('lead')
     if (newFilters.project.length) params.set('projects', newFilters.project.join(','))
     else params.delete('projects')
     if (newFilters.tags.length) params.set('tags', newFilters.tags.join(','))
     else params.delete('tags')
+    if (newFilters.tasks.length) params.set('tasks', newFilters.tasks.join(','))
+    else params.delete('tasks')
+    if (newFilters.status.length) params.set('status', newFilters.status.join(','))
+    else params.delete('status')
     if (newFilters.description) params.set('description', newFilters.description)
     else params.delete('description')
     router.push(`${pathname}?${params.toString()}`)
   }
 
-  const totalSecs = useMemo(() => filtered.reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
-  const billableSecs = useMemo(() => filtered.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
+  const totalSecs = useMemo(() => sorted.reduce((a, e) => a + (e.duration ?? 0), 0), [sorted])
+  const billableSecs = useMemo(() => sorted.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0), [sorted])
 
   const dispDur = (s: number) => fmtDur(s, rounding)
 
@@ -417,6 +490,7 @@ export default function DetailedReportPage() {
       dateRange={dateRange}
       onRangeChange={setDateRange}
       initialTeam={selUsers}
+      initialLead={selLeads}
       initialProject={selProjects}
       initialTags={selTags}
       initialTasks={selTasks}
@@ -520,25 +594,21 @@ export default function DetailedReportPage() {
             ) : (
               Object.entries(
                 sorted.reduce((acc, entry) => {
-                  const dateKey = sortField === 'startTime'
-                    ? format(new Date(entry.startTime), 'EEE, MMM d')
-                    : 'Results'
+                  const dateKey = format(new Date(entry.startTime), 'EEE, MMM d')
                   if (!acc[dateKey]) acc[dateKey] = []
                   acc[dateKey].push(entry)
                   return acc
                 }, {} as Record<string, typeof filtered>)
               ).map(([dateLabel, entries]) => (
                 <div key={dateLabel}>
-                  {sortField === 'startTime' && (
-                    <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2.5 text-[14px] font-bold text-[#777] flex items-center">
-                      <span>{dateLabel}</span>
-                      <div className="flex-1 min-w-0" />
+                  <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2.5 text-[14px] font-bold text-[#777] flex items-center">
+                    <span>{dateLabel}</span>
+                    <div className="flex-1 min-w-0" />
                       {/* <div className="w-[80px] text-right flex-shrink-0 px-2 flex items-center justify-end text-[16px] font-bold text-[#333] tabular-nums">
                         {dispDur(entries.reduce((a, e) => a + (e.duration ?? 0), 0))}
                       </div> */}
                       <div className="w-[480px] flex-shrink-0" />
                     </div>
-                  )}
                   {entries.map(entry => {
                     const proj = projects.find(p => p.id === entry.projectId)
                     const entryTask = tasks.find(t => t.id === entry.taskId)
