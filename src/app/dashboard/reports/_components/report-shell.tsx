@@ -54,9 +54,10 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
   // ── Build filter items from store data ──────────────────────────────────────
   const teamItems = useMemo(() => {
     const groupItems = groups.map(g => ({ id: g.id, label: g.name, group: 'Groups' }))
-    // Show all users the backend returned — the backend already scopes visibility
-    // per role (ADMIN sees all, TEAM_LEAD sees their team, MEMBER sees project peers)
-    const userItems = users.map(u => ({ id: u.id, label: u.name }))
+    const userItems = users
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(u => ({ id: u.id, label: u.name, group: 'Users' }))
     return [...groupItems, ...userItems]
   }, [groups, users])
 

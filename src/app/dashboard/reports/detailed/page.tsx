@@ -14,7 +14,6 @@ import { useAuthStore } from '@/lib/stores/auth-store'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TimeEntry, Project, User, Tag } from '@/lib/types'
 import { getTimeEntries, TimeEntryParams } from '@/lib/api/time-entries'
-import { getTeamMembers, ApiTeamMember } from '@/lib/api/teams'
 import { ApiTimeEntry, mapApiTimeEntry } from '@/lib/api/mappers'
 import { extractArray } from '@/lib/api/utils'
 
@@ -277,13 +276,16 @@ export default function DetailedReportPage() {
       endDate: format(dateRange.to, 'yyyy-MM-dd'),
     }
     // Send filters to API where supported (single values only; multi-select handled client-side)
-    if (selUsers.length === 1 && !selUsers.includes('__without__')) params.userId = selUsers[0]
+    const selectedGroupIds = selUsers.filter(id => groups.find(g => g.id === id))
+    const selectedUserIds = selUsers.filter(id => !groups.find(g => g.id === id))
+
+    if (selectedUserIds.length === 1 && selectedGroupIds.length === 0) params.userId = selectedUserIds[0]
     if (selProjects.length === 1 && !selProjects.includes('__without__')) params.projectId = selProjects[0]
     if (selTags.length === 1 && !selTags.includes('__without__')) params.tagId = selTags[0]
 
     const timer = setTimeout(() => setLoading(true), 0)
     getTimeEntries(params)
-      .then(async (res: unknown) => {
+      .then((res: unknown) => {
         if (!active) return
 
         const entriesRaw = extractArray<ApiTimeEntry>(res)
@@ -304,24 +306,15 @@ export default function DetailedReportPage() {
           })
         }
         if (selUsers.length > 0) {
-          // Separate plain user IDs from group/team IDs
-          const plainUserIds = selUsers.filter(id => groups.find(g => g.id === id) === undefined)
-          const groupIds = selUsers.filter(id => groups.find(g => g.id === id) !== undefined)
-
-          // Fetch members for each selected group from the API
-          const groupMemberIds = await Promise.all(
-            groupIds.map(gid =>
-              getTeamMembers(gid)
-                .then(res => extractArray<ApiTeamMember>(res).map(m => m._id))
-                .catch(() => [])
-            )
-          )
-
-          const expandedUserIds = new Set<string>([
-            ...plainUserIds,
-            ...groupMemberIds.flat(),
-          ])
-          mapped = mapped.filter(e => expandedUserIds.has(e.userId))
+          // Expand all group IDs into member user IDs
+          const groupMemberIds = selectedGroupIds.flatMap(gid => {
+            const group = groups.find(g => g.id === gid)
+            return (group?.memberIds ?? []).map(m =>
+              typeof m === 'string' ? m : (m as { _id?: string; id?: string })._id ?? (m as { _id?: string; id?: string }).id ?? ''
+            ).filter(Boolean)
+          })
+          const allUserIds = new Set<string>([...selectedUserIds, ...groupMemberIds])
+          mapped = mapped.filter(e => allUserIds.has(e.userId))
         }
         if (selProjects.length > 0) {
           const wantWithout = selProjects.includes('__without__')
