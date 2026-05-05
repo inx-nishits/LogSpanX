@@ -106,7 +106,7 @@ function generateWeekSchedules(): Record<string, DaySchedule[]> {
       )
     } else if (dayOfWeek === 4) { // Thursday
       daySchedules.push(
-        { projectId: 'project_9', duration: 9000, description: 'Inhouse Clokify - Started working on LogSpanX', billable: true },
+        { projectId: 'project_9', duration: 9000, description: 'Inhouse Clokify - Started working on Trackify', billable: true },
         { projectId: 'project_6', duration: 5400, description: 'Nurvia fixed-cost milestone delivery', billable: true }
       )
     } else if (dayOfWeek === 5) { // Friday

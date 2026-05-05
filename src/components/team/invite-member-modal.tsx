@@ -67,7 +67,7 @@ export function InviteMemberModal({ isOpen, onClose, onInvite }: InviteMemberMod
                     </div>
                     <DialogTitle className="text-2xl font-bold text-gray-900 tracking-tight">Invite new member</DialogTitle>
                     <DialogDescription className="text-sm text-gray-500">
-                        Send an invitation to join LogSpanX and assign their starting role.
+                        Send an invitation to join Trackify and assign their starting role.
                     </DialogDescription>
                 </DialogHeader>
 

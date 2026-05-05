@@ -254,6 +254,13 @@ export default function ProjectsPage() {
   const [selectedBillingStatuses, setSelectedBillingStatuses] = useState<string[]>([])
   const [nameSearchQuery, setNameSearchQuery] = useState('')
 
+  // Applied filter state — only updated when Apply Filter is clicked
+  const [appliedStatus, setAppliedStatus] = useState('All')
+  const [appliedLeadNames, setAppliedLeadNames] = useState<string[]>([])
+  const [appliedWithoutLead, setAppliedWithoutLead] = useState(false)
+  const [appliedBillingStatuses, setAppliedBillingStatuses] = useState<string[]>([])
+  const [appliedNameQuery, setAppliedNameQuery] = useState('')
+
   const SortIndicator = ({ active, order }: { active: boolean; order: 'asc' | 'desc' }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
       <path d="m7 9 5-5 5 5" className={`transition-all duration-300 ${active && order === 'asc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} />
@@ -281,38 +288,33 @@ export default function ProjectsPage() {
     })
   }, [storeProjects, users, timeEntries])
 
-  // Filter Logic
+  // Filter Logic — uses applied state only
   const filteredProjects = useMemo(() => {
     return fullProjects.filter(p => {
-      // Status Filter
-      const matchesStatus = statusFilter === 'All' ||
-        (statusFilter === 'Active' && !p.archived) ||
-        (statusFilter === 'Archived' && p.archived)
-
+      const matchesStatus = appliedStatus === 'All' ||
+        (appliedStatus === 'Active' && !p.archived) ||
+        (appliedStatus === 'Archived' && p.archived)
       if (!matchesStatus) return false
 
-      // Lead Filter
-      const matchesLead = selectedLeadNames.length === 0 ||
-        selectedLeadNames.includes(p.lead) ||
-        (includeWithoutLead && (p.lead === '-' || !p.lead))
+      const matchesLead = appliedLeadNames.length === 0 ||
+        appliedLeadNames.includes(p.lead) ||
+        (appliedWithoutLead && (p.lead === '-' || !p.lead))
       if (!matchesLead) return false
 
-      // Billing Filter
       let matchesBilling = true
-      if (selectedBillingStatuses.length > 0) {
+      if (appliedBillingStatuses.length > 0) {
         matchesBilling =
-          (selectedBillingStatuses.includes('Billable') && p.billable) ||
-          (selectedBillingStatuses.includes('Non billable') && !p.billable)
+          (appliedBillingStatuses.includes('Billable') && p.billable) ||
+          (appliedBillingStatuses.includes('Non billable') && !p.billable)
       }
       if (!matchesBilling) return false
 
-      // Name Search
-      const matchesName = !nameSearchQuery || p.name.toLowerCase().includes(nameSearchQuery.toLowerCase())
+      const matchesName = !appliedNameQuery || p.name.toLowerCase().includes(appliedNameQuery.toLowerCase())
       if (!matchesName) return false
 
       return true
     })
-  }, [fullProjects, statusFilter, selectedLeadNames, includeWithoutLead, selectedBillingStatuses, nameSearchQuery])
+  }, [fullProjects, appliedStatus, appliedLeadNames, appliedWithoutLead, appliedBillingStatuses, appliedNameQuery])
 
   // Sort projects
   const sortedProjects = useMemo(() => {
@@ -329,27 +331,33 @@ export default function ProjectsPage() {
   }, [filteredProjects, sortKey, sortOrder])
 
   const handleApplyFilter = () => {
-    // This button can now just be a placeholder or we can use it to "commit" search query if we wanted to debounced it.
-    // But since we are using useMemo, it's already reactive.
+    setAppliedStatus(statusFilter)
+    setAppliedLeadNames([...selectedLeadNames])
+    setAppliedWithoutLead(includeWithoutLead)
+    setAppliedBillingStatuses([...selectedBillingStatuses])
+    setAppliedNameQuery(nameSearchQuery)
   }
 
   const handleClearFilters = () => {
-    setStatusFilter('Active')
+    setStatusFilter('All')
     setSelectedLeadNames([])
     setIncludeWithoutLead(false)
     setSelectedAccessGroups([])
     setSelectedAccessUsers([])
     setSelectedBillingStatuses([])
     setNameSearchQuery('')
+    setAppliedStatus('All')
+    setAppliedLeadNames([])
+    setAppliedWithoutLead(false)
+    setAppliedBillingStatuses([])
+    setAppliedNameQuery('')
   }
 
-  const hasActiveFilters = statusFilter !== 'Active' ||
-    selectedLeadNames.length > 0 ||
-    includeWithoutLead ||
-    selectedAccessGroups.length > 0 ||
-    selectedAccessUsers.length > 0 ||
-    selectedBillingStatuses.length > 0 ||
-    nameSearchQuery !== ''
+  const hasActiveFilters = appliedStatus !== 'All' ||
+    appliedLeadNames.length > 0 ||
+    appliedWithoutLead ||
+    appliedBillingStatuses.length > 0 ||
+    appliedNameQuery !== ''
 
   const toggleFavorite = (projectName: string) => {
     setFavorites(prev => prev.includes(projectName) ? prev.filter(n => n !== projectName) : [...prev, projectName])
@@ -451,7 +459,7 @@ export default function ProjectsPage() {
 
                 <div className="h-8 w-[1px] border-l border-dotted border-[#c6d2d9]" />
                 <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className={`flex items-center px-4 h-full cursor-pointer outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] ${statusFilter !== 'Active' ? 'text-[#03a9f4] font-semibold' : 'text-[#666666]'}`}>
+                  <DropdownMenuTrigger className={`flex items-center px-4 h-full cursor-pointer outline-none hover:text-[#333] data-[state=open]:text-[#03a9f4] ${appliedStatus !== 'All' ? 'text-[#03a9f4] font-semibold' : 'text-[#666666]'}`}>
                     <span>{statusFilter}</span>
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </DropdownMenuTrigger>

@@ -171,7 +171,7 @@ async function fetchProjectTasks(projects: Project[]) {
         return tasks.map((task) => mapApiTask(task, project.id))
       })
     )
-    
+
     batchResults.forEach(res => {
       if (res.status === 'fulfilled') {
         results.push(...res.value)
@@ -224,9 +224,9 @@ export const useDataStore = create<DataStore>((set, get) => ({
       const clients = clientsRaw.status === 'fulfilled' ? extractArray<ApiClient>(clientsRaw.value) : []
       const projects = projectsRaw.status === 'fulfilled' ? extractArray<ApiProject>(projectsRaw.value) : []
       const tags = tagsRaw.status === 'fulfilled' ? extractArray<ApiTag>(tagsRaw.value) : []
-      
+
       const normalizedProjects = projects.map(mapApiProject)
-      
+
       // Fetch tasks and time entries (less critical, handle failures gracefully)
       const [tasks, timeEntriesResult] = await Promise.allSettled([
         fetchProjectTasks(normalizedProjects),
@@ -235,7 +235,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
       const finalTasks = tasks.status === 'fulfilled' ? tasks.value : []
       const timeEntriesResultValue = timeEntriesResult.status === 'fulfilled' ? timeEntriesResult.value : []
-      
+
       const timeEntriesRaw = Array.isArray(timeEntriesResultValue)
         ? timeEntriesResultValue
         : (timeEntriesResultValue && typeof timeEntriesResultValue === 'object' && 'items' in timeEntriesResultValue && Array.isArray((timeEntriesResultValue as Record<string, unknown>).items))
@@ -301,19 +301,52 @@ export const useDataStore = create<DataStore>((set, get) => ({
   updateTimeEntry: async (id, updates) => {
     try {
       const token = useAuthStore.getState().token
-      const payload = await apiRequest<ApiTimeEntry>(`/time-entries/${id}`, {
+      const existing = get().timeEntries.find(e => e.id === id)
+
+      // Optimistic update
+      if (existing) {
+        set((state) => ({
+          timeEntries: state.timeEntries.map((entry) =>
+            entry.id !== id ? entry : { ...entry, ...updates }
+          ),
+        }))
+      }
+
+      // Only send changed fields — per API spec
+      const body: Record<string, unknown> = {}
+      const merged = existing ? { ...existing, ...updates } : updates
+
+      if ('description' in updates) body.description = merged.description ?? ''
+      if ('projectId' in updates) body.projectId = merged.projectId ?? null
+      if ('taskId' in updates) body.taskId = merged.taskId ?? null
+      if ('tagIds' in updates) body.tagIds = (merged.tagIds ?? []).filter(Boolean) // only when tags changed
+      if ('billable' in updates) body.billable = merged.billable ?? false
+      if ('startTime' in updates) body.startTime = merged.startTime instanceof Date ? merged.startTime.toISOString() : merged.startTime ? new Date(merged.startTime as string).toISOString() : undefined
+      if ('endTime' in updates) body.endTime = merged.endTime instanceof Date ? merged.endTime.toISOString() : merged.endTime ? new Date(merged.endTime as string).toISOString() : undefined
+      if ('userId' in updates) body.userId = merged.userId
+      // Never send duration — backend calculates from startTime/endTime
+
+      if (Object.keys(body).length === 0) return
+
+      const res = await apiRequest<ApiTimeEntry>(`/time-entries/${id}`, {
         method: 'PATCH',
         token,
-        body: JSON.stringify(serializeTimeEntryPatch(updates)),
+        body: JSON.stringify(body),
       })
 
-      const synced = mapApiTimeEntry(payload)
-      set((state) => ({
-        timeEntries: state.timeEntries.map((entry) =>
-          entry.id !== id ? entry : { ...entry, ...updates, ...synced }
-        ),
-      }))
+      // Update store with returned data, preserving startTime from response
+      const synced = mapApiTimeEntry(res)
+      if (synced.startTime && !isNaN(synced.startTime.getTime())) {
+        set((state) => ({
+          timeEntries: state.timeEntries.map((entry) =>
+            entry.id !== id ? entry : { ...entry, ...synced }
+          ),
+        }))
+      }
     } catch (err) {
+      // Rollback on failure
+      const existing = get().timeEntries.find(e => e.id === id)
+      if (existing) set((state) => ({ timeEntries: state.timeEntries.map(e => e.id !== id ? e : existing) }))
       console.error('Update failed:', err instanceof Error ? err.message : String(err))
     }
   },
@@ -321,13 +354,8 @@ export const useDataStore = create<DataStore>((set, get) => ({
   deleteTimeEntry: async (id) => {
     try {
       const token = useAuthStore.getState().token
-      const entryToDelete = get().timeEntries.find((entry) => entry.id === id)
-      if (!entryToDelete) return
-
       await apiRequest(`/time-entries/${id}`, { method: 'DELETE', token })
-
       set((state) => ({
-        lastDeletedEntries: [entryToDelete],
         timeEntries: state.timeEntries.filter((entry) => entry.id !== id),
       }))
     } catch (err) {

@@ -114,7 +114,7 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
 
   const fmtDurInline = (s: number) => {
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
-    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
   }
 
   const handleAdd = () => {
@@ -123,15 +123,15 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
     if (!secs) return
     const endTime = new Date()
     const startTime = new Date(endTime.getTime() - secs * 1000)
-    onAdd({ 
-      description: desc, 
-      projectId: pid || undefined, 
-      tagIds, 
-      billable, 
-      userId: uid, 
-      startTime, 
-      endTime, 
-      duration: secs 
+    onAdd({
+      description: desc,
+      projectId: pid || undefined,
+      tagIds,
+      billable,
+      userId: uid,
+      startTime,
+      endTime,
+      duration: secs
     })
     setDesc('')
     setDurInput('00:00:00')
@@ -206,12 +206,33 @@ const SortIcon = ({ field, sortField, sortOrder }: { field: string; sortField: s
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function DetailedReportPage() {
-  const { projects, users, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
+  const { projects, users, tasks, timeEntries, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const { user: currentUser } = useAuthStore()
   const canManageUsers = currentUser?.role === 'owner' || currentUser?.role === 'admin'
+
+  // Team member IDs for team_lead RBAC
+  const teamMemberIds = useMemo(() => {
+    if (currentUser?.role !== 'admin') return new Set<string>()
+    const ids = new Set<string>()
+    projects.forEach(p => {
+      if (p.leadId === currentUser.id) {
+        p.members.forEach(m => ids.add(typeof m === 'string' ? m : m.userId))
+      }
+    })
+    return ids
+  }, [projects, currentUser])
+
+  const canEditEntry = (entry: TimeEntry) => {
+    if (!currentUser) return false
+    if (currentUser.role === 'owner') return true // admin
+    if (currentUser.role === 'admin') { // team_lead
+      return entry.userId === currentUser.id || teamMemberIds.has(entry.userId)
+    }
+    return entry.userId === currentUser.id // member
+  }
 
   const paramFrom = searchParams.get('from')
   const paramTo = searchParams.get('to')
@@ -229,13 +250,22 @@ export default function DetailedReportPage() {
   }))
 
   const [selIds, setSelIds] = useState<Set<string>>(new Set())
-  const [sortField, setSortField] = useState<string>('createdAt')
+  const [sortField, setSortField] = useState<string>('startTime')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [rounding, setRounding] = useState(false)
   const [showEntryBar, setShowEntryBar] = useState(false)
 
   const [filtered, setFiltered] = useState<TimeEntry[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Sync store updates into filtered — so edits on tracker page reflect here instantly
+  useEffect(() => {
+    if (timeEntries.length === 0) return
+    setFiltered(prev => prev.map(e => {
+      const updated = timeEntries.find(t => t.id === e.id)
+      return updated ? { ...e, ...updated } : e
+    }))
+  }, [timeEntries])
 
   useEffect(() => {
     let active = true
@@ -254,7 +284,7 @@ export default function DetailedReportPage() {
     getTimeEntries(params)
       .then((res: unknown) => {
         if (!active) return
-        
+
         const entriesRaw = extractArray<ApiTimeEntry>(res)
         let mapped = entriesRaw.map(mapApiTimeEntry)
 
@@ -285,22 +315,22 @@ export default function DetailedReportPage() {
     list.sort((a, b) => {
       let valA: string | number = a[sortField as keyof TimeEntry] as string | number
       let valB: string | number = b[sortField as keyof TimeEntry] as string | number
-      
-      if (sortField === 'createdAt') { 
-        valA = new Date(a.createdAt).getTime()
-        valB = new Date(b.createdAt).getTime() 
+
+      if (sortField === 'startTime') {
+        valA = new Date(a.startTime).getTime()
+        valB = new Date(b.startTime).getTime()
       }
-      if (sortField === 'userName') { 
+      if (sortField === 'userName') {
         valA = userMap[a.userId] || ''
-        valB = userMap[b.userId] || '' 
+        valB = userMap[b.userId] || ''
       }
-      if (sortField === 'duration') { 
+      if (sortField === 'duration') {
         valA = a.duration || 0
-        valB = b.duration || 0 
+        valB = b.duration || 0
       }
-      if (sortField === 'description') { 
+      if (sortField === 'description') {
         valA = a.description || ''
-        valB = b.description || '' 
+        valB = b.description || ''
       }
 
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1
@@ -310,11 +340,11 @@ export default function DetailedReportPage() {
     return list
   }, [filtered, sortField, sortOrder, users])
 
-  const handleApply = (newFilters: { 
-    team: string[]; 
-    project: string[]; 
-    tags: string[]; 
-    description: string 
+  const handleApply = (newFilters: {
+    team: string[];
+    project: string[];
+    tags: string[];
+    description: string
   }) => {
     const params = new URLSearchParams(searchParams.toString())
     if (newFilters.team.length) params.set('users', newFilters.team.join(','))
@@ -351,26 +381,35 @@ export default function DetailedReportPage() {
   }
 
   const updateEntry = (id: string, updates: Partial<typeof filtered[0]>) => {
-    updateTimeEntry(id, updates)
+    const existing = filtered.find(e => e.id === id)
+    const fullUpdates = existing ? { ...existing, ...updates } : updates
+    // Optimistic local update
     setFiltered(prev => prev.map(e => e.id !== id ? e : { ...e, ...updates }))
+    updateTimeEntry(id, fullUpdates)
   }
 
   const onDup = (e: typeof filtered[0]) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, createdAt: _ca, updatedAt: _ua, ...rest } = e
-    addTimeEntry({ ...rest, startTime: new Date() })
+    const newEntry = { ...rest, startTime: new Date() }
+    addTimeEntry(newEntry)
+    setFiltered(prev => [{ ...newEntry, id: Date.now().toString(), createdAt: new Date(), updatedAt: new Date() }, ...prev])
   }
 
-  const bulkDelete = () => { 
-    if (window.confirm(`Delete ${selIds.size} entries?`)) { 
-      deleteTimeEntries(Array.from(selIds))
-      setSelIds(new Set()) 
-    } 
+  const bulkDelete = () => {
+    if (window.confirm(`Delete ${selIds.size} entries?`)) {
+      const ids = Array.from(selIds)
+      deleteTimeEntries(ids)
+      setFiltered(prev => prev.filter(e => !ids.includes(e.id)))
+      setSelIds(new Set())
+    }
   }
-  
-  const bulkUpdate = (data: Partial<TimeEntry>) => { 
-    updateTimeEntries(Array.from(selIds), data)
-    setSelIds(new Set()) 
+
+  const bulkUpdate = (data: Partial<TimeEntry>) => {
+    const ids = Array.from(selIds)
+    updateTimeEntries(ids, data)
+    setFiltered(prev => prev.map(e => ids.includes(e.id) ? { ...e, ...data } : e))
+    setSelIds(new Set())
   }
 
   return (
@@ -400,7 +439,10 @@ export default function DetailedReportPage() {
 
         <div className="mx-6 mb-8 bg-white border border-[#e4e8ec] shadow-sm rounded-sm flex flex-col">
           {/* Inline Manual Entry */}
-          {showEntryBar && <InlineEntryBar onAdd={addTimeEntry} defaultDate={dateRange.from} />}
+          {showEntryBar && <InlineEntryBar onAdd={(entry) => {
+            addTimeEntry(entry)
+            setFiltered(prev => [{ ...entry, id: Date.now().toString(), createdAt: new Date(), updatedAt: new Date() }, ...prev])
+          }} defaultDate={dateRange.from} />}
 
           {/* Stats bar */}
           <div className="flex items-center justify-between bg-[#f2f6f8] border-b border-[#e4eaee] px-4 h-[42px] flex-shrink-0">
@@ -478,8 +520,8 @@ export default function DetailedReportPage() {
             ) : (
               Object.entries(
                 sorted.reduce((acc, entry) => {
-                  const dateKey = sortField === 'createdAt'
-                    ? format(new Date(entry.createdAt), 'EEE, MMM d')
+                  const dateKey = sortField === 'startTime'
+                    ? format(new Date(entry.startTime), 'EEE, MMM d')
                     : 'Results'
                   if (!acc[dateKey]) acc[dateKey] = []
                   acc[dateKey].push(entry)
@@ -487,7 +529,7 @@ export default function DetailedReportPage() {
                 }, {} as Record<string, typeof filtered>)
               ).map(([dateLabel, entries]) => (
                 <div key={dateLabel}>
-                  {sortField === 'createdAt' && (
+                  {sortField === 'startTime' && (
                     <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2.5 text-[14px] font-bold text-[#777] flex items-center">
                       <span>{dateLabel}</span>
                       <div className="flex-1 min-w-0" />
@@ -499,7 +541,10 @@ export default function DetailedReportPage() {
                   )}
                   {entries.map(entry => {
                     const proj = projects.find(p => p.id === entry.projectId)
+                    const entryTask = tasks.find(t => t.id === entry.taskId)
+                    const projLead = proj ? users.find(u => u.id === proj.leadId) : undefined
                     const user = users.find(u => u.id === entry.userId)
+                    const canEdit = canEditEntry(entry)
 
                     return (
                       <div key={entry.id} className={cn("flex items-stretch min-h-[56px] bg-white border-b border-[#f0f0f0] transition-colors group relative", selIds.has(entry.id) ? "bg-[#f2f9ff]" : "hover:bg-[#fafbfc]")}>
@@ -517,38 +562,50 @@ export default function DetailedReportPage() {
                             />
                             <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0">
                               <span className="text-gray-300 flex-shrink-0">•</span>
-                              <ProjectPicker selectedProjectId={entry.projectId}
-                                onSelect={pid => updateEntry(entry.id, { projectId: pid })}
-                                onClear={() => updateEntry(entry.id, { projectId: undefined })}
-                                customTrigger={proj ? (
-                                  <div className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
-                                    <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
-                                    <span className="text-[15px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[15px] font-medium opacity-0 group-hover/entry:opacity-100 transition-opacity cursor-pointer">
-                                    <Plus className="h-3 w-3" /> Project
-                                  </div>
-                                )}
-                              />
+                              {canEdit ? (
+                                <ProjectPicker selectedProjectId={entry.projectId}
+                                  selectedTaskId={entry.taskId}
+                                  onSelect={(pid, tid) => updateEntry(entry.id, { projectId: pid, taskId: tid || undefined })}
+                                  onClear={() => updateEntry(entry.id, { projectId: undefined, taskId: undefined })}
+                                  customTrigger={proj ? (
+                                    <div className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
+                                      <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
+                                      <span className="text-[15px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
+                                      {entryTask && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
+                                      {projLead && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[15px] font-medium opacity-0 group-hover/entry:opacity-100 transition-opacity cursor-pointer">
+                                      <Plus className="h-3 w-3" /> Project
+                                    </div>
+                                  )}
+                                />
+                              ) : proj ? (
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
+                                  <span className="text-[15px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
+                                  {entryTask && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
+                                  {projLead && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                           <div className="flex-shrink-0 ml-auto">
-                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={tagIds => updateEntry(entry.id, { tagIds })} />
+                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={canEdit ? tagIds => updateEntry(entry.id, { tagIds }) : () => {}} />
                           </div>
                         </div>
 
                         <div className="w-[80px] flex-shrink-0 flex items-center justify-end px-2 text-[14px] text-[#aaa] tabular-nums">0.00</div>
 
                         <div className="w-[40px] flex-shrink-0 flex items-center justify-center">
-                          <button onClick={() => updateEntry(entry.id, { billable: !entry.billable })}
-                            className={cn('cursor-pointer transition-colors', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc]')}>
+                          <button onClick={() => canEdit && updateEntry(entry.id, { billable: !entry.billable })}
+                            className={cn('transition-colors', canEdit ? 'cursor-pointer' : 'cursor-default', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc]')}>
                             <DollarSign style={{ width: 18, height: 18 }} />
                           </button>
                         </div>
 
                         <div className="w-[150px] flex-shrink-0 flex items-center justify-end px-2">
-                          {canManageUsers ? (
+                          {canManageUsers && canEdit ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="flex items-center justify-end gap-1 text-[14px] text-[#555] hover:text-[#03a9f4] cursor-pointer ml-auto max-w-[130px] truncate">
@@ -569,7 +626,17 @@ export default function DetailedReportPage() {
                         </div>
 
                         <div className="w-[90px] flex-shrink-0 flex items-center justify-center">
-                          <DurCell dur={entry.duration ?? 0} onSave={s => updateEntry(entry.id, { duration: s })} />
+                          {canEdit ? (
+                            <DurCell dur={entry.duration ?? 0} onSave={s => {
+                              const start = new Date(entry.startTime)
+                              const endTime = new Date(start.getTime() + s * 1000)
+                              updateEntry(entry.id, { startTime: start, endTime })
+                            }} />
+                          ) : (
+                            <span className="text-[17px] font-bold text-[#333] tabular-nums w-[52px] inline-block text-center">
+                              {fmtDur(entry.duration ?? 0)}
+                            </span>
+                          )}
                         </div>
 
                         <div className="w-[100px] flex-shrink-0 flex items-center justify-end pr-4 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -578,17 +645,19 @@ export default function DetailedReportPage() {
                               <Play style={{ width: 16, height: 16 }} />
                             </button>
                           </Tip>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="text-[#ccc] hover:text-[#666] cursor-pointer p-1">
-                                <MoreVertical style={{ width: 16, height: 16 }} />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[140px] shadow-xl bg-white border border-gray-100 rounded-sm">
-                              <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => deleteTimeEntry(entry.id)} className="py-2.5 text-[14px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {canEdit && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="text-[#ccc] hover:text-[#666] cursor-pointer p-1">
+                                  <MoreVertical style={{ width: 16, height: 16 }} />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-[140px] shadow-xl bg-white border border-gray-100 rounded-sm">
+                                <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { deleteTimeEntry(entry.id); setFiltered(prev => prev.filter(e => e.id !== entry.id)) }} className="py-2.5 text-[14px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       </div>
                     )

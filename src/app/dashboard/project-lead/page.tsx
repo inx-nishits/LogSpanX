@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { getGroups, updateGroup, ApiGroup } from '@/lib/api/teams'
+import { getGroups, updateGroup, updateUserRole, ApiGroup } from '@/lib/api/teams'
 import { apiRequest } from '@/lib/api/client'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { Search, ChevronDown, Pencil, MoreVertical } from 'lucide-react'
@@ -77,8 +77,11 @@ export default function ProjectLeadPage() {
     if (!group || group.memberIds.includes(user._id)) return
     setAdding(true)
     try {
-      const res = await updateGroup(group._id, { memberIds: [...group.memberIds, user._id] })
-      const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
+      const [groupRes] = await Promise.all([
+        updateGroup(group._id, { memberIds: [...group.memberIds, user._id] }),
+        updateUserRole(user._id, 'team_lead'),
+      ])
+      const updated = (groupRes as any)?._id ? groupRes as ApiGroup : (groupRes as any)?.data as ApiGroup
       setGroup(prev => prev ? { ...prev, memberIds: updated?.memberIds ?? [...prev.memberIds, user._id] } : prev)
       setAddSearch('')
       setAddDropOpen(false)

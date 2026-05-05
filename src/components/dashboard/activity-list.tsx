@@ -5,7 +5,7 @@ import { useDataStore } from '@/lib/stores/data-store'
 import { TimeEntry } from '@/lib/types'
 
 export function ActivityList({ entries }: { entries: TimeEntry[] }) {
-    const { projects } = useDataStore()
+    const { projects, users } = useDataStore()
 
     // Group by description+project, sum durations, take top 10
     const activities = useMemo(() => {
@@ -22,12 +22,14 @@ export function ActivityList({ entries }: { entries: TimeEntry[] }) {
             .slice(0, 10)
             .map(a => {
                 const proj = projects.find(p => p.id === a.projectId)
+                const lead = proj?.leadId ? users.find(u => u.id === proj.leadId) : undefined
                 const h = Math.floor(a.totalSec / 3600)
                 const m = Math.floor((a.totalSec % 3600) / 60)
                 return {
                     title: a.description || '(no description)',
                     project: proj?.name || '(no Project)',
                     projectColor: proj?.color || '#ccc',
+                    lead: lead?.name,
                     time: `${h}:${String(m).padStart(2, '0')}`,
                 }
             })
@@ -48,6 +50,7 @@ export function ActivityList({ entries }: { entries: TimeEntry[] }) {
                             <div className="flex items-center space-x-1.5 truncate">
                                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: activity.projectColor }} />
                                 <span className="text-[13px] text-[#999] truncate">{activity.project}</span>
+                                {activity.lead && <span className="text-[13px] text-[#bbb] flex-shrink-0">- {activity.lead}</span>}
                             </div>
                         </div>
                         <span className="text-[14px] font-semibold text-[#333] tabular-nums ml-auto flex-shrink-0">{activity.time}</span>

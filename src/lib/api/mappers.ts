@@ -257,8 +257,8 @@ export function serializeProjectMember(member: ProjectMember) {
 export function serializeTimeEntryPatch(entry: Partial<TimeEntry>) {
   const patch: Record<string, unknown> = {}
 
-  if ('description' in entry) patch.description = entry.description
-  if ('projectId' in entry) patch.projectId = entry.projectId || undefined
+  if ('description' in entry) patch.description = entry.description ?? ''
+  if ('projectId' in entry) patch.projectId = entry.projectId || null
   if ('taskId' in entry) patch.taskId = entry.taskId || null
   if ('tagIds' in entry) patch.tagIds = (entry.tagIds ?? []).filter(id => id !== '')
   if ('billable' in entry) patch.billable = entry.billable
