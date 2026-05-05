@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { ChevronDown, Printer, Share2, Search, X, Check } from 'lucide-react'
 import { startOfWeek, endOfWeek, startOfDay, endOfDay, eachDayOfInterval, format, isSameDay } from 'date-fns'
 import { useDataStore } from '@/lib/stores/data-store'
@@ -10,6 +10,8 @@ import { SummaryBarChart } from './summary-bar-chart'
 import { SummaryDonut } from './summary-donut'
 import { SummaryTable, SummaryRow } from './summary-table'
 import { ReportShell } from '../_components/report-shell'
+import { TimeEntry } from '@/lib/types'
+import { Skeleton } from '@/components/ui/skeleton'
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 
@@ -30,8 +32,173 @@ function fmtH(s: number) {
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
+type ExportFormat = 'pdf' | 'excel' | 'csv'
+
+interface ExportRow {
+  title: string
+  entryCount: number
+  duration: string
+  amount: string
+  level: number
+}
+
+function flattenRows(rows: SummaryRow[], level = 0): ExportRow[] {
+  return rows.flatMap(row => [
+    {
+      title: `${'  '.repeat(level)}${row.title}`,
+      entryCount: row.entryCount,
+      duration: fmtSecs(row.duration),
+      amount: row.billable ? '-' : '0.00 USD',
+      level,
+    },
+    ...flattenRows(row.children ?? [], level + 1),
+  ])
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function csvEscape(value: string | number) {
+  const text = String(value)
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+function htmlEscape(value: string | number) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function pdfEscape(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
+}
+
+function createPdfBlob(lines: string[]) {
+  const pageWidth = 595
+  const pageHeight = 842
+  const margin = 42
+  const lineHeight = 15
+  const maxLines = Math.floor((pageHeight - margin * 2) / lineHeight)
+  const pages: string[][] = []
+
+  for (let i = 0; i < lines.length; i += maxLines) {
+    pages.push(lines.slice(i, i + maxLines))
+  }
+
+  const objects: string[] = []
+  const catalogId = 1
+  const pagesId = 2
+  const fontId = 3
+  const pageIds = pages.map((_, index) => 4 + index * 2)
+  const contentIds = pages.map((_, index) => 5 + index * 2)
+
+  objects[catalogId] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`
+  objects[pagesId] = `<< /Type /Pages /Kids [${pageIds.map(id => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`
+  objects[fontId] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'
+
+  pages.forEach((pageLines, index) => {
+    const pageId = pageIds[index]
+    const contentId = contentIds[index]
+    const text = pageLines
+      .map((line, lineIndex) => {
+        const y = pageHeight - margin - lineIndex * lineHeight
+        return `BT /F1 9 Tf ${margin} ${y} Td (${pdfEscape(line.slice(0, 105))}) Tj ET`
+      })
+      .join('\n')
+
+    objects[pageId] = `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`
+    objects[contentId] = `<< /Length ${text.length} >>\nstream\n${text}\nendstream`
+  })
+
+  let pdf = '%PDF-1.4\n'
+  const offsets = [0]
+  for (let id = 1; id < objects.length; id++) {
+    offsets[id] = pdf.length
+    pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`
+  }
+
+  const xrefOffset = pdf.length
+  pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`
+  for (let id = 1; id < objects.length; id++) {
+    pdf += `${String(offsets[id]).padStart(10, '0')} 00000 n \n`
+  }
+  pdf += `trailer\n<< /Size ${objects.length} /Root ${catalogId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
+
+  return new Blob([pdf], { type: 'application/pdf' })
+}
+
+function ExportDropdown({ onExport }: { onExport: (format: ExportFormat) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const options: Array<{ label: string; format: ExportFormat }> = [
+    { label: 'Export as PDF', format: 'pdf' },
+    { label: 'Export as Excel', format: 'excel' },
+    { label: 'Export as CSV', format: 'csv' },
+  ]
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(value => !value)}
+        className="flex items-center gap-0.5 hover:text-[#03a9f4] cursor-pointer"
+      >
+        Export <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 mt-1 bg-white border border-[#d0d8de] shadow-lg z-[200] min-w-[150px] py-1">
+          {options.map(option => (
+            <button
+              key={option.format}
+              onClick={() => {
+                onExport(option.format)
+                setOpen(false)
+              }}
+              className="w-full text-left px-3 py-2 text-[14px] text-[#555] hover:bg-[#f5f7f9] hover:text-[#03a9f4] cursor-pointer"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function extractApiTimeEntries(payload: unknown): ApiTimeEntry[] {
+  if (Array.isArray(payload)) return payload as ApiTimeEntry[]
+
+  if (!payload || typeof payload !== 'object') return []
+
+  const record = payload as Record<string, unknown>
+  if (Array.isArray(record.items)) return record.items as ApiTimeEntry[]
+  if (Array.isArray(record.entries)) return record.entries as ApiTimeEntry[]
+
+  const nestedArray = Object.values(record).find(Array.isArray)
+  return Array.isArray(nestedArray) ? nestedArray as ApiTimeEntry[] : []
+}
+
 // ─── Description filter ──────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function DescriptionFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -184,15 +351,14 @@ function BillabilityDropdown({ mode, onChange }: { mode: 'billability' | 'projec
   )
 }
 
-import { getTimeEntries } from '@/lib/api/time-entries'
-import { mapApiTimeEntry } from '@/lib/api/mappers'
+import { getTimeEntries, TimeEntryParams } from '@/lib/api/time-entries'
+import { ApiTimeEntry, mapApiTimeEntry } from '@/lib/api/mappers'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SummaryReportPage() {
-  const pathname = usePathname()
   const router = useRouter()
-  const { timeEntries, projects, users, tags, groups } = useDataStore()
+  const { projects, users, tags, groups } = useDataStore()
 
   const [dateRange, setDateRange] = useState({
     from: startOfDay(startOfWeek(new Date(), { weekStartsOn: 1 })),
@@ -249,13 +415,14 @@ export default function SummaryReportPage() {
     return appliedFilters.lead // lead filter stores user IDs directly
   }, [appliedFilters.lead])
 
-  const [filtered, setFiltered] = useState<typeof timeEntries>([])
+  const [filtered, setFiltered] = useState<TimeEntry[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
 
     // Only one value per filter for simplistic passing to API as per normal backend params
-    const params: any = {
+    const params: TimeEntryParams = {
       startDate: from.toISOString(),
       endDate: to.toISOString(),
     }
@@ -269,29 +436,18 @@ export default function SummaryReportPage() {
     if (appliedFilters.status.length === 1 && appliedFilters.status.includes('billable')) params.billable = 'true'
     if (appliedFilters.status.length === 1 && appliedFilters.status.includes('non-billable')) params.billable = 'false'
 
+    setLoading(true)
     getTimeEntries(params)
-      .then((res: any) => {
+      .then((res) => {
         if (!active) return
-        let entries = Array.isArray(res) ? res : (res?.items || res?.entries || [])
-        if (!Array.isArray(entries)) {
-          entries = Object.values(res || {}).find(v => Array.isArray(v)) || []
-        }
+        let entries = extractApiTimeEntries(res).map(mapApiTimeEntry)
 
-        // Map raw API entries to the expected TimeEntry format
-        entries = entries.map(mapApiTimeEntry)
-
-        // Keep local filtering for anything backend might not support comprehensively
-        entries = entries.filter((e: any) => {
-          // Team filter
+        entries = entries.filter((e) => {
           if (teamUserIds.length > 0 && !teamUserIds.includes(e.userId)) return false
-
-          // Project Lead filter
           if (leadUserIds.length > 0) {
             const proj = projects.find(p => p.id === e.projectId)
             if (!proj || !leadUserIds.includes(proj.leadId ?? '')) return false
           }
-
-          // Task filter
           if (appliedFilters.task.length > 0) {
             const wantWithout = appliedFilters.task.includes('__without__')
             const tIds = appliedFilters.task.filter(id => id !== '__without__')
@@ -302,8 +458,6 @@ export default function SummaryReportPage() {
               if (tIds.length === 0 && !wantWithout) return false
             }
           }
-
-          // Description filter
           if (appliedFilters.desc) {
             if (appliedFilters.desc === '__without__') {
               if (e.description?.trim()) return false
@@ -317,6 +471,9 @@ export default function SummaryReportPage() {
         setFiltered(entries)
       })
       .catch(err => console.error(err))
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
     return () => { active = false }
   }, [from, to, teamUserIds, leadUserIds, appliedFilters, projects])
@@ -326,25 +483,43 @@ export default function SummaryReportPage() {
 
   const barData = useMemo(() => {
     const days = eachDayOfInterval({ start: from, end: to })
+    
+    // Pre-group entries by day for O(N) performance
+    const entriesByDay: Record<string, TimeEntry[]> = {}
+    filtered.forEach(e => {
+      const dateKey = format(new Date(e.createdAt), 'yyyy-MM-dd')
+      if (!entriesByDay[dateKey]) entriesByDay[dateKey] = []
+      entriesByDay[dateKey].push(e)
+    })
 
     const buildDay = (date: Date) => {
-      const day = filtered.filter(e => isSameDay(new Date(e.createdAt), date))
-      const b = day.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-      const nb = day.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-      const base = { name: format(date, 'EEE, MMM d'), billable: Number(b.toFixed(2)), nonBillable: Number(nb.toFixed(2)), totalLabel: fmtH((b + nb) * 3600) }
-      // always inject per-project hours so project mode works
+      const dateKey = format(date, 'yyyy-MM-dd')
+      const dayEntries = entriesByDay[dateKey] || []
+      
+      let b = 0, nb = 0
       const perProject: Record<string, number> = {}
-      projects.forEach(p => {
-        const hrs = day.filter(e => e.projectId === p.id).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
-        perProject[p.id] = Number(hrs.toFixed(2))
+      
+      dayEntries.forEach(e => {
+        const hrs = (e.duration ?? 0) / 3600
+        if (e.billable) b += hrs; else nb += hrs
+        if (e.projectId) perProject[e.projectId] = (perProject[e.projectId] || 0) + Number(hrs.toFixed(2))
       })
-      return { ...base, ...perProject }
+
+      return { 
+        name: format(date, 'EEE, MMM d'), 
+        billable: Number(b.toFixed(2)), 
+        nonBillable: Number(nb.toFixed(2)), 
+        totalLabel: fmtH((b + nb) * 3600),
+        ...perProject
+      }
     }
 
     if (groupBy === 'Month') {
       const monthMap: Record<string, { b: number; nb: number;[k: string]: number }> = {}
       filtered.forEach(e => {
-        const key = format(new Date(e.createdAt), 'MMM yyyy')
+        const d = new Date(e.createdAt)
+        if (isNaN(d.getTime())) return
+        const key = format(d, 'MMM yyyy')
         if (!monthMap[key]) { monthMap[key] = { b: 0, nb: 0 }; projects.forEach(p => { monthMap[key][p.id] = 0 }) }
         const hrs = (e.duration ?? 0) / 3600
         if (e.billable) monthMap[key].b += hrs; else monthMap[key].nb += hrs
@@ -360,7 +535,9 @@ export default function SummaryReportPage() {
     if (groupBy === 'Week') {
       const weekMap: Record<string, { b: number; nb: number;[k: string]: number }> = {}
       filtered.forEach(e => {
-        const key = `Week of ${format(new Date(e.createdAt), 'MMM d')}`
+        const d = new Date(e.createdAt)
+        if (isNaN(d.getTime())) return
+        const key = `Week of ${format(d, 'MMM d')}`
         if (!weekMap[key]) { weekMap[key] = { b: 0, nb: 0 }; projects.forEach(p => { weekMap[key][p.id] = 0 }) }
         const hrs = (e.duration ?? 0) / 3600
         if (e.billable) weekMap[key].b += hrs; else weekMap[key].nb += hrs
@@ -617,6 +794,71 @@ export default function SummaryReportPage() {
     })
   }, [filtered, groupBy, subGroupBy, users, projects, tags])
 
+  const handleExport = (exportFormat: ExportFormat) => {
+    const rows = flattenRows(tableRows)
+    const fromLabel = format(dateRange.from, 'yyyy-MM-dd')
+    const toLabel = format(dateRange.to, 'yyyy-MM-dd')
+    const fileBase = `summary-report-${fromLabel}-to-${toLabel}`
+    const metadata = [
+      ['Report', 'Summary'],
+      ['Date range', `${fromLabel} to ${toLabel}`],
+      ['Group by', groupBy],
+      ['Sub group by', subGroupBy],
+      ['Total duration', fmtSecs(totalSecs)],
+      ['Billable duration', fmtSecs(billableSecs)],
+    ]
+
+    if (exportFormat === 'csv') {
+      const lines = [
+        ...metadata.map(([key, value]) => `${csvEscape(key)},${csvEscape(value)}`),
+        '',
+        ['Title', 'Entries', 'Duration', 'Amount'].map(csvEscape).join(','),
+        ...rows.map(row => [row.title, row.entryCount, row.duration, row.amount].map(csvEscape).join(',')),
+      ]
+      downloadBlob(new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' }), `${fileBase}.csv`)
+      return
+    }
+
+    if (exportFormat === 'excel') {
+      const metadataRows = metadata
+        .map(([key, value]) => `<tr><th align="left">${htmlEscape(key)}</th><td>${htmlEscape(value)}</td></tr>`)
+        .join('')
+      const dataRows = rows
+        .map(row => `<tr><td style="padding-left:${row.level * 18}px">${htmlEscape(row.title)}</td><td>${row.entryCount}</td><td>${htmlEscape(row.duration)}</td><td>${htmlEscape(row.amount)}</td></tr>`)
+        .join('')
+      const html = `
+        <html>
+          <head><meta charset="utf-8" /></head>
+          <body>
+            <table>${metadataRows}</table>
+            <br />
+            <table border="1">
+              <thead><tr><th>Title</th><th>Entries</th><th>Duration</th><th>Amount</th></tr></thead>
+              <tbody>${dataRows}</tbody>
+            </table>
+          </body>
+        </html>
+      `
+      downloadBlob(new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' }), `${fileBase}.xls`)
+      return
+    }
+
+    const pdfLines = [
+      'LogSpanX Summary Report',
+      `Date range: ${fromLabel} to ${toLabel}`,
+      `Group by: ${groupBy} / ${subGroupBy}`,
+      `Total: ${fmtSecs(totalSecs)}    Billable: ${fmtSecs(billableSecs)}`,
+      '',
+      'Title                                                       Entries   Duration   Amount',
+      '-------------------------------------------------------------------------------------',
+      ...rows.map(row => {
+        const title = row.title.padEnd(58, ' ').slice(0, 58)
+        return `${title} ${String(row.entryCount).padStart(7, ' ')}   ${row.duration.padStart(8, ' ')}   ${row.amount}`
+      }),
+    ]
+    downloadBlob(createPdfBlob(pdfLines), `${fileBase}.pdf`)
+  }
+
   return (
     <ReportShell
       dateRange={dateRange}
@@ -652,7 +894,7 @@ export default function SummaryReportPage() {
             </div>
             <div className="flex items-center gap-4 text-[15px] text-[#555]">
               <button className="hover:text-[#03a9f4] cursor-pointer">Create invoice</button>
-              <button className="flex items-center gap-0.5 hover:text-[#03a9f4] cursor-pointer">Export <ChevronDown className="h-3 w-3" /></button>
+              <ExportDropdown onExport={handleExport} />
               <button className="hover:text-[#03a9f4] cursor-pointer"><Printer className="h-4 w-4" /></button>
               <button className="hover:text-[#03a9f4] cursor-pointer"><Share2 className="h-4 w-4" /></button>
               <div className="flex items-center gap-1.5">
@@ -670,7 +912,13 @@ export default function SummaryReportPage() {
             <div className="mb-4">
               <BillabilityDropdown mode={billabilityMode} onChange={setBillabilityMode} />
             </div>
-            <SummaryBarChart data={barData} mode={billabilityMode} projects={projects} />
+            {loading ? (
+              <div className="h-[250px] w-full flex flex-col gap-4">
+                <Skeleton className="h-full w-full" />
+              </div>
+            ) : (
+              <SummaryBarChart data={barData} mode={billabilityMode} projects={projects} />
+            )}
           </div>
 
           {/* Group by row */}
@@ -683,31 +931,41 @@ export default function SummaryReportPage() {
           {/* Table + Donut side by side */}
           <div className="flex items-start h-[450px]">
             <div className="w-[60%] flex-shrink-0 border-r border-[#e4eaee] overflow-y-auto">
-              <SummaryTable rows={tableRows} onRowClick={(row) => {
-                const params = new URLSearchParams()
-                params.set('from', dateRange.from.toISOString())
-                params.set('to', dateRange.to.toISOString())
+              {loading ? (
+                <div className="p-4 flex flex-col gap-3">
+                  {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <SummaryTable rows={tableRows} onRowClick={(row) => {
+                  const params = new URLSearchParams()
+                  params.set('from', dateRange.from.toISOString())
+                  params.set('to', dateRange.to.toISOString())
 
-                // Propagate global applied filters
-                if (appliedFilters.team.length) params.set('users', appliedFilters.team.join(','))
-                if (appliedFilters.project.length) params.set('projects', appliedFilters.project.join(','))
-                if (appliedFilters.tag.length) params.set('tags', appliedFilters.tag.join(','))
-                if (appliedFilters.desc) params.set('description', appliedFilters.desc)
+                  if (appliedFilters.team.length) params.set('users', appliedFilters.team.join(','))
+                  if (appliedFilters.project.length) params.set('projects', appliedFilters.project.join(','))
+                  if (appliedFilters.tag.length) params.set('tags', appliedFilters.tag.join(','))
+                  if (appliedFilters.desc) params.set('description', appliedFilters.desc)
 
-                // Add row-specific specificity
-                if (row.filterType === 'project' && row.filterId && row.filterId !== '__none__') {
-                  params.set('projects', row.filterId)
-                } else if (row.filterType === 'user' && row.filterId) {
-                  params.set('users', row.filterId)
-                } else if (row.filterType === 'tag' && row.filterId && row.filterId !== '__none__') {
-                  params.set('tags', row.filterId)
-                }
+                  if (row.filterType === 'project' && row.filterId && row.filterId !== '__none__') {
+                    params.set('projects', row.filterId)
+                  } else if (row.filterType === 'user' && row.filterId) {
+                    params.set('users', row.filterId)
+                  } else if (row.filterType === 'tag' && row.filterId && row.filterId !== '__none__') {
+                    params.set('tags', row.filterId)
+                  }
 
-                router.push(`/dashboard/reports/detailed?${params.toString()}`)
-              }} />
+                  router.push(`/dashboard/reports/detailed?${params.toString()}`)
+                }} />
+              )}
             </div>
             <div className="flex-1 flex items-center justify-center py-10 overflow-hidden">
-              <SummaryDonut data={donutData} totalLabel={fmtSecs(totalSecs)} />
+              {loading ? (
+                <Skeleton className="h-[200px] w-[200px] rounded-full" />
+              ) : (
+                <SummaryDonut data={donutData} totalLabel={fmtSecs(totalSecs)} />
+              )}
             </div>
           </div>
 

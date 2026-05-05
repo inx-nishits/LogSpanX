@@ -162,12 +162,22 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
           ))}
         </div>
         <div className="flex items-center gap-0">
-          <button onClick={() => onRangeChange({ from: addDays(dateRange.from, -7), to: addDays(dateRange.to, -7) })} className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-r-0 rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer">
-            <ChevronLeft className="h-3.5 w-3.5" />
+          <button 
+            onClick={() => onRangeChange({ from: addDays(dateRange.from, -7), to: addDays(dateRange.to, -7) })} 
+            className="w-[36px] h-[36px] flex items-center justify-center border border-[#d0d8de] rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
           </button>
-          <DateRangePicker initialRange={dateRange} onRangeChange={onRangeChange} />
-          <button onClick={() => onRangeChange({ from: addDays(dateRange.from, 7), to: addDays(dateRange.to, 7) })} className="w-[28px] h-[28px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer">
-            <ChevronRight className="h-3.5 w-3.5" />
+          <DateRangePicker 
+            initialRange={dateRange} 
+            onRangeChange={onRangeChange} 
+            className="border-l-0 rounded-none min-w-[200px]" 
+          />
+          <button 
+            onClick={() => onRangeChange({ from: addDays(dateRange.from, 7), to: addDays(dateRange.to, 7) })} 
+            className="w-[36px] h-[36px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>

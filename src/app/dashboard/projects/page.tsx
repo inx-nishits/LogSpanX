@@ -213,25 +213,15 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function ProjectsPage() {
-  const { projects: storeProjects, users, clients, timeEntries, addProject, updateProject, updateProjects, deleteProject } = useDataStore()
+  const { projects: storeProjects, users, clients, timeEntries, addProject, updateProject, updateProjects, deleteProject, toggleProjectArchive } = useDataStore()
   const { user } = useAuthStore()
   const isReadOnly = user?.role === 'member'
 
   const [showNewModal, setShowNewModal] = useState(false)
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('[data-menu]')) setOpenMenuId(null)
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
-
-  const handleArchiveSingle = async (id: string, currentArchived: boolean) => {
+  const handleArchiveSingle = async (id: string) => {
     try {
-      await updateProject(id, { archived: !currentArchived })
+      await toggleProjectArchive(id)
     } catch (err) { console.error(err) }
   }
 
@@ -245,9 +235,16 @@ export default function ProjectsPage() {
     { name: 'Sales', status: 'active' }
   ]
 
-  const [statusFilter, setStatusFilter] = useState('Active')
+  const [sortKey, setSortKey] = useState<string>('NAME')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [isLeadStatusFilterOpen, setIsLeadStatusFilterOpen] = useState(false)
+  const [isAccessStatusFilterOpen, setIsAccessStatusFilterOpen] = useState(false)
+  const [leadStatusFilter, setLeadStatusFilter] = useState('Active')
+  const [accessStatusFilter, setAccessStatusFilter] = useState('Active')
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([])
+  const [favorites, setFavorites] = useState<string[]>([])
 
-  // Advanced Filter States
+  const [statusFilter, setStatusFilter] = useState('All')
   const [leadSearchQuery, setLeadSearchQuery] = useState('')
   const [selectedLeadNames, setSelectedLeadNames] = useState<string[]>([])
   const [includeWithoutLead, setIncludeWithoutLead] = useState(false)
@@ -256,8 +253,18 @@ export default function ProjectsPage() {
   const [selectedAccessUsers, setSelectedAccessUsers] = useState<string[]>([])
   const [selectedBillingStatuses, setSelectedBillingStatuses] = useState<string[]>([])
   const [nameSearchQuery, setNameSearchQuery] = useState('')
-  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([])
-  const [favorites, setFavorites] = useState<string[]>([])
+
+  const SortIndicator = ({ active, order }: { active: boolean; order: 'asc' | 'desc' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
+      <path d="m7 9 5-5 5 5" className={`transition-all duration-300 ${active && order === 'asc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} />
+      <path d="m7 15 5 5 5-5" className={`transition-all duration-300 ${active && order === 'desc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} />
+    </svg>
+  )
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortOrder('asc') }
+  }
 
   // Compute functional project list
   const fullProjects = useMemo(() => {
@@ -274,32 +281,56 @@ export default function ProjectsPage() {
     })
   }, [storeProjects, users, timeEntries])
 
-  const [displayProjects, setDisplayProjects] = useState(fullProjects)
-  useEffect(() => setDisplayProjects(fullProjects), [fullProjects])
-
-  const handleApplyFilter = () => {
-    const filtered = fullProjects.filter(p => {
+  // Filter Logic
+  const filteredProjects = useMemo(() => {
+    return fullProjects.filter(p => {
+      // Status Filter
       const matchesStatus = statusFilter === 'All' ||
         (statusFilter === 'Active' && !p.archived) ||
         (statusFilter === 'Archived' && p.archived)
 
+      if (!matchesStatus) return false
+
+      // Lead Filter
       const matchesLead = selectedLeadNames.length === 0 ||
         selectedLeadNames.includes(p.lead) ||
         (includeWithoutLead && (p.lead === '-' || !p.lead))
+      if (!matchesLead) return false
 
-      // Use real billable field
+      // Billing Filter
       let matchesBilling = true
       if (selectedBillingStatuses.length > 0) {
         matchesBilling =
           (selectedBillingStatuses.includes('Billable') && p.billable) ||
           (selectedBillingStatuses.includes('Non billable') && !p.billable)
       }
+      if (!matchesBilling) return false
 
+      // Name Search
       const matchesName = !nameSearchQuery || p.name.toLowerCase().includes(nameSearchQuery.toLowerCase())
+      if (!matchesName) return false
 
-      return matchesStatus && matchesLead && matchesBilling && matchesName
+      return true
     })
-    setDisplayProjects(filtered)
+  }, [fullProjects, statusFilter, selectedLeadNames, includeWithoutLead, selectedBillingStatuses, nameSearchQuery])
+
+  // Sort projects
+  const sortedProjects = useMemo(() => {
+    return [...filteredProjects].sort((a, b) => {
+      if (sortKey === 'NAME') return sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+      if (sortKey === 'PROJECT LEAD') return sortOrder === 'asc' ? a.lead.localeCompare(b.lead) : b.lead.localeCompare(a.lead)
+      if (sortKey === 'TRACKED') {
+        const parseH = (s: string) => parseFloat(s.replace(/[^0-9.]/g, '')) || 0
+        return sortOrder === 'asc' ? parseH(a.tracked) - parseH(b.tracked) : parseH(b.tracked) - parseH(a.tracked)
+      }
+      if (sortKey === 'ACCESS') return sortOrder === 'asc' ? a.access.localeCompare(b.access) : b.access.localeCompare(a.access)
+      return 0
+    })
+  }, [filteredProjects, sortKey, sortOrder])
+
+  const handleApplyFilter = () => {
+    // This button can now just be a placeholder or we can use it to "commit" search query if we wanted to debounced it.
+    // But since we are using useMemo, it's already reactive.
   }
 
   const handleClearFilters = () => {
@@ -310,7 +341,6 @@ export default function ProjectsPage() {
     setSelectedAccessUsers([])
     setSelectedBillingStatuses([])
     setNameSearchQuery('')
-    setDisplayProjects(fullProjects)
   }
 
   const hasActiveFilters = statusFilter !== 'Active' ||
@@ -325,35 +355,6 @@ export default function ProjectsPage() {
     setFavorites(prev => prev.includes(projectName) ? prev.filter(n => n !== projectName) : [...prev, projectName])
   }
 
-  const [sortKey, setSortKey] = useState<string>('NAME')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-  const [isLeadStatusFilterOpen, setIsLeadStatusFilterOpen] = useState(false)
-  const [isAccessStatusFilterOpen, setIsAccessStatusFilterOpen] = useState(false)
-  const [leadStatusFilter, setLeadStatusFilter] = useState('Active')
-  const [accessStatusFilter, setAccessStatusFilter] = useState('Active')
-
-  const SortIndicator = ({ active, order }: { active: boolean; order: 'asc' | 'desc' }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
-      <path d="m7 9 5-5 5 5" className={`transition-all duration-300 ${active && order === 'asc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} />
-      <path d="m7 15 5 5 5-5" className={`transition-all duration-300 ${active && order === 'desc' ? 'text-[#333] opacity-100' : 'text-[#999] opacity-30'}`} />
-    </svg>
-  )
-
-  const handleSort = (key: string) => {
-    if (sortKey === key) setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
-    else { setSortKey(key); setSortOrder('asc') }
-  }
-
-  const sortedProjects = [...displayProjects].sort((a, b) => {
-    if (sortKey === 'NAME') return sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
-    if (sortKey === 'PROJECT LEAD') return sortOrder === 'asc' ? a.lead.localeCompare(b.lead) : b.lead.localeCompare(a.lead)
-    if (sortKey === 'TRACKED') {
-      const parseH = (s: string) => parseFloat(s.replace(/[^0-9.]/g, '')) || 0
-      return sortOrder === 'asc' ? parseH(a.tracked) - parseH(b.tracked) : parseH(b.tracked) - parseH(a.tracked)
-    }
-    if (sortKey === 'ACCESS') return sortOrder === 'asc' ? a.access.localeCompare(b.access) : b.access.localeCompare(a.access)
-    return 0
-  })
 
   // Filter Logic Helpers
   const filteredLeads = leadItems.filter(lead => {
@@ -680,7 +681,7 @@ export default function ProjectsPage() {
                       </tr>
                     )}
                     {sortedProjects.map((project) => (
-                      <tr key={project.id} className={`hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7] h-[56px] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''}`}>
+                      <tr key={project.id} className={`hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7] h-[56px] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''} ${project.archived ? 'bg-gray-50/50' : ''}`}>
                         {/* Name */}
                         <td className="pl-4 pr-3 py-4 whitespace-nowrap overflow-hidden">
                           <div className="flex items-center gap-4">
@@ -692,8 +693,8 @@ export default function ProjectsPage() {
                                 {selectedProjectIds.includes(project.id) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                               </div>
                             )}
-                            <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: project.color }} />
-                            <Link href={`/dashboard/projects/${project.id}`} className={`text-[14px] font-normal truncate hover:underline cursor-pointer ${project.archived ? 'line-through text-[#aaa]' : 'text-[#333]'}`}>
+                            <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: project.color, opacity: project.archived ? 0.5 : 1 }} />
+                            <Link href={`/dashboard/projects/${project.id}`} className={`text-[14px] font-normal truncate hover:underline cursor-pointer ${project.archived ? 'line-through text-[#999]' : 'text-[#333]'}`}>
                               {project.name}
                             </Link>
                           </div>
@@ -720,24 +721,23 @@ export default function ProjectsPage() {
                                 className={`h-[18px] w-[18px] cursor-pointer transition-all ${favorites.includes(project.name) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#d6e5ef] hover:text-[#f5a623]'}`}
                               />
                               {!isReadOnly && (
-                                <div className="relative" data-menu onClick={e => e.stopPropagation()}>
-                                  <button
-                                    onClick={() => setOpenMenuId(openMenuId === project.id ? null : project.id)}
-                                    className="text-[#ccc] hover:text-[#666] transition-colors p-0.5"
-                                  >
-                                    <MoreVertical className="h-[16px] w-[16px]" />
-                                  </button>
-                                  {openMenuId === project.id && (
-                                    <div className="absolute right-0 top-full mt-0.5 bg-white border border-[#ddd] shadow-lg z-[100] min-w-[140px] rounded-sm py-0.5">
-                                      <button
-                                        onClick={() => { handleArchiveSingle(project.id, project.archived); setOpenMenuId(null) }}
-                                        className="w-full text-left px-4 py-2 text-[13px] text-[#555] hover:bg-[#f0f4f8] transition-colors"
-                                      >
-                                        {project.archived ? 'Unarchive' : 'Archive'}
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
+                                <DropdownMenu modal={false}>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      className="text-[#ccc] hover:text-[#666] transition-colors p-0.5 outline-none"
+                                    >
+                                      <MoreVertical className="h-[16px] w-[16px]" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="bg-white border border-[#ddd] shadow-lg min-w-[140px] rounded-sm py-1">
+                                    <DropdownMenuItem
+                                      onClick={() => handleArchiveSingle(project.id)}
+                                      className="px-4 py-2 text-[13px] text-[#555] cursor-pointer hover:bg-[#f0f4f8] outline-none"
+                                    >
+                                      {project.archived ? 'Unarchive' : 'Archive'}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               )}
                             </div>
                           </div>

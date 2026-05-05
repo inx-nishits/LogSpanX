@@ -88,6 +88,7 @@ interface DataStore {
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>
   updateProjects: (ids: string[], updates: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
+  toggleProjectArchive: (id: string) => Promise<void>
   assignMember: (projectId: string, userId: string, role?: string, hourlyRate?: number) => Promise<void>
   unassignMember: (projectId: string, userId: string) => Promise<void>
 
@@ -400,20 +401,35 @@ export const useDataStore = create<DataStore>((set, get) => ({
     }))
   },
 
+  toggleProjectArchive: async (id) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<{ success: boolean; data: ApiProject }>(`/projects/${id}/archive`, {
+      method: 'PATCH',
+      token,
+    })
+
+    if (payload.data) {
+      const updatedProject = mapApiProject(payload.data)
+      set((state) => ({
+        projects: state.projects.map((project) => (project.id === id ? updatedProject : project)),
+      }))
+    }
+  },
+
   updateProject: async (id, updates) => {
     const token = useAuthStore.getState().token
     const existing = get().projects.find(p => p.id === id)
     const payload = await apiRequest<ApiProject>(`/projects/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       token,
       body: JSON.stringify({
-        name: updates.name ?? existing?.name,
-        color: updates.color ?? existing?.color,
-        clientName: updates.clientName ?? existing?.clientName,
-        leadId: updates.leadId ?? existing?.leadId,
-        billable: updates.billable ?? existing?.billable,
-        archived: updates.archived ?? existing?.archived,
-        members: (updates.members ?? existing?.members)?.map((m) => (typeof m === 'string' ? m : m.userId)),
+        name: updates.name,
+        color: updates.color,
+        clientName: updates.clientName,
+        leadId: updates.leadId,
+        billable: updates.billable,
+        archived: updates.archived,
+        members: updates.members?.map((m) => (typeof m === 'string' ? m : m.userId)),
       }),
     })
 
