@@ -56,7 +56,7 @@ export default function SignupPage() {
 
       <div className="w-full max-w-[400px] bg-white rounded-sm shadow-[0_4px_16px_rgba(11,12,14,0.08)] px-10 py-10">
         <div className="flex justify-center mb-8">
-          <img src="/Trackify.svg" alt="Trackify" className="h-10 object-contain" />
+          <img src="/Trackify.svg" alt="Trackify" className="h-10 w-auto object-contain" />
         </div>
 
         <h1 className="text-[20px] font-normal text-gray-800 text-center mb-1">

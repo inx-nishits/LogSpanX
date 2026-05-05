@@ -204,7 +204,7 @@ export function Sidebar() {
           </button>
           {!col && (
             <span className="text-[22px] font-black text-[#333] tracking-tight leading-none ml-2">
-              <Image src="/Trackify.svg" alt="Trackify" width={110} height={28} className="object-contain" />
+              <Image src="/Trackify.svg" alt="Trackify" width={110} height={28} className="object-contain w-auto" />
             </span>
           )}
           <button onClick={toggleMobile} className="md:hidden ml-auto text-[#999] hover:text-[#555]">

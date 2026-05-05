@@ -13,6 +13,9 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: "Trackify - Time Tracking",
   description: "Track your time seamlessly with Trackify",
+  icons: {
+    icon: '/Trackify.svg',
+  },
 };
 
 export default function RootLayout({
