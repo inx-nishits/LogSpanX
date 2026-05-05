@@ -222,7 +222,7 @@ export const useAuthStore = create<AuthState>()(
   },
     }),
     {
-  name: 'logspanx-auth',
+  name: 'trackify-auth',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         token: state.token,

@@ -17,7 +17,7 @@ export class ApiError extends Error {
   }
 }
 
-export const COOKIE_SESSION_TOKEN = '__logspanx_cookie_session__'
+export const COOKIE_SESSION_TOKEN = '__trackify_cookie_session__'
 
 function getConfiguredApiBaseUrl() {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()
