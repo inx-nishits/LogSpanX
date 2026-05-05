@@ -14,7 +14,6 @@ export const getDashboardRoute = (_role: User['role']): string => {
 const restrictedRoutes: Array<{ prefix: string; allowedRoles: User['role'][] }> = [
   { prefix: '/dashboard/pm', allowedRoles: ['owner'] },
   { prefix: '/dashboard/tl', allowedRoles: ['owner', 'admin'] },
-  { prefix: '/dashboard/projects', allowedRoles: ['owner'] },
   { prefix: '/dashboard/tags', allowedRoles: ['owner'] },
   { prefix: '/dashboard/project-lead', allowedRoles: ['owner'] },
 ]

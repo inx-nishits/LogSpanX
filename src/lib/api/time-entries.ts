@@ -55,11 +55,11 @@ export function createTimeEntry(payload: CreateTimeEntryPayload) {
 }
 
 // ─── 5.3 Edit Entry / Stop Timer ─────────────────────────────────────────────
-// PUT /time-entries/:id
+// PATCH /time-entries/:id
 export function updateTimeEntry(id: string, payload: UpdateTimeEntryPayload) {
   const token = useAuthStore.getState().token
   return apiRequest<{ id: string; description?: string; endTime?: string }>(`/time-entries/${id}`, {
-    method: 'PUT',
+    method: 'PATCH',
     token,
     body: JSON.stringify(payload),
   })

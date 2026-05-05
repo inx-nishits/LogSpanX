@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { startOfWeek, endOfWeek, isWithinInterval, format, eachDayOfInterval, isSameDay, endOfDay, startOfDay } from 'date-fns'
+import { startOfWeek, endOfWeek, format, eachDayOfInterval, endOfDay, startOfDay } from 'date-fns'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { useDataStore } from '@/lib/stores/data-store'
 import { DashboardHeader } from './dashboard-header'
@@ -10,8 +10,6 @@ import { WeeklyBarChart } from './weekly-bar-chart'
 import { ProjectDonutChart } from './project-donut-chart'
 import { TeamActivities } from './team-activities'
 import { ActivityList } from './activity-list'
-import { getTimeEntries, type TimeEntryParams } from '@/lib/api/time-entries'
-import { mapApiTimeEntry } from '@/lib/api/mappers'
 import { Skeleton } from '@/components/ui/skeleton'
 import { type TimeEntry } from '@/lib/types'
 import { type DashboardStats } from '@/lib/stores/data-store'
@@ -48,43 +46,20 @@ export function DashboardView() {
 
     const [sourceEntries, setSourceEntries] = useState<TimeEntry[]>([])
 
+    // Derive sourceEntries from store's timeEntries (always in sync) filtered by date range
     useEffect(() => {
-        let active = true
         if (!user) return
-
-        const params: TimeEntryParams = {
-            startDate: startOfDay(dateRange.from).toISOString(),
-            endDate: endOfDay(dateRange.to).toISOString(),
-        }
-
-        if (filters.teamScope === 'only-me') {
-            params.userId = user.id
-        }
-
-        setLoading(true)
-        getTimeEntries(params)
-            .then((res: unknown) => {
-                if (!active) return
-                // Robust extraction of entries from various possible API response shapes
-                let entries: any[] = []
-                if (Array.isArray(res)) {
-                    entries = res
-                } else if (res && typeof res === 'object') {
-                    const r = res as Record<string, any>
-                    entries = r.items || r.entries || []
-                    if (!Array.isArray(entries)) {
-                        entries = Object.values(r).find(v => Array.isArray(v)) || []
-                    }
-                }
-                
-                const mappedEntries = entries.map(mapApiTimeEntry)
-                setSourceEntries(mappedEntries)
-            })
-            .catch(console.error)
-            .finally(() => { if (active) setLoading(false) })
-
-        return () => { active = false }
-    }, [user, dateRange, filters.teamScope])
+        const from = startOfDay(dateRange.from)
+        const to = endOfDay(dateRange.to)
+        const filtered = timeEntries.filter(e => {
+            const t = new Date(e.startTime)
+            if (t < from || t > to) return false
+            if (filters.teamScope === 'only-me' && e.userId !== user.id) return false
+            return true
+        })
+        setSourceEntries(filtered)
+        setLoading(false)
+    }, [timeEntries, dateRange, filters.teamScope, user])
 
     // Build lead name map from store instead of hardcoding
     const leadNames = useMemo(() =>

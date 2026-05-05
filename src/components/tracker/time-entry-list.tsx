@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { cn } from '@/lib/utils'
@@ -76,6 +76,11 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(fmtDur(dur))
 
+  // Sync display when dur changes from store update
+  useEffect(() => {
+    if (!editing) setVal(fmtDur(dur))
+  }, [dur, editing])
+
   const commit = (v: string) => {
     setEditing(false)
     const secs = parseDuration(v)
@@ -102,24 +107,39 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
 }
 
 export function TimeEntryList({ userId }: { userId: string }) {
-  const { timeEntries, projects, users, updateTimeEntry, deleteTimeEntry, deleteTimeEntries, addTimeEntry } = useDataStore()
+  const { timeEntries, projects, users, tasks, updateTimeEntry, deleteTimeEntry, deleteTimeEntries, addTimeEntry } = useDataStore()
   const { user } = useAuthStore()
+
+  // RBAC: can this user edit a given entry?
+  const canEditEntry = (entry: typeof timeEntries[0]) => {
+    if (!user) return false
+    if (user.role === 'owner') return true // project manager — can edit anyone
+    if (user.role === 'admin') {
+      // team lead — can edit entries of members in their projects
+      const entryProject = projects.find(p => p.id === entry.projectId)
+      if (!entryProject) return entry.userId === user.id
+      return entryProject.leadId === user.id || entry.userId === user.id
+    }
+    // member — own entries only
+    return entry.userId === user.id
+  }
   const [bulkMode, setBulkMode] = useState(false)
   const [selIds, setSelIds] = useState<string[]>([])
   const [delId, setDelId] = useState<string | null>(null)
   const [bulkDel, setBulkDel] = useState(false)
   const [bulkEdit, setBulkEdit] = useState(false)
 
-  const entries = useMemo(() =>
-    timeEntries.filter(e => e.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [timeEntries, userId]
-  )
+  const entries = useMemo(() => {
+    const seen = new Set<string>()
+    return timeEntries
+      .filter(e => { if (e.userId !== userId || seen.has(e.id)) return false; seen.add(e.id); return true })
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+  }, [timeEntries, userId])
 
   const weekGroups = useMemo(() => {
     const w: Record<string, Record<string, typeof entries>> = {}
     entries.forEach(e => {
-      const d = new Date(e.createdAt)
+      const d = new Date(e.startTime)
       const wk = startOfWeek(d, { weekStartsOn: 1 }).toISOString()
       const dk = startOfDay(d).toISOString()
       if (!w[wk]) w[wk] = {}
@@ -205,8 +225,10 @@ export function TimeEntryList({ userId }: { userId: string }) {
                     {dayEntries.map(entry => {
                       const proj = projects.find(p => p.id === entry.projectId)
                       const lead = users.find(u => u.id === proj?.leadId)
+                      const task = tasks.find(t => t.id === entry.taskId)
                       const isSel = selIds.includes(entry.id)
                       const liveDur = timeEntries.find(e => e.id === entry.id)?.duration ?? entry.duration ?? 0
+                      const canEdit = canEditEntry(entry)
 
                       return (
                         <div key={entry.id}
@@ -225,51 +247,66 @@ export function TimeEntryList({ userId }: { userId: string }) {
 
                           <div className="flex flex-1 items-center min-w-0 overflow-hidden pl-8 pr-3 gap-3">
                             <input type="text" defaultValue={entry.description}
-                              onBlur={e => updateTimeEntry(entry.id, { description: e.target.value })}
+                              onBlur={e => canEdit && updateTimeEntry(entry.id, { description: e.target.value })}
+                              readOnly={!canEdit}
                               placeholder="Add description"
-                              style={{ fontSize: 15, color: '#222', background: 'transparent', border: 'none', outline: 'none', flexShrink: 0, width: 220, minWidth: 0 }}
+                              style={{ fontSize: 15, color: '#222', background: 'transparent', border: 'none', outline: 'none', flexShrink: 0, width: 220, minWidth: 0, cursor: canEdit ? 'text' : 'default' }}
                               className="placeholder-[#bbb] truncate"
                             />
                             <div className="flex items-center gap-2 min-w-0 overflow-hidden flex-shrink-0">
-                              <ProjectPicker
-                                selectedProjectId={entry.projectId}
-                                onSelect={pid => updateTimeEntry(entry.id, { projectId: pid })}
-                                onClear={() => updateTimeEntry(entry.id, { projectId: undefined })}
-                                customTrigger={
-                                  proj ? (
-                                    <div
-                                      className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-75 transition-opacity"
-                                      onClick={e => e.stopPropagation()}
-                                    >
-                                      <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: proj.color, flexShrink: 0 }} />
-                                      <span style={{ fontSize: 15, color: '#03a9f4' }} className="truncate">{proj.name}</span>
-                                      {lead && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {lead.name}</span>}
-                                    </div>
-                                  ) : undefined
-                                }
-                              />
+                              {canEdit ? (
+                                <ProjectPicker
+                                  selectedProjectId={entry.projectId}
+                                  selectedTaskId={entry.taskId}
+                                  onSelect={(pid, tid) => updateTimeEntry(entry.id, { projectId: pid, taskId: tid || undefined })}
+                                  onClear={() => updateTimeEntry(entry.id, { projectId: undefined, taskId: undefined })}
+                                  customTrigger={
+                                    proj ? (
+                                      <div className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-75 transition-opacity" onClick={e => e.stopPropagation()}>
+                                        <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: proj.color, flexShrink: 0 }} />
+                                        <span style={{ fontSize: 15, color: '#03a9f4' }} className="truncate">{proj.name}</span>
+                                        {task && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {task.name}</span>}
+                                        {lead && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {lead.name}</span>}
+                                      </div>
+                                    ) : undefined
+                                  }
+                                />
+                              ) : proj ? (
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: proj.color, flexShrink: 0 }} />
+                                  <span style={{ fontSize: 15, color: '#03a9f4' }} className="truncate">{proj.name}</span>
+                                  {task && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {task.name}</span>}
+                                  {lead && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {lead.name}</span>}
+                                </div>
+                              ) : null}
                             </div>
                             <div className="flex-shrink-0 ml-auto">
                               <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []}
-                                onChange={tagIds => updateTimeEntry(entry.id, { tagIds })} />
+                                onChange={tagIds => canEdit && updateTimeEntry(entry.id, { tagIds })} />
                             </div>
                           </div>
 
                           <D>
                             <Tip label={entry.billable ? 'Billable' : 'Non-billable'}>
-                              <button onClick={() => updateTimeEntry(entry.id, { billable: !entry.billable })}
-                                className={cn('cursor-pointer transition-colors', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc] hover:text-[#999]')}>
+                              <button onClick={() => canEdit && updateTimeEntry(entry.id, { billable: !entry.billable })}
+                                className={cn('transition-colors', canEdit ? 'cursor-pointer' : 'cursor-default', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc] hover:text-[#999]')}>
                                 <DollarSign style={{ width: 20, height: 20 }} strokeWidth={1.5} />
                               </button>
                             </Tip>
                           </D>
 
                           <D>
-                            <DurCell dur={liveDur} onSave={s => {
-                              const endTime = new Date()
-                              const startTime = new Date(endTime.getTime() - s * 1000)
-                              updateTimeEntry(entry.id, { startTime, endTime })
-                            }} />
+                            {canEdit ? (
+                              <DurCell dur={liveDur} onSave={s => {
+                                const start = new Date(entry.startTime)
+                                const endTime = new Date(start.getTime() + s * 1000)
+                                updateTimeEntry(entry.id, { startTime: start, endTime, duration: s })
+                              }} />
+                            ) : (
+                              <span style={{ fontSize: 16, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums', width: 52, display: 'inline-block', textAlign: 'center' }}>
+                                {fmtDur(liveDur)}
+                              </span>
+                            )}
                           </D>
 
                           <div className="flex items-center justify-center px-3 opacity-0 group-hover:opacity-100 transition-opacity">

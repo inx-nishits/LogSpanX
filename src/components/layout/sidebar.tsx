@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -82,7 +83,7 @@ const getMenuItems = (role: User['role']) => {
   ]
 
   const filteredManage = (role === 'admin' || role === 'member')
-    ? manageItems.filter(i => !['Projects', 'Tags', 'Project Lead'].includes(i.label))
+    ? manageItems.filter(i => !['Tags', 'Project Lead'].includes(i.label))
     : manageItems
 
   return { topItems, analyzeItems, manageItems: filteredManage }
@@ -203,7 +204,7 @@ export function Sidebar() {
           </button>
           {!col && (
             <span className="text-[22px] font-black text-[#333] tracking-tight leading-none ml-2">
-              LogSpan<span className="text-[#03a9f4]">X</span>
+              <Image src="/Trackify.svg" alt="Trackify" width={110} height={28} className="object-contain" />
             </span>
           )}
           <button onClick={toggleMobile} className="md:hidden ml-auto text-[#999] hover:text-[#555]">

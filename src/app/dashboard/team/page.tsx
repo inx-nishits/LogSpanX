@@ -66,10 +66,11 @@ function FilterDropdown({ label, options, value, onChange }: {
 
 // ─── Access Dropdown ────────────────────────────────────────────────────────
 
-function AccessDropdown({ group, rawUsers, onToggle }: {
+function AccessDropdown({ group, rawUsers, onToggle, onSelectAll }: {
   group: ApiGroup
   rawUsers: RawUser[]
   onToggle: (userId: string, checked: boolean) => void
+  onSelectAll: (users: RawUser[], selectAll: boolean) => void
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -83,15 +84,6 @@ function AccessDropdown({ group, rawUsers, onToggle }: {
 
   const filtered = rawUsers.filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()))
   const allSelected = filtered.length > 0 && filtered.every(u => group.memberIds.includes(u._id))
-
-  const handleSelectAll = () => {
-    filtered.forEach(u => {
-      const isIn = group.memberIds.includes(u._id)
-      if (allSelected && isIn) onToggle(u._id, false)
-      else if (!allSelected && !isIn) onToggle(u._id, true)
-    })
-  }
-
   const groupMembers = rawUsers.filter(u => group.memberIds.includes(u._id))
 
   return (
@@ -119,7 +111,8 @@ function AccessDropdown({ group, rawUsers, onToggle }: {
           <div className="max-h-[240px] overflow-y-auto py-1">
             {!search && (
               <label className="flex items-center gap-2 px-3 py-2 hover:bg-[#f0f4f8] cursor-pointer border-b border-[#f0f0f0]">
-                <input type="checkbox" checked={allSelected} onChange={handleSelectAll}
+                <input type="checkbox" checked={allSelected}
+                  onChange={() => onSelectAll(filtered, !allSelected)}
                   className="accent-[#03a9f4] w-[14px] h-[14px]" />
                 <span className="text-[13px] text-[#555] font-medium">Select all</span>
               </label>
@@ -288,21 +281,41 @@ export default function TeamPage() {
   const [rawUsers, setRawUsers] = useState<RawUser[]>([])
 
   useEffect(() => {
-    apiRequest<RawUser[] | { data: RawUser[] }>('/users', { method: 'GET', token: useAuthStore.getState().token })
+    apiRequest<unknown>('/users', { method: 'GET', token: useAuthStore.getState().token })
       .then(res => {
-        const arr = Array.isArray(res) ? res : (res as { data: RawUser[] })?.data ?? []
+        const arr: RawUser[] = Array.isArray(res) ? res
+          : Array.isArray((res as any)?.data) ? (res as any).data
+          : Object.values(res as object).find(Array.isArray) ?? []
         setRawUsers(arr)
       })
       .catch(console.error)
   }, [])
+
+  const isProjectLeadGroup = (g: ApiGroup) => g.name.toLowerCase().includes('project lead')
 
   const handleGroupAccessToggle = async (group: ApiGroup, userId: string, checked: boolean) => {
     const newMemberIds = checked
       ? [...group.memberIds, userId]
       : group.memberIds.filter(id => id !== userId)
     try {
-      const res = await updateGroup(group._id, { memberIds: newMemberIds })
-      const updated = res as ApiGroup
+      const calls: Promise<any>[] = [updateGroup(group._id, { memberIds: newMemberIds })]
+      if (checked && isProjectLeadGroup(group)) calls.push(updateUserRole(userId, 'team_lead'))
+      const [res] = await Promise.all(calls)
+      const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
+      const finalIds = updated?.memberIds ?? newMemberIds
+      setGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
+    } catch (err) { console.error(err) }
+  }
+
+  const handleGroupAccessSelectAll = async (group: ApiGroup, allUsers: RawUser[], selectAll: boolean) => {
+    const newMemberIds = selectAll ? allUsers.map(u => u._id) : []
+    try {
+      const calls: Promise<any>[] = [updateGroup(group._id, { memberIds: newMemberIds })]
+      if (selectAll && isProjectLeadGroup(group)) {
+        allUsers.forEach(u => calls.push(updateUserRole(u._id, 'team_lead')))
+      }
+      const [res] = await Promise.all(calls)
+      const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
       const finalIds = updated?.memberIds ?? newMemberIds
       setGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
     } catch (err) { console.error(err) }
@@ -668,6 +681,7 @@ export default function TeamPage() {
                             group={group}
                             rawUsers={rawUsers}
                             onToggle={(userId, checked) => handleGroupAccessToggle(group, userId, checked)}
+                            onSelectAll={(users, selectAll) => handleGroupAccessSelectAll(group, users, selectAll)}
                           />
                         </td>
                         <td className="px-5 py-2 text-right">

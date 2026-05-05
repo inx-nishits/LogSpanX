@@ -31,7 +31,7 @@ export default function ProfilePage() {
                 Authorized User
               </span>
               <span className="text-[10px] md:text-xs text-gray-400 font-medium">
-                LogSpanX Pro Member
+                Trackify Pro Member
               </span>
             </div>
           </div>
