@@ -21,6 +21,15 @@ export function updateUser(id: string, updates: Partial<ApiUser>) {
   })
 }
 
+export function toggleUserActive(id: string, isActive: boolean) {
+  const token = useAuthStore.getState().token
+  return apiRequest<ApiUser>(`/users/${id}/status`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ isActive }),
+  })
+}
+
 export function deleteUser(id: string) {
   const token = useAuthStore.getState().token
   return apiRequest(`/users/${id}`, { method: 'DELETE', token })

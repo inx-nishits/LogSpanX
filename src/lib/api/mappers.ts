@@ -9,6 +9,7 @@ export interface ApiUser {
   name: string
   avatar?: string | null
   role: string
+  isActive?: boolean
   archived?: boolean
   billableRate?: number | null
   group?: string | null
@@ -130,6 +131,7 @@ export function mapApiUser(user: ApiUser): User {
     name: user.name,
     avatar: user.avatar ?? undefined,
     role: normalizeApiRole(user.role),
+    isActive: user.isActive ?? true,
     archived: user.archived ?? false,
     billableRate: user.billableRate ?? undefined,
     group: user.group ?? undefined,

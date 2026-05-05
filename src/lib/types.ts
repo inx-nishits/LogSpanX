@@ -4,6 +4,7 @@ export interface User {
   name: string
   avatar?: string
   role: 'owner' | 'admin' | 'member'
+  isActive?: boolean
   archived?: boolean
   billableRate?: number
   group?: string

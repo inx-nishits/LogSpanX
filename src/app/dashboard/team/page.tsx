@@ -10,10 +10,124 @@ import {
   getGroups, createGroup, updateGroup, deleteGroup,
   ApiGroup, updateUserRole,
 } from '@/lib/api/teams'
+import { toggleUserActive } from '@/lib/api/users'
 import { User } from '@/lib/types'
 import { canInviteMembers, canDeleteUser, canChangeUserRole } from '@/lib/rbac'
+import { mapApiUser } from '@/lib/api/mappers'
 
-interface RawUser { _id: string; id?: string; name: string; email: string; archived?: boolean }
+interface RawUser { _id: string; id?: string; name: string; email: string; archived?: boolean; isActive?: boolean }
+
+// ─── Member Actions Dropdown ──────────────────────────────────────────────────
+
+function MemberActionsDropdown({ member, onEdit, onToggleActive }: {
+  member: User
+  onEdit: (member: User) => void
+  onToggleActive: (member: User) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node) && e.target !== btnRef.current) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + 4, left: rect.right - 150 })
+    }
+    setOpen(o => !o)
+  }
+
+  return (
+    <div ref={ref}>
+      <button ref={btnRef} onClick={handleOpen} className="p-1 text-[#ccc] hover:text-[#555] cursor-pointer transition-colors">
+        <MoreVertical className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="fixed bg-white border border-[#ddd] shadow-lg z-[9999] w-[150px] py-0.5 rounded-sm"
+          style={{ top: pos.top, left: pos.left }}
+        >
+          <button
+            onClick={() => { onEdit(member); setOpen(false) }}
+            className="w-full text-left px-4 py-2.5 text-[14px] text-[#333] hover:bg-[#f0f4f8] cursor-pointer"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => { onToggleActive(member); setOpen(false) }}
+            className={cn('w-full text-left px-4 py-2.5 text-[14px] cursor-pointer',
+              member.isActive !== false ? 'text-[#f44336] hover:bg-[#fff5f5]' : 'text-[#4caf50] hover:bg-[#f5fff5]'
+            )}
+          >
+            {member.isActive !== false ? 'Deactivate' : 'Activate'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Edit Member Modal ────────────────────────────────────────────────────────
+
+function EditMemberModal({ member, onClose, onSave }: {
+  member: User
+  onClose: () => void
+  onSave: (id: string, updates: { name: string; email: string; billableRate: number }) => Promise<void>
+}) {
+  const [name, setName] = useState(member.name)
+  const [email, setEmail] = useState(member.email)
+  const [billableRate, setBillableRate] = useState(member.billableRate ?? 0)
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await onSave(member.id, { name, email, billableRate })
+      onClose()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000] p-4">
+      <div className="bg-white rounded-sm shadow-2xl w-full max-w-[480px]">
+        <div className="px-6 py-4 flex items-center justify-between border-b border-[#e4eaee]">
+          <h2 className="text-[18px] font-normal text-[#333]">Edit Member</h2>
+          <button onClick={onClose} className="text-[#999] hover:text-[#666] cursor-pointer"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="p-6 flex flex-col gap-4">
+          <div>
+            <label className="text-[13px] font-bold text-[#555] uppercase tracking-wider block mb-1">Name</label>
+            <input value={name} onChange={e => setName(e.target.value)}
+              className="w-full border border-[#c6d2d9] rounded-sm px-3 h-[36px] text-[14px] outline-none focus:border-[#03a9f4]" />
+          </div>
+          <div>
+            <label className="text-[13px] font-bold text-[#555] uppercase tracking-wider block mb-1">Email</label>
+            <input value={email} onChange={e => setEmail(e.target.value)}
+              className="w-full border border-[#c6d2d9] rounded-sm px-3 h-[36px] text-[14px] outline-none focus:border-[#03a9f4]" />
+          </div>
+          <div>
+            <label className="text-[13px] font-bold text-[#555] uppercase tracking-wider block mb-1">Billable Rate (USD)</label>
+            <input type="number" value={billableRate} onChange={e => setBillableRate(Number(e.target.value))}
+              className="w-full border border-[#c6d2d9] rounded-sm px-3 h-[36px] text-[14px] outline-none focus:border-[#03a9f4]" />
+          </div>
+        </div>
+        <div className="px-6 py-4 flex items-center justify-end gap-3 border-t border-[#e4eaee]">
+          <button onClick={onClose} className="text-[#03a9f4] text-[14px] hover:underline cursor-pointer">Cancel</button>
+          <button onClick={handleSave} disabled={saving}
+            className="bg-[#03a9f4] text-white px-8 py-2 text-[14px] font-bold rounded-sm hover:bg-[#0288d1] uppercase tracking-wider disabled:opacity-60 cursor-pointer">
+            {saving ? 'Saving...' : 'SAVE'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -255,16 +369,11 @@ export default function TeamPage() {
 
   // ── Members tab state ──
   const [memberSearch, setMemberSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('Active')
+  const [statusFilter, setStatusFilter] = useState('All')
   const [billableFilter, setBillableFilter] = useState('Billable rate')
   const [roleFilter, setRoleFilter] = useState('Role')
   const [groupFilter, setGroupFilter] = useState('Group')
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [appliedStatus, setAppliedStatus] = useState('Active')
-  const [appliedRole, setAppliedRole] = useState('Role')
-  const [appliedGroup, setAppliedGroup] = useState('Group')
   const [isInviteOpen, setIsInviteOpen] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
 
   const handleRoleChange = async (memberId: string, newBackendRole: string) => {
     try {
@@ -322,6 +431,23 @@ export default function TeamPage() {
   }
 
   const [roleOverrides, setRoleOverrides] = useState<Record<string, string>>({})
+  const [activeOverrides, setActiveOverrides] = useState<Record<string, boolean>>({})
+  const [editingMember, setEditingMember] = useState<User | null>(null)
+
+  const handleToggleActive = async (member: User) => {
+    const currentlyActive = member.id in activeOverrides ? activeOverrides[member.id] : (member.isActive !== false && !member.archived)
+    const newActive = !currentlyActive
+    try {
+      const res = await toggleUserActive(member.id, newActive)
+      const updated = mapApiUser(res)
+      setActiveOverrides(prev => ({ ...prev, [member.id]: updated.isActive ?? newActive }))
+    } catch (err) { console.error(err) }
+  }
+
+  const handleEditSave = async (id: string, updates: { name: string; email: string; billableRate: number }) => {
+    const { updateUserRecord } = useDataStore.getState()
+    await updateUserRecord(id, updates)
+  }
 
   useEffect(() => {
     getGroups()
@@ -365,13 +491,14 @@ export default function TeamPage() {
 
   // ── Members filtering ──
   const filteredUsers = users.filter(u => {
-    if (appliedSearch && !u.name.toLowerCase().includes(appliedSearch.toLowerCase()) &&
-      !u.email.toLowerCase().includes(appliedSearch.toLowerCase())) return false
-    if (appliedStatus === 'Active' && u.archived) return false
-    if (appliedStatus === 'Inactive' && !u.archived) return false
-    if (appliedRole !== 'Role' && roleLabel(u.role).toLowerCase() !== appliedRole.toLowerCase()) return false
-    if (appliedGroup !== 'Group') {
-      const grp = storeGroups.find(g => g.name === appliedGroup)
+    const isActive = u.id in activeOverrides ? activeOverrides[u.id] : (u.isActive !== false && !u.archived)
+    if (memberSearch && !u.name.toLowerCase().includes(memberSearch.toLowerCase()) &&
+      !u.email.toLowerCase().includes(memberSearch.toLowerCase())) return false
+    if (statusFilter === 'Active' && !isActive) return false
+    if (statusFilter === 'Inactive' && isActive) return false
+    if (roleFilter !== 'Role' && roleLabel(u.role).toLowerCase() !== roleFilter.toLowerCase()) return false
+    if (groupFilter !== 'Group') {
+      const grp = storeGroups.find(g => g.name === groupFilter)
       if (!grp || !grp.memberIds.includes(u.id)) return false
     }
     return true
@@ -383,17 +510,11 @@ export default function TeamPage() {
     g.memberIds.some(id => users.find(u => u.id === id)?.name.toLowerCase().includes(groupSearch.toLowerCase()))
   )
 
-  const handleApplyFilter = () => {
-    setAppliedSearch(memberSearch)
-    setAppliedStatus(statusFilter)
-    setAppliedRole(roleFilter)
-    setAppliedGroup(groupFilter)
-  }
+  const handleApplyFilter = () => {} // filters apply instantly on change
 
   const handleClearFilters = () => {
-    setMemberSearch(''); setStatusFilter('Active'); setBillableFilter('Billable rate')
+    setMemberSearch(''); setStatusFilter('All'); setBillableFilter('Billable rate')
     setRoleFilter('Role'); setGroupFilter('Group')
-    setAppliedSearch(''); setAppliedStatus('Active'); setAppliedRole('Role'); setAppliedGroup('Group')
   }
 
   const handleAddGroup = async () => {
@@ -447,12 +568,7 @@ export default function TeamPage() {
               </button>
             ))}
           </div>
-          {canInvite && activeTab === 'MEMBERS' && (
-            <button onClick={() => setIsInviteOpen(true)}
-              className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[14px] font-bold py-2.5 px-6 rounded-sm transition-colors uppercase tracking-widest">
-              ADD NEW MEMBER
-            </button>
-          )}
+          {canInvite && activeTab === 'MEMBERS' && null}
         </div>
       </div>
 
@@ -481,14 +597,14 @@ export default function TeamPage() {
                       className="flex-1 px-2 text-[14px] outline-none placeholder:text-[#bbb] bg-transparent" />
                   </div>
                   <button onClick={handleApplyFilter}
-                    className="px-4 h-[34px] border border-[#03a9f4] text-[#03a9f4] text-[14px] font-bold uppercase rounded-sm hover:bg-[#03a9f4] hover:text-white transition-all tracking-widest">
+                    className="px-4 h-[34px] bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[14px] font-bold uppercase rounded-sm transition-colors tracking-widest">
                     APPLY FILTER
                   </button>
                 </div>
               </div>
 
               {/* Clear filters */}
-              {(appliedSearch || appliedStatus !== 'Active' || appliedRole !== 'Role' || appliedGroup !== 'Group') && (
+              {(memberSearch || statusFilter !== 'All' || roleFilter !== 'Role' || groupFilter !== 'Group') && (
                 <div className="flex justify-end px-5 py-1 border-b border-[#f0f0f0]">
                   <button onClick={handleClearFilters} className="text-[14px] text-[#03a9f4] hover:underline cursor-pointer">
                     Clear filters
@@ -528,14 +644,17 @@ export default function TeamPage() {
                 <tbody className="divide-y divide-[#f1f4f7]">
                   {filteredUsers.map(member => {
                     const memberGroup = allGroups.find(g => g.memberIds.includes(member.id))
+                    const isActive = member.id in activeOverrides ? activeOverrides[member.id] : (member.isActive !== false)
                     return (
                       <tr key={member.id} className="hover:bg-[#f9fafb] transition-colors group text-[14px] h-[60px]">
-                        <td className="px-4 py-2">
+                        <td className={cn('px-4 py-2', !isActive && 'opacity-50')}>
                           <div className="w-[14px] h-[14px] border border-[#c6d2d9] rounded-sm bg-white" />
                         </td>
-                        <td className="px-4 py-2 text-[#333] font-normal">{member.name}</td>
-                        <td className="px-4 py-2 text-[#999] hover:text-[#03a9f4] cursor-pointer transition-colors">{member.email}</td>
-                        <td className="px-4 py-2">
+                        <td className={cn('px-4 py-2 text-[#333] font-normal', !isActive && 'opacity-50')}>
+                          <span className={cn(!isActive && 'line-through text-[#aaa]')}>{member.name}</span>
+                        </td>
+                        <td className={cn('px-4 py-2 text-[#999] hover:text-[#03a9f4] cursor-pointer transition-colors', !isActive && 'opacity-50')}>{member.email}</td>
+                        <td className={cn('px-4 py-2', !isActive && 'opacity-50')}>
                           <div className="flex items-center justify-center">
                             <div className="flex bg-[#f2f6fb] border border-[#e4eaee] rounded-sm overflow-hidden w-[130px]">
                               <div className="px-3 py-1.5 text-[#333] flex-1 text-center">
@@ -547,7 +666,7 @@ export default function TeamPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-2">
+                        <td className={cn('px-4 py-2', !isActive && 'opacity-50')}>
                           {canChangeRole ? (
                             <RoleDropdown
                               memberId={member.id}
@@ -590,7 +709,11 @@ export default function TeamPage() {
                           />
                         </td>
                         <td className="px-4 py-2 text-center">
-                          <MoreVertical className="h-4 w-4 text-[#ccc] group-hover:text-[#999] cursor-pointer" />
+                          <MemberActionsDropdown
+                            member={{ ...member, isActive }}
+                            onEdit={setEditingMember}
+                            onToggleActive={handleToggleActive}
+                          />
                         </td>
                       </tr>
                     )
@@ -715,33 +838,16 @@ export default function TeamPage() {
         </div>
       </div>
 
-      {/* Invite Modal */}
-      {isInviteOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000] p-4">
-          <div className="bg-white rounded-sm shadow-2xl w-full max-w-[560px]">
-            <div className="px-6 py-4 flex items-center justify-between border-b border-[#e4eaee]">
-              <h2 className="text-[18px] font-normal text-[#333]">Add members</h2>
-              <button onClick={() => setIsInviteOpen(false)} className="text-[#999] hover:text-[#666]">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <label className="text-[14px] font-bold text-[#333] block mb-1">Invite by email</label>
-              <p className="text-[14px] text-[#999] mb-3">Separate multiple emails with commas, spaces, or Enter.</p>
-              <textarea value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                placeholder="Enter email"
-                className="w-full h-[100px] border border-[#c6d2d9] rounded-sm p-3 text-[14px] outline-none focus:border-[#03a9f4] placeholder:text-[#ccc] resize-none" />
-            </div>
-            <div className="px-6 py-4 flex items-center justify-end gap-3 border-t border-[#e4eaee]">
-              <button onClick={() => setIsInviteOpen(false)} className="text-[#03a9f4] text-[14px] hover:underline">Cancel</button>
-              <button onClick={() => setIsInviteOpen(false)}
-                className="bg-[#03a9f4] text-white px-8 py-2 text-[14px] font-bold rounded-sm hover:bg-[#0288d1] uppercase tracking-wider">
-                SEND INVITE
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Edit Member Modal */}
+      {editingMember && (
+        <EditMemberModal
+          member={editingMember}
+          onClose={() => setEditingMember(null)}
+          onSave={handleEditSave}
+        />
       )}
+
+
     </div>
   )
 }
