@@ -1,4 +1,4 @@
-# 🚀 LogSpanX: Technical Handover & Implementation Guide
+# 🚀 Trackify: Technical Handover & Implementation Guide
 
 **Project Version:** 0.1.0 (Frontend Prototype)  
 **Primary Architect:** Antigravity AI  
@@ -13,7 +13,7 @@ This project serves as a comprehensive **UI Boilerplate** for the development te
 ---
 
 ## 1. Executive Summary
-LogSpanX is a "Frontend-First" build designed to serve as a production-grade UI foundation. It utilizes **Next.js 16 (App Router)** and **Tailwind CSS 4**. The project is built on a **Fully Component-Based Architecture** using Atomic Design principles. All data interactions are managed through centralized state stores, providing a 100% functional UI shell that is ready for backend integration or modular expansion.
+Trackify is a "Frontend-First" build designed to serve as a production-grade UI foundation. It utilizes **Next.js 16 (App Router)** and **Tailwind CSS 4**. The project is built on a **Fully Component-Based Architecture** using Atomic Design principles. All data interactions are managed through centralized state stores, providing a 100% functional UI shell that is ready for backend integration or modular expansion.
 
 ---
 
@@ -89,4 +89,4 @@ Current persistence is `localStorage`.
 
 ---
 
-**Note to Developers:** LogSpanX is designed for high-standard aesthetics and low-friction scalability. Maintain the decoupled nature of the components to ensure the app remains easy to refactor as it grows.
+**Note to Developers:** Trackify is designed for high-standard aesthetics and low-friction scalability. Maintain the decoupled nature of the components to ensure the app remains easy to refactor as it grows.

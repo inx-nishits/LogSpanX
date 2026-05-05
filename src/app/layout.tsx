@@ -11,8 +11,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "LogSpanX - Time Tracking",
-  description: "Track your time seamlessly with LogSpanX",
+  title: "Trackify - Time Tracking",
+  description: "Track your time seamlessly with Trackify",
 };
 
 export default function RootLayout({

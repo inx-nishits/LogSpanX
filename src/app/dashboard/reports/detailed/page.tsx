@@ -14,7 +14,8 @@ import { useAuthStore } from '@/lib/stores/auth-store'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TimeEntry, Project, User, Tag } from '@/lib/types'
 import { getTimeEntries, TimeEntryParams } from '@/lib/api/time-entries'
-import { mapApiTimeEntry } from '@/lib/api/mappers'
+import { ApiTimeEntry, mapApiTimeEntry } from '@/lib/api/mappers'
+import { extractArray } from '@/lib/api/utils'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -50,7 +51,12 @@ function D({ children, extra = '' }: { children: React.ReactNode; extra?: string
 function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(fmtDur(dur))
-  useEffect(() => { if (!editing) setVal(fmtDur(dur)) }, [dur, editing])
+  useEffect(() => {
+    if (!editing) {
+      const timer = setTimeout(() => setVal(fmtDur(dur)), 0)
+      return () => clearTimeout(timer)
+    }
+  }, [dur, editing])
 
   const commit = (v: string) => {
     setEditing(false)
@@ -79,8 +85,8 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
 
 // ─── Inline Entry Bar ────────────────────────────────────────────────────────
 
-function InlineEntryBar({ onAdd }: { onAdd: (e: Partial<TimeEntry>) => void, defaultDate: Date }) {
-  const { projects, users } = useDataStore()
+function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => void, defaultDate: Date }) {
+  const { users } = useDataStore()
   const [desc, setDesc] = useState('')
   const [pid, setPid] = useState('')
   const [tagIds, setTagIds] = useState<string[]>([])
@@ -193,9 +199,14 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Partial<TimeEntry>) => void, def
   )
 }
 
+const SortIcon = ({ field, sortField, sortOrder }: { field: string; sortField: string; sortOrder: 'asc' | 'desc' }) => {
+  if (sortField !== field) return null
+  return sortOrder === 'desc' ? <ArrowDown className="h-3.5 w-3.5 ml-1" /> : <ArrowUp className="h-3.5 w-3.5 ml-1" />
+}
+
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function DetailedReportPage() {
-  const { timeEntries, projects, users, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
+  const { projects, users, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -239,7 +250,7 @@ export default function DetailedReportPage() {
     if (selStatus.length === 1 && selStatus.includes('billable')) params.billable = 'true'
     if (selStatus.length === 1 && selStatus.includes('non-billable')) params.billable = 'false'
 
-    setLoading(true)
+    const timer = setTimeout(() => setLoading(true), 0)
     getTimeEntries(params)
       .then((res: unknown) => {
         if (!active) return
@@ -261,7 +272,10 @@ export default function DetailedReportPage() {
         if (active) setLoading(false)
       })
 
-    return () => { active = false }
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
   }, [dateRange, selUsers, selProjects, selTags, selTasks, selStatus, filterDesc])
 
   const sorted = useMemo(() => {
@@ -269,8 +283,8 @@ export default function DetailedReportPage() {
     const userMap = Object.fromEntries(users.map(u => [u.id, u.name]))
 
     list.sort((a, b) => {
-      let valA: string | number = (a as any)[sortField]
-      let valB: string | number = (b as any)[sortField]
+      let valA: string | number = a[sortField as keyof TimeEntry] as string | number
+      let valB: string | number = b[sortField as keyof TimeEntry] as string | number
       
       if (sortField === 'createdAt') { 
         valA = new Date(a.createdAt).getTime()
@@ -342,7 +356,8 @@ export default function DetailedReportPage() {
   }
 
   const onDup = (e: typeof filtered[0]) => {
-    const { id, createdAt, updatedAt, ...rest } = e
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, createdAt: _ca, updatedAt: _ua, ...rest } = e
     addTimeEntry({ ...rest, startTime: new Date() })
   }
 
@@ -356,11 +371,6 @@ export default function DetailedReportPage() {
   const bulkUpdate = (data: Partial<TimeEntry>) => { 
     updateTimeEntries(Array.from(selIds), data)
     setSelIds(new Set()) 
-  }
-
-  const SortIcon = ({ field }: { field: string }) => {
-    if (sortField !== field) return null
-    return sortOrder === 'desc' ? <ArrowDown className="h-3.5 w-3.5 ml-1" /> : <ArrowUp className="h-3.5 w-3.5 ml-1" />
   }
 
   return (
@@ -440,15 +450,15 @@ export default function DetailedReportPage() {
             ) : (
               <>
                 <div className="flex-1 min-w-0 flex items-center gap-1 cursor-pointer hover:text-[#555]" onClick={() => handleSort('description')}>
-                  Time Entry <SortIcon field="description" />
+                  Time Entry <SortIcon field="description" sortField={sortField} sortOrder={sortOrder} />
                 </div>
                 <div className="w-[80px] text-right flex-shrink-0 flex items-center justify-end px-2">Amount</div>
                 <div className="w-[40px] flex-shrink-0" />
                 <div className="w-[150px] text-right flex-shrink-0 px-2 flex items-center justify-end cursor-pointer hover:text-[#555]" onClick={() => handleSort('userName')}>
-                  User <SortIcon field="userName" />
+                  User <SortIcon field="userName" sortField={sortField} sortOrder={sortOrder} />
                 </div>
                 <div className="w-[90px] text-center flex-shrink-0 px-2 flex items-center justify-center cursor-pointer hover:text-[#555]" onClick={() => handleSort('duration')}>
-                  Duration <SortIcon field="duration" />
+                  Duration <SortIcon field="duration" sortField={sortField} sortOrder={sortOrder} />
                 </div>
                 <div className="w-[100px] flex-shrink-0" />
               </>

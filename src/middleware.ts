@@ -7,9 +7,10 @@ const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
 const restrictedRoutes: Array<{ prefix: string; allowedRoles: User['role'][] }> = [
   { prefix: '/dashboard/pm', allowedRoles: ['owner'] },
   { prefix: '/dashboard/tl', allowedRoles: ['owner', 'admin'] },
-  { prefix: '/dashboard/projects', allowedRoles: ['owner'] },
-  { prefix: '/dashboard/tags', allowedRoles: ['owner'] },
-  { prefix: '/dashboard/project-lead', allowedRoles: ['owner'] },
+  { prefix: '/dashboard/projects', allowedRoles: ['owner', 'admin', 'member'] },
+  { prefix: '/dashboard/team', allowedRoles: ['owner', 'admin'] },
+  { prefix: '/dashboard/tags', allowedRoles: ['owner', 'admin'] },
+  { prefix: '/dashboard/project-lead', allowedRoles: ['owner', 'admin'] },
 ]
 
 function getSafeRole(role: string | undefined): User['role'] {

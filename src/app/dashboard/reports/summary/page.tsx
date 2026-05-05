@@ -833,7 +833,7 @@ export default function SummaryReportPage() {
     }
 
     const pdfLines = [
-      'LogSpanX Summary Report',
+      'Trackify Summary Report',
       `Date range: ${fromLabel} to ${toLabel}`,
       `Group by: ${groupBy} / ${subGroupBy}`,
       `Total: ${fmtSecs(totalSecs)}    Billable: ${fmtSecs(billableSecs)}`,

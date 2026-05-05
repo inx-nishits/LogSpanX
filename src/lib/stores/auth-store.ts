@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { apiRequest, COOKIE_SESSION_TOKEN } from '@/lib/api/client'
 import { ApiUser, mapApiUser } from '@/lib/api/mappers'
 import { User } from '@/lib/types'
@@ -53,7 +54,9 @@ function authenticatedState(user: ApiUser, token?: string, refreshToken?: string
   }
 }
 
-export const useAuthStore = create<AuthState>()((set, get) => ({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
   ...initialState,
 
   setToken: () => {
@@ -217,4 +220,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       body: JSON.stringify({ email, role, billableRate }),
     })
   },
-}))
+    }),
+    {
+  name: 'logspanx-auth',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        token: state.token,
+        refreshToken: state.refreshToken,
+        user: state.user,
+        authStatus: state.authStatus,
+      }),
+    }
+  )
+)

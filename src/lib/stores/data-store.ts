@@ -780,12 +780,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   getSharedReports: async () => {
     const token = useAuthStore.getState().token
-    const raw = await apiRequest<unknown>('/shared-reports', { method: 'GET', token })
+    const workspaceId = useAuthStore.getState().user?.workspaceId
+    const raw = await apiRequest<unknown>(`/reports/shared?workspaceId=${workspaceId}`, { method: 'GET', token })
     return extractArray<SharedReport>(raw)
   },
 
   getSharedReport: async (token) => {
-    return await apiRequest<SharedReportData>(`/shared-reports/${token}`, {
+    return await apiRequest<SharedReportData>(`/reports/shared/${token}`, {
       method: 'GET',
     })
   },

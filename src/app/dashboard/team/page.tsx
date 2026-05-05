@@ -288,11 +288,9 @@ export default function TeamPage() {
   const [rawUsers, setRawUsers] = useState<RawUser[]>([])
 
   useEffect(() => {
-    apiRequest<unknown>('/users', { method: 'GET', token: useAuthStore.getState().token })
+    apiRequest<RawUser[] | { data: RawUser[] }>('/users', { method: 'GET', token: useAuthStore.getState().token })
       .then(res => {
-        const arr: RawUser[] = Array.isArray(res) ? res
-          : Array.isArray((res as any)?.data) ? (res as any).data
-          : Object.values(res as object).find(Array.isArray) ?? []
+        const arr = Array.isArray(res) ? res : (res as { data: RawUser[] })?.data ?? []
         setRawUsers(arr)
       })
       .catch(console.error)
@@ -304,7 +302,7 @@ export default function TeamPage() {
       : group.memberIds.filter(id => id !== userId)
     try {
       const res = await updateGroup(group._id, { memberIds: newMemberIds })
-      const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
+      const updated = res as ApiGroup
       const finalIds = updated?.memberIds ?? newMemberIds
       setGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
     } catch (err) { console.error(err) }
@@ -324,7 +322,7 @@ export default function TeamPage() {
       : group.memberIds.filter(id => id !== member.id)
     try {
       const res = await updateGroup(group._id, { memberIds: newMemberIds })
-      const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
+      const updated = res as ApiGroup
       setAllGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: updated?.memberIds ?? newMemberIds } : g))
     } catch (err) { console.error(err) }
   }
@@ -340,7 +338,7 @@ export default function TeamPage() {
   // Load groups from API when tab is active
   useEffect(() => {
     if (activeTab !== 'GROUPS') return
-    setLoadingGroups(true)
+    const timer = setTimeout(() => setLoadingGroups(true), 0)
     getGroups()
       .then(res => {
         // client.ts unwraps { success, data: [...] } so res is already the array
@@ -349,6 +347,7 @@ export default function TeamPage() {
       })
       .catch(console.error)
       .finally(() => setLoadingGroups(false))
+    return () => clearTimeout(timer)
   }, [activeTab])
 
   // ── Members filtering ──
@@ -389,7 +388,7 @@ export default function TeamPage() {
     try {
       const res = await createGroup(newGroupName.trim())
       // client.ts unwraps envelope — res is the group object directly
-      const created = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
+      const created = res as ApiGroup
       if (created?._id) setGroups(prev => [...prev, created])
       setNewGroupName('')
     } catch (err) { console.error(err) }
@@ -406,7 +405,7 @@ export default function TeamPage() {
     if (!editingGroup || !editName.trim()) return
     try {
       const res = await updateGroup(editingGroup._id, { name: editName.trim(), memberIds: editingGroup.memberIds })
-      const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
+      const updated = res as ApiGroup
       setGroups(prev => prev.map(g => g._id === editingGroup._id ? updated : g))
       setEditingGroup(null)
     } catch (err) { console.error(err) }
@@ -642,8 +641,8 @@ export default function TeamPage() {
                   ) : filteredGroups.map(group => {
                     const members = users.filter(u => group.memberIds.includes(u.id))
                     const MAX_SHOW = 5
-                    const shown = members.slice(0, MAX_SHOW)
-                    const extra = members.length - MAX_SHOW
+                    const _shown = members.slice(0, MAX_SHOW)
+                    const _extra = members.length - MAX_SHOW
                     const isEditing = editingGroup?._id === group._id
 
                     return (

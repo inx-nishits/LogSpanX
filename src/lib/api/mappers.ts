@@ -12,6 +12,7 @@ export interface ApiUser {
   archived?: boolean
   billableRate?: number | null
   group?: string | null
+  workspaceId?: string | null
 }
 
 export interface ApiGroup {
@@ -132,6 +133,7 @@ export function mapApiUser(user: ApiUser): User {
     archived: user.archived ?? false,
     billableRate: user.billableRate ?? undefined,
     group: user.group ?? undefined,
+    workspaceId: user.workspaceId ?? undefined,
   }
 }
 
@@ -207,18 +209,18 @@ export function mapApiTimeEntry(entry: ApiTimeEntry): TimeEntry {
   // userId may be a populated object
   const isUserObj = typeof entry.userId === 'object' && entry.userId !== null
   const userIdObj = isUserObj ? (entry.userId as { id?: string; _id?: string; name?: string }) : null
-  const userId = isUserObj
+  const userId = userIdObj
     ? (userIdObj._id ?? userIdObj.id ?? '')
     : entry.userId as string
-  const userName = isUserObj ? userIdObj.name : undefined
+  const userName = userIdObj ? userIdObj.name : undefined
 
   // projectId may be a populated object
   const isProjObj = typeof entry.projectId === 'object' && entry.projectId !== null
   const projObj = isProjObj ? (entry.projectId as { id?: string; _id?: string; name?: string }) : null
-  const projectId = isProjObj
+  const projectId = projObj
     ? (projObj.id ?? projObj._id ?? undefined)
     : (entry.projectId as string ?? undefined)
-  const projectName = isProjObj ? projObj.name : undefined
+  const projectName = projObj ? projObj.name : undefined
 
   // tags may be populated objects; fall back to tagIds string array
   const tagIds = entry.tags?.length

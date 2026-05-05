@@ -1,8 +1,8 @@
-# LogSpanX Production Readiness And Performance Audit
+# Trackify Production Readiness And Performance Audit
 
 Last reviewed: 2026-05-05
 
-This document lists the changes required to make the current LogSpanX frontend production ready, easier to maintain, and more performant. It is based on a full repository scan plus `npm run lint` and `npm run build`.
+This document lists the changes required to make the current Trackify frontend production ready, easier to maintain, and more performant. It is based on a full repository scan plus `npm run lint` and `npm run build`.
 
 ## Current Verification Status
 

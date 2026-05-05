@@ -231,7 +231,7 @@ export default function WeeklyReportPage() {
                 </div>
 
                 {/* Day columns */}
-                {row.dayTotals.map((secs, i) => (
+                {(row.dayTotals as number[]).map((secs: number, i: number) => (
                   <div key={i} className="w-[80px] text-right flex-shrink-0 text-[16px] text-[#333] tabular-nums">
                     {fmtH(secs)}
                   </div>

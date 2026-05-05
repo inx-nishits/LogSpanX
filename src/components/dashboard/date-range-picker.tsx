@@ -47,7 +47,7 @@ const PRESETS = [
     { label: 'Last year', getValue: () => ({ from: startOfYear(subMonths(new Date(), 12)), to: endOfYear(subMonths(new Date(), 12)) }) },
 ]
 
-export function DateRangePicker({ initialRange, onRangeChange, label }: DateRangePickerProps) {
+export function DateRangePicker({ initialRange, onRangeChange, label, className }: DateRangePickerProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [range, setRange] = useState<DateRange>(initialRange)
     const [viewDate, setViewDate] = useState(startOfMonth(initialRange.from))
