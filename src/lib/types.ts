@@ -76,6 +76,7 @@ export interface Task {
   name: string
   projectId: string
   completed: boolean
+  assignees?: { id: string; name: string; email?: string; avatar?: string }[]
 }
 
 export interface Tag {

@@ -468,6 +468,7 @@ export default function TeamPage() {
 
   // ── Groups tab state ──
   const [groups, setGroups] = useState<ApiGroup[]>([])
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
   const [groupSearch, setGroupSearch] = useState('')
   const [newGroupName, setNewGroupName] = useState('')
   const [editingGroup, setEditingGroup] = useState<ApiGroup | null>(null)
@@ -528,11 +529,18 @@ export default function TeamPage() {
     } catch (err) { console.error(err) }
   }
 
-  const handleDeleteGroup = async (id: string) => {
+  const handleDeleteGroup = async (id: string, name: string) => {
+    setConfirmDelete({ id, name })
+  }
+
+  const confirmDeleteGroup = async () => {
+    if (!confirmDelete) return
     try {
-      await deleteGroup(id)
-      setGroups(prev => prev.filter(g => g._id !== id))
-    } catch (err) { console.error(err) }
+      await deleteGroup(confirmDelete.id)
+      setGroups(prev => prev.filter(g => g._id !== confirmDelete.id))
+    } catch (err) { console.error(err) } finally {
+      setConfirmDelete(null)
+    }
   }
 
   const handleSaveEdit = async () => {
@@ -816,7 +824,7 @@ export default function TeamPage() {
                               </button>
                             )}
                             {canDelete && (
-                              <button onClick={() => handleDeleteGroup(group._id)}
+                              <button onClick={() => handleDeleteGroup(group._id, group.name)}
                                 className="text-[#ccc] hover:text-[#f44336] cursor-pointer transition-colors">
                                 <X className="h-4 w-4" />
                               </button>
@@ -837,6 +845,32 @@ export default function TeamPage() {
           )}
         </div>
       </div>
+
+      {/* Delete Group Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-[400px]">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-[#e4eaee]">
+              <h2 className="text-[18px] font-normal text-[#333]">Delete Group</h2>
+              <button onClick={() => setConfirmDelete(null)} className="text-[#999] hover:text-[#666] cursor-pointer">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-[15px] text-[#555]">
+                Are you sure you want to delete the group <strong className="text-[#333]">&quot;{confirmDelete.name}&quot;</strong>? This action cannot be undone.
+              </p>
+            </div>
+            <div className="px-6 py-4 flex items-center justify-end gap-3 border-t border-[#e4eaee]">
+              <button onClick={() => setConfirmDelete(null)} className="text-[#555] text-[14px] hover:underline cursor-pointer">Cancel</button>
+              <button onClick={confirmDeleteGroup}
+                className="bg-[#f44336] hover:bg-[#d32f2f] text-white px-6 py-2 text-[14px] font-bold rounded-sm uppercase tracking-wider cursor-pointer transition-colors">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Member Modal */}
       {editingMember && (

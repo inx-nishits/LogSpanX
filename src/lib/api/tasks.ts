@@ -4,11 +4,7 @@ import { ApiTask } from './mappers'
 
 export function getProjectTasks(projectId: string) {
   const token = useAuthStore.getState().token
-  // The documentation says /tasks/project/{projectId}
-  // But the existing code used /projects/{id}/tasks
-  // We'll follow the documentation but provide a fallback if needed
-  return apiRequest<ApiTask[]>(`/tasks/project/${projectId}`, { method: 'GET', token })
-    .catch(() => apiRequest<ApiTask[]>(`/projects/${projectId}/tasks`, { method: 'GET', token }))
+  return apiRequest<ApiTask[]>(`/projects/${projectId}/tasks`, { method: 'GET', token })
 }
 
 export function createTask(projectId: string, name: string) {
@@ -23,9 +19,18 @@ export function createTask(projectId: string, name: string) {
 export function updateTask(taskId: string, updates: { name?: string; completed?: boolean }) {
   const token = useAuthStore.getState().token
   return apiRequest<ApiTask>(`/tasks/${taskId}`, {
-    method: 'PUT',
+    method: 'PATCH',
     token,
     body: JSON.stringify(updates),
+  })
+}
+
+export function updateTaskAssignees(taskId: string, assignees: string[]) {
+  const token = useAuthStore.getState().token
+  return apiRequest<ApiTask>(`/tasks/${taskId}/assignees`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ assignees }),
   })
 }
 

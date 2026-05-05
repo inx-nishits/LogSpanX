@@ -562,7 +562,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
   updateTask: async (taskId, updates) => {
     const token = useAuthStore.getState().token
     const payload = await apiRequest<ApiTask>(`/tasks/${taskId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       token,
       body: JSON.stringify(updates),
     })

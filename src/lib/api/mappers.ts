@@ -44,6 +44,7 @@ export interface ApiTask {
   name: string
   projectId?: string
   completed: boolean
+  assignees?: { _id?: string; id?: string; name: string; email?: string; avatar?: string | null }[]
 }
 
 export interface ApiClient {
@@ -182,6 +183,12 @@ export function mapApiTask(task: ApiTask, projectId?: string): Task {
     name: task.name,
     projectId: task.projectId ?? projectId ?? '',
     completed: task.completed,
+    assignees: (task.assignees ?? []).map(a => ({
+      id: a._id ?? a.id ?? '',
+      name: a.name,
+      email: a.email ?? undefined,
+      avatar: a.avatar ?? undefined,
+    })),
   }
 }
 
