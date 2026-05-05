@@ -28,7 +28,9 @@ export async function GET() {
   if (backendResponse.status === 401) {
     token = await applyRefreshCookies(nextResponse)
     if (!token) {
-      return NextResponse.json({ user: null }, { status: 401 })
+      const response = NextResponse.json({ user: null }, { status: 401 })
+      clearAuthCookies(response)
+      return response
     }
     backendResponse = await fetchProfile(token)
   }
