@@ -10,8 +10,11 @@ import { WeeklyBarChart } from './weekly-bar-chart'
 import { ProjectDonutChart } from './project-donut-chart'
 import { TeamActivities } from './team-activities'
 import { ActivityList } from './activity-list'
-import { getTimeEntries } from '@/lib/api/time-entries'
+import { getTimeEntries, type TimeEntryParams } from '@/lib/api/time-entries'
 import { mapApiTimeEntry } from '@/lib/api/mappers'
+import { Skeleton } from '@/components/ui/skeleton'
+import { type TimeEntry } from '@/lib/types'
+import { type DashboardStats } from '@/lib/stores/data-store'
 
 export interface DonutEntry {
     name: string
@@ -36,19 +39,20 @@ export function DashboardView() {
         from: startOfWeek(new Date(), { weekStartsOn: 1 }),
         to: endOfWeek(new Date(), { weekStartsOn: 1 })
     })
-    const [stats, setStats] = useState<{ todayHours: number; weekHours: number; activeProjects: number; topProject: string } | null>(null)
+    const [stats, setStats] = useState<DashboardStats | null>(null)
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         getDashboardStats().then(setStats).catch(() => { })
     }, [getDashboardStats])
 
-    const [sourceEntries, setSourceEntries] = useState<typeof timeEntries>([])
+    const [sourceEntries, setSourceEntries] = useState<TimeEntry[]>([])
 
     useEffect(() => {
         let active = true
         if (!user) return
 
-        const params: any = {
+        const params: TimeEntryParams = {
             startDate: startOfDay(dateRange.from).toISOString(),
             endDate: endOfDay(dateRange.to).toISOString(),
         }
@@ -57,17 +61,27 @@ export function DashboardView() {
             params.userId = user.id
         }
 
+        setLoading(true)
         getTimeEntries(params)
-            .then((res: any) => {
+            .then((res: unknown) => {
                 if (!active) return
-                let entries = Array.isArray(res) ? res : (res?.items || res?.entries || [])
-                if (!Array.isArray(entries)) {
-                    entries = Object.values(res || {}).find(v => Array.isArray(v)) || []
+                // Robust extraction of entries from various possible API response shapes
+                let entries: any[] = []
+                if (Array.isArray(res)) {
+                    entries = res
+                } else if (res && typeof res === 'object') {
+                    const r = res as Record<string, any>
+                    entries = r.items || r.entries || []
+                    if (!Array.isArray(entries)) {
+                        entries = Object.values(r).find(v => Array.isArray(v)) || []
+                    }
                 }
-                entries = entries.map(mapApiTimeEntry)
-                setSourceEntries(entries)
+                
+                const mappedEntries = entries.map(mapApiTimeEntry)
+                setSourceEntries(mappedEntries)
             })
             .catch(console.error)
+            .finally(() => { if (active) setLoading(false) })
 
         return () => { active = false }
     }, [user, dateRange, filters.teamScope])
@@ -78,40 +92,45 @@ export function DashboardView() {
         [users]
     )
 
-    const dashboardData = useMemo(() => {
-        if (!user) return null
+    // Derived Stats
+    const totalSeconds = useMemo(() => sourceEntries.reduce((acc, e) => acc + (e.duration ?? 0), 0), [sourceEntries])
+    
+    const totalDisplay = useMemo(() => {
+        const h = Math.floor(totalSeconds / 3600)
+        const m = Math.floor((totalSeconds % 3600) / 60)
+        return `${h}:${String(m).padStart(2, '0')}`
+    }, [totalSeconds])
 
-        // 2. Stats
-        const totalSeconds = sourceEntries.reduce((acc, e) => acc + (e.duration ?? 0), 0)
-        const totalDisplay = `${Math.floor(totalSeconds / 3600)}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}`
+    const billablePercent = useMemo(() => {
         const billableSec = sourceEntries.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0)
-        const billablePercent = totalSeconds > 0 ? Math.round((billableSec / totalSeconds) * 100) + '%' : '0%'
+        return totalSeconds > 0 ? Math.round((billableSec / totalSeconds) * 100) + '%' : '0%'
+    }, [sourceEntries, totalSeconds])
 
-        // 3. Tasks in range — count unique tasks whose project has entries in range
+    // Tasks in range — count unique tasks whose project has entries in range
+    const tasksInRange = useMemo(() => {
         const projectIdsInRange = new Set(sourceEntries.map(e => e.projectId).filter(Boolean))
-        const tasksInRange = tasks.filter(t => projectIdsInRange.has(t.projectId))
-        const totalTasks = tasksInRange.length
-        const completedTasks = tasksInRange.filter(t => t.completed).length
+        return tasks.filter(t => projectIdsInRange.has(t.projectId))
+    }, [sourceEntries, tasks])
 
-        // 4. Donut + Legend Data
+    const donutData = useMemo((): DonutEntry[] => {
         const isTaskView = filters.groupBy === 'task'
         const isBillability = filters.viewBy === 'billability'
-        let donutData: DonutEntry[] = []
 
         if (isBillability) {
             const bH = sourceEntries.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
             const nH = sourceEntries.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600
             const total = bH + nH
-            donutData = [
+            return [
                 { name: 'Billable', value: Number(bH.toFixed(2)), color: '#b2d235', percentage: total > 0 ? ((bH / total) * 100).toFixed(2) : '0' },
                 { name: 'Non-Billable', value: Number(nH.toFixed(2)), color: '#e4eaee', percentage: total > 0 ? ((nH / total) * 100).toFixed(2) : '0' },
             ].filter(d => d.value > 0)
-        } else if (isTaskView) {
-            // Tasks per project as count
+        } 
+        
+        if (isTaskView) {
             const taskMap: Record<string, number> = {}
             tasksInRange.forEach(t => { taskMap[t.projectId] = (taskMap[t.projectId] || 0) + 1 })
             const totalT = Object.values(taskMap).reduce((a, b) => a + b, 0)
-            donutData = Object.entries(taskMap).map(([pid, count]) => {
+            return Object.entries(taskMap).map(([pid, count]) => {
                 const p = projects.find(proj => proj.id === pid)
                 return {
                     name: p?.name || 'Unknown',
@@ -121,33 +140,43 @@ export function DashboardView() {
                     percentage: totalT > 0 ? ((count / totalT) * 100).toFixed(2) : '0'
                 }
             }).sort((a, b) => b.value - a.value)
-        } else {
-            // Time per project
-            const pMap: Record<string, number> = {}
-            sourceEntries.forEach(e => { if (e.projectId) pMap[e.projectId] = (pMap[e.projectId] || 0) + ((e.duration ?? 0) / 3600) })
-            const totalH = Object.values(pMap).reduce((a, b) => a + b, 0)
-            donutData = Object.entries(pMap).map(([id, val]) => {
-                const p = projects.find(proj => proj.id === id)
-                return {
-                    name: p?.name || 'Unknown',
-                    leadName: leadNames[p?.leadId || ''] || '',
-                    value: Number(val.toFixed(2)),
-                    color: p?.color || '#cbd5e1',
-                    percentage: totalH > 0 ? ((val / totalH) * 100).toFixed(2) : '0'
-                }
-            }).sort((a, b) => b.value - a.value)
         }
 
-        // 5. Top project & lead
-        const topProjectName = donutData[0]?.name || 'N/A'
-        const topProjectObj = projects.find(p => p.name === topProjectName)
-        const topLeadName = leadNames[topProjectObj?.leadId || ''] || 'N/A'
+        // Time per project (default)
+        const pMap: Record<string, number> = {}
+        sourceEntries.forEach(e => { 
+            if (e.projectId) {
+                pMap[e.projectId] = (pMap[e.projectId] || 0) + ((e.duration ?? 0) / 3600) 
+            }
+        })
+        const totalH = Object.values(pMap).reduce((a, b) => a + b, 0)
+        return Object.entries(pMap).map(([id, val]) => {
+            const p = projects.find(proj => proj.id === id)
+            return {
+                name: p?.name || 'Unknown',
+                leadName: leadNames[p?.leadId || ''] || '',
+                value: Number(val.toFixed(2)),
+                color: p?.color || '#cbd5e1',
+                percentage: totalH > 0 ? ((val / totalH) * 100).toFixed(2) : '0'
+            }
+        }).sort((a, b) => b.value - a.value)
+    }, [sourceEntries, projects, tasksInRange, leadNames, filters.groupBy, filters.viewBy])
 
-        // 6. Bar Chart
+    const barData = useMemo((): BarDay[] => {
+        const isTaskView = filters.groupBy === 'task'
+        const isBillability = filters.viewBy === 'billability'
         const daysInInterval = eachDayOfInterval({ start: dateRange.from, end: dateRange.to })
+        
+        const entriesByDay: Record<string, TimeEntry[]> = {}
+        sourceEntries.forEach(e => {
+            const dk = format(new Date(e.startTime), 'yyyy-MM-dd')
+            if (!entriesByDay[dk]) entriesByDay[dk] = []
+            entriesByDay[dk].push(e)
+        })
 
-        const barData = daysInInterval.map((date): BarDay => {
-            const entriesForDay = sourceEntries.filter(e => isSameDay(new Date(e.startTime), date))
+        return daysInInterval.map((date): BarDay => {
+            const dk = format(date, 'yyyy-MM-dd')
+            const entriesForDay = entriesByDay[dk] || []
             const dayTotalSec = entriesForDay.reduce((a, e) => a + (e.duration ?? 0), 0)
             const dh = Math.floor(dayTotalSec / 3600)
             const dm = Math.floor((dayTotalSec % 3600) / 60)
@@ -162,26 +191,37 @@ export function DashboardView() {
                 dayObj['billable'] = Number((entriesForDay.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600).toFixed(2))
                 dayObj['non-billable'] = Number((entriesForDay.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600).toFixed(2))
             } else if (isTaskView) {
-                // Bar shows task count per project per day
                 const dayProjectIds = new Set(entriesForDay.map(e => e.projectId).filter(Boolean))
+                let dayTaskCount = 0
                 projects.forEach(p => {
                     if (!dayProjectIds.has(p.id)) return
                     const count = tasks.filter(t => t.projectId === p.id).length
-                    if (count > 0) dayObj[p.id] = count
+                    if (count > 0) {
+                        dayObj[p.id] = count
+                        dayTaskCount += count
+                    }
                 })
-                // Override displayTotal for task view
-                const dayTaskCount = projects
-                    .filter(p => dayProjectIds.has(p.id))
-                    .reduce((a, p) => a + tasks.filter(t => t.projectId === p.id).length, 0)
                 dayObj.displayTotal = dayTaskCount > 0 ? `${dayTaskCount} tasks` : ''
             } else {
-                projects.forEach(p => {
-                    const val = entriesForDay.filter(e => e.projectId === p.id).reduce((a, e) => a + ((e.duration ?? 0) / 3600), 0)
-                    if (val > 0) dayObj[p.id] = Number(val.toFixed(2))
+                const projTime: Record<string, number> = {}
+                entriesForDay.forEach(e => {
+                    if (e.projectId) projTime[e.projectId] = (projTime[e.projectId] || 0) + ((e.duration ?? 0) / 3600)
+                })
+                Object.entries(projTime).forEach(([pid, val]) => {
+                    dayObj[pid] = Number(val.toFixed(2))
                 })
             }
             return dayObj
         })
+    }, [sourceEntries, projects, tasks, dateRange, filters.groupBy, filters.viewBy])
+
+    const dashboardData = useMemo(() => {
+        if (!user) return null
+
+        const isBillability = filters.viewBy === 'billability'
+        const topProjectName = donutData[0]?.name || 'N/A'
+        const topProjectObj = projects.find(p => p.name === topProjectName)
+        const topLeadName = leadNames[topProjectObj?.leadId || ''] || 'N/A'
 
         const barProjects = isBillability
             ? [{ id: 'billable', name: 'Billable', color: '#b2d235' }, { id: 'non-billable', name: 'Non-Billable', color: '#e4eaee' }]
@@ -194,14 +234,15 @@ export function DashboardView() {
             topProject: stats?.topProject || topProjectName,
             topLead: topLeadName,
             billablePercent,
-            totalTasks,
-            completedTasks,
+            totalTasks: tasksInRange.length,
+            completedTasks: tasksInRange.filter(t => t.completed).length,
             donutData,
             barData,
             barProjects,
-            isTaskView,
+            isTaskView: filters.groupBy === 'task',
         }
-    }, [user, sourceEntries, projects, tasks, users, filters, dateRange, leadNames, stats])
+    }, [user, donutData, barData, projects, tasksInRange, leadNames, filters, totalDisplay, billablePercent, stats])
+
 
     if (!user || !dashboardData) return null
 
@@ -216,8 +257,18 @@ export function DashboardView() {
                 currentRange={dateRange}
                 onRangeChange={setDateRange}
             />
-
-            {isPersonal ? (
+            {loading ? (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+                    </div>
+                    <Skeleton className="h-[300px] w-full" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <Skeleton className="lg:col-span-2 h-[400px] w-full" />
+                        <Skeleton className="lg:col-span-1 h-[400px] w-full" />
+                    </div>
+                </div>
+            ) : isPersonal ? (
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                     <div className="lg:col-span-3 space-y-4">
                         <StatsSummary

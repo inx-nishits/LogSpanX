@@ -42,7 +42,7 @@ export function Topbar() {
           <Menu className="h-5 w-5 stroke-[1.5px]" />
         </button>
         <span className="text-sm font-medium text-gray-700 tracking-tight hidden sm:inline">
-          LogSpanX
+          Trackify
         </span>
       </div>
 

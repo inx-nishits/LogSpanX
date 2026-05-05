@@ -11,6 +11,11 @@ import { TagPicker } from '@/components/tracker/tag-picker'
 import { ProjectPicker } from '@/components/tracker/project-picker'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { Skeleton } from '@/components/ui/skeleton'
+import { TimeEntry, Project, User, Tag } from '@/lib/types'
+import { getTimeEntries, TimeEntryParams } from '@/lib/api/time-entries'
+import { ApiTimeEntry, mapApiTimeEntry } from '@/lib/api/mappers'
+import { extractArray } from '@/lib/api/utils'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -46,7 +51,12 @@ function D({ children, extra = '' }: { children: React.ReactNode; extra?: string
 function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(fmtDur(dur))
-  useEffect(() => { if (!editing) setVal(fmtDur(dur)) }, [dur, editing])
+  useEffect(() => {
+    if (!editing) {
+      const timer = setTimeout(() => setVal(fmtDur(dur)), 0)
+      return () => clearTimeout(timer)
+    }
+  }, [dur, editing])
 
   const commit = (v: string) => {
     setEditing(false)
@@ -75,8 +85,8 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
 
 // ─── Inline Entry Bar ────────────────────────────────────────────────────────
 
-function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defaultDate: Date }) {
-  const { projects, users } = useDataStore()
+function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => void, defaultDate: Date }) {
+  const { users } = useDataStore()
   const [desc, setDesc] = useState('')
   const [pid, setPid] = useState('')
   const [tagIds, setTagIds] = useState<string[]>([])
@@ -113,7 +123,16 @@ function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defau
     if (!secs) return
     const endTime = new Date()
     const startTime = new Date(endTime.getTime() - secs * 1000)
-    onAdd({ description: desc, projectId: pid || undefined, tagIds, billable, userId: uid, startTime, endTime, duration: secs })
+    onAdd({ 
+      description: desc, 
+      projectId: pid || undefined, 
+      tagIds, 
+      billable, 
+      userId: uid, 
+      startTime, 
+      endTime, 
+      duration: secs 
+    })
     setDesc('')
     setDurInput('00:00:00')
   }
@@ -180,11 +199,14 @@ function InlineEntryBar({ onAdd, defaultDate }: { onAdd: (e: any) => void, defau
   )
 }
 
-import { getTimeEntries } from '@/lib/api/time-entries'
-import { mapApiTimeEntry } from '@/lib/api/mappers'
+const SortIcon = ({ field, sortField, sortOrder }: { field: string; sortField: string; sortOrder: 'asc' | 'desc' }) => {
+  if (sortField !== field) return null
+  return sortOrder === 'desc' ? <ArrowDown className="h-3.5 w-3.5 ml-1" /> : <ArrowUp className="h-3.5 w-3.5 ml-1" />
+}
 
+// ─── Main Page ──────────────────────────────────────────────────────────────
 export default function DetailedReportPage() {
-  const { timeEntries, projects, users, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
+  const { projects, users, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -212,13 +234,13 @@ export default function DetailedReportPage() {
   const [rounding, setRounding] = useState(false)
   const [showEntryBar, setShowEntryBar] = useState(false)
 
-  const [filtered, setFiltered] = useState<typeof timeEntries>([])
+  const [filtered, setFiltered] = useState<TimeEntry[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
 
-    // Only one value per filter for simplistic passing to API as per normal backend params
-    const params: any = {
+    const params: TimeEntryParams = {
       startDate: dateRange.from.toISOString(),
       endDate: dateRange.to.toISOString(),
     }
@@ -228,52 +250,80 @@ export default function DetailedReportPage() {
     if (selStatus.length === 1 && selStatus.includes('billable')) params.billable = 'true'
     if (selStatus.length === 1 && selStatus.includes('non-billable')) params.billable = 'false'
 
+    const timer = setTimeout(() => setLoading(true), 0)
     getTimeEntries(params)
-      .then((res: any) => {
+      .then((res: unknown) => {
         if (!active) return
-        let entries = Array.isArray(res) ? res : (res?.items || res?.entries || [])
-        if (!Array.isArray(entries)) {
-          // fallback if it's nested differently
-          entries = Object.values(res || {}).find(v => Array.isArray(v)) || []
+        
+        const entriesRaw = extractArray<ApiTimeEntry>(res)
+        let mapped = entriesRaw.map(mapApiTimeEntry)
+
+        if (filterDesc) {
+          mapped = mapped.filter((e) => e.description?.toLowerCase().includes(filterDesc.toLowerCase()))
+        }
+        if (selTasks.length) {
+          mapped = mapped.filter((e) => e.taskId && selTasks.includes(e.taskId))
         }
 
-        // Map raw API entries to the expected TimeEntry format
-        entries = entries.map(mapApiTimeEntry)
-
-        // Final local filtering only for items the backend might not natively support via specific query keys
-        if (filterDesc) entries = entries.filter((e: any) => e.description?.toLowerCase().includes(filterDesc.toLowerCase()))
-        if (selTasks.length) entries = entries.filter((e: any) => e.taskId && selTasks.includes(e.taskId))
-
-        // Sort
-        entries.sort((a: any, b: any) => {
-          let valA: any = a[sortField as keyof typeof a]
-          let valB: any = b[sortField as keyof typeof b]
-          if (sortField === 'createdAt') { valA = new Date(a.createdAt).getTime(); valB = new Date(b.createdAt).getTime() }
-          if (sortField === 'userName') { valA = users.find(u => u.id === a.userId)?.name || ''; valB = users.find(u => u.id === b.userId)?.name || '' }
-          if (sortField === 'duration') { valA = a.duration || 0; valB = b.duration || 0 }
-          if (sortField === 'description') { valA = a.description || ''; valB = b.description || '' }
-
-          if (valA < valB) return sortOrder === 'asc' ? -1 : 1
-          if (valA > valB) return sortOrder === 'asc' ? 1 : -1
-          return 0
-        })
-
-        setFiltered(entries)
+        setFiltered(mapped)
       })
       .catch(err => console.error(err))
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
-    return () => { active = false }
-  }, [dateRange, selUsers, selProjects, selTags, selTasks, selStatus, filterDesc, sortField, sortOrder, users])
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [dateRange, selUsers, selProjects, selTags, selTasks, selStatus, filterDesc])
 
-  const handleApply = (filters: any) => {
+  const sorted = useMemo(() => {
+    const list = [...filtered]
+    const userMap = Object.fromEntries(users.map(u => [u.id, u.name]))
+
+    list.sort((a, b) => {
+      let valA: string | number = a[sortField as keyof TimeEntry] as string | number
+      let valB: string | number = b[sortField as keyof TimeEntry] as string | number
+      
+      if (sortField === 'createdAt') { 
+        valA = new Date(a.createdAt).getTime()
+        valB = new Date(b.createdAt).getTime() 
+      }
+      if (sortField === 'userName') { 
+        valA = userMap[a.userId] || ''
+        valB = userMap[b.userId] || '' 
+      }
+      if (sortField === 'duration') { 
+        valA = a.duration || 0
+        valB = b.duration || 0 
+      }
+      if (sortField === 'description') { 
+        valA = a.description || ''
+        valB = b.description || '' 
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1
+      return 0
+    })
+    return list
+  }, [filtered, sortField, sortOrder, users])
+
+  const handleApply = (newFilters: { 
+    team: string[]; 
+    project: string[]; 
+    tags: string[]; 
+    description: string 
+  }) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (filters.team.length) params.set('users', filters.team.join(','))
+    if (newFilters.team.length) params.set('users', newFilters.team.join(','))
     else params.delete('users')
-    if (filters.project.length) params.set('projects', filters.project.join(','))
+    if (newFilters.project.length) params.set('projects', newFilters.project.join(','))
     else params.delete('projects')
-    if (filters.tags.length) params.set('tags', filters.tags.join(','))
+    if (newFilters.tags.length) params.set('tags', newFilters.tags.join(','))
     else params.delete('tags')
-    if (filters.description) params.set('description', filters.description)
+    if (newFilters.description) params.set('description', newFilters.description)
     else params.delete('description')
     router.push(`${pathname}?${params.toString()}`)
   }
@@ -289,7 +339,10 @@ export default function DetailedReportPage() {
   }
 
   const toggleOne = (id: string) => {
-    const n = new Set(selIds); if (n.has(id)) n.delete(id); else n.add(id); setSelIds(n)
+    const n = new Set(selIds)
+    if (n.has(id)) n.delete(id)
+    else n.add(id)
+    setSelIds(n)
   }
 
   const handleSort = (field: string) => {
@@ -303,16 +356,21 @@ export default function DetailedReportPage() {
   }
 
   const onDup = (e: typeof filtered[0]) => {
-    const { id, createdAt, updatedAt, ...rest } = e
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, createdAt: _ca, updatedAt: _ua, ...rest } = e
     addTimeEntry({ ...rest, startTime: new Date() })
   }
 
-  const bulkDelete = () => { if (confirm(`Delete ${selIds.size} entries?`)) { deleteTimeEntries(Array.from(selIds)); setSelIds(new Set()) } }
-  const bulkUpdate = (data: any) => { updateTimeEntries(Array.from(selIds), data); setSelIds(new Set()) }
-
-  const SortIcon = ({ field }: { field: string }) => {
-    if (sortField !== field) return null
-    return sortOrder === 'desc' ? <ArrowDown className="h-3.5 w-3.5 ml-1" /> : <ArrowUp className="h-3.5 w-3.5 ml-1" />
+  const bulkDelete = () => { 
+    if (window.confirm(`Delete ${selIds.size} entries?`)) { 
+      deleteTimeEntries(Array.from(selIds))
+      setSelIds(new Set()) 
+    } 
+  }
+  
+  const bulkUpdate = (data: Partial<TimeEntry>) => { 
+    updateTimeEntries(Array.from(selIds), data)
+    setSelIds(new Set()) 
   }
 
   return (
@@ -392,15 +450,15 @@ export default function DetailedReportPage() {
             ) : (
               <>
                 <div className="flex-1 min-w-0 flex items-center gap-1 cursor-pointer hover:text-[#555]" onClick={() => handleSort('description')}>
-                  Time Entry <SortIcon field="description" />
+                  Time Entry <SortIcon field="description" sortField={sortField} sortOrder={sortOrder} />
                 </div>
                 <div className="w-[80px] text-right flex-shrink-0 flex items-center justify-end px-2">Amount</div>
                 <div className="w-[40px] flex-shrink-0" />
                 <div className="w-[150px] text-right flex-shrink-0 px-2 flex items-center justify-end cursor-pointer hover:text-[#555]" onClick={() => handleSort('userName')}>
-                  User <SortIcon field="userName" />
+                  User <SortIcon field="userName" sortField={sortField} sortOrder={sortOrder} />
                 </div>
                 <div className="w-[90px] text-center flex-shrink-0 px-2 flex items-center justify-center cursor-pointer hover:text-[#555]" onClick={() => handleSort('duration')}>
-                  Duration <SortIcon field="duration" />
+                  Duration <SortIcon field="duration" sortField={sortField} sortOrder={sortOrder} />
                 </div>
                 <div className="w-[100px] flex-shrink-0" />
               </>
@@ -409,11 +467,17 @@ export default function DetailedReportPage() {
 
           {/* Rows */}
           <div className="bg-white">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="p-4 space-y-4">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : sorted.length === 0 ? (
               <div className="py-16 text-center text-[14px] text-[#aaa]">No entries for selected range</div>
             ) : (
               Object.entries(
-                filtered.reduce((acc, entry) => {
+                sorted.reduce((acc, entry) => {
                   const dateKey = sortField === 'createdAt'
                     ? format(new Date(entry.createdAt), 'EEE, MMM d')
                     : 'Results'

@@ -1,8 +1,8 @@
-# LogSpanX API Documentation
+# Trackify API Documentation
 
-**Project:** LogSpanX - Time Tracking & Productivity Management  
+**Project:** Trackify - Time Tracking & Productivity Management  
 **Version:** 0.1.0  
-**Base URL:** `https://api.logspanx.com/v1`  
+**Base URL:** `https://api.trackify.com/v1`  
 **Authentication:** Bearer Token (JWT)
 
 ---

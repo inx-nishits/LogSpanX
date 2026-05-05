@@ -42,7 +42,7 @@ export default function DashboardLayout({
       <div className="min-h-screen flex items-center justify-center bg-[#f2f6f8]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#03a9f4] mx-auto mb-4"></div>
-          <p className="text-gray-500 font-medium tracking-tight">Loading LogSpanX...</p>
+          <p className="text-gray-500 font-medium tracking-tight">Loading Trackify...</p>
         </div>
       </div>
     )

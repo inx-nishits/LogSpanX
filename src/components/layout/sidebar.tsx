@@ -5,9 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart3, LayoutGrid, Clock, Calendar, Users, Briefcase,
-  UserCircle, Tag, ChevronDown, ChevronUp, ChevronRight,
-  ClipboardList, Grid3X3, CalendarRange, Receipt, TimerOff,
-  Activity, CheckSquare, FileText, Menu, X,
+  UserCircle, Tag, ChevronRight, Menu, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/lib/stores/sidebar-store'
@@ -63,7 +61,7 @@ function ReportsFlyout({ visible, top }: { visible: boolean; top: number }) {
 }
 
 /* ── Menu data ──────────────────────────────────────────────── */
-interface MenuItem { label: string; icon: any; href: string; chevron?: boolean }
+interface MenuItem { label: string; icon: React.ElementType; href: string; chevron?: boolean }
 
 const getMenuItems = (role: User['role']) => {
   const dashHref = role === 'owner' ? '/dashboard/pm' : role === 'admin' ? '/dashboard/tl' : '/dashboard/member'
@@ -90,74 +88,95 @@ const getMenuItems = (role: User['role']) => {
   return { topItems, analyzeItems, manageItems: filteredManage }
 }
 
+/* ── section label ── */
+const Section = ({ label, col }: { label: string; col: boolean }) =>
+  col ? null : (
+    <p className="px-[16px] pt-[18px] pb-[7px] text-[11px] font-semibold text-[#aaa] uppercase tracking-widest">
+      {label}
+    </p>
+  )
+
+/* ── single nav row ── */
+const NavRow = ({
+  item,
+  pathname,
+  col,
+  reportsRef,
+  setFlyoutTop,
+  setReportsOpen,
+  reportsOpen,
+  flyoutTop,
+  setMobileOpen,
+}: {
+  item: MenuItem
+  pathname: string
+  col: boolean
+  reportsRef: React.RefObject<HTMLDivElement | null>
+  setFlyoutTop: (top: number) => void
+  setReportsOpen: (open: boolean) => void
+  reportsOpen: boolean
+  flyoutTop: number
+  setMobileOpen: (open: boolean) => void
+}) => {
+  const active = pathname === item.href || pathname.startsWith(item.href + '/')
+  const isRep = item.label === 'Reports'
+
+  const inner = (
+    <>
+      <item.icon
+        className={cn('flex-shrink-0 h-[18px] w-[18px] stroke-[1.5]', active ? 'text-[#555]' : 'text-[#888]')}
+      />
+      {!col && (
+        <span className="flex-1 text-[15px] uppercase tracking-wide text-[#333] leading-none whitespace-nowrap">
+          {item.label}
+        </span>
+      )}
+      {!col && item.chevron && (
+        <ChevronRight className="flex-shrink-0 h-[14px] w-[14px] text-[#bbb]" />
+      )}
+    </>
+  )
+
+  const cls = cn(
+    'flex items-center w-full gap-[13px] px-[16px] py-[13px] transition-colors duration-100',
+    active ? 'bg-[#ebebeb]' : 'bg-white hover:bg-[#f5f5f5]',
+    col && 'justify-center px-0'
+  )
+
+  if (isRep) return (
+    <div
+      ref={reportsRef}
+      onMouseEnter={() => {
+        if (reportsRef.current) setFlyoutTop(reportsRef.current.getBoundingClientRect().top)
+        setReportsOpen(true)
+      }}
+      onMouseLeave={() => setReportsOpen(false)}
+    >
+      <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>{inner}</Link>
+      <ReportsFlyout visible={reportsOpen} top={flyoutTop} />
+    </div>
+  )
+
+  return (
+    <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>
+      {inner}
+    </Link>
+  )
+}
+
 /* ── Sidebar ────────────────────────────────────────────────── */
 export function Sidebar() {
-  const pathname  = usePathname()
-  const { user }  = useAuthStore()
+  const pathname = usePathname()
+  const { user } = useAuthStore()
   const { isCollapsed, isMobileOpen, toggle, toggleMobile, setMobileOpen } = useSidebarStore()
-  const [showMore, setShowMore]           = useState(false)
-  const [reportsOpen, setReportsOpen]     = useState(false)
-  const [flyoutTop, setFlyoutTop]         = useState(0)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [showMore, setShowMore] = useState(false)
+  const [reportsOpen, setReportsOpen] = useState(false)
+  const [flyoutTop, setFlyoutTop] = useState(0)
   const reportsRef = useRef<HTMLDivElement>(null)
 
   const { topItems, analyzeItems, manageItems } = getMenuItems(user?.role || 'member')
-  const col = isCollapsed && !isMobileOpen   // true when desktop-collapsed
-
-  /* ── single nav row ── */
-  const Row = ({ item }: { item: MenuItem }) => {
-    const active   = pathname === item.href || pathname.startsWith(item.href + '/')
-    const isRep    = item.label === 'Reports'
-
-    const inner = (
-      <>
-        <item.icon
-          className={cn('flex-shrink-0 h-[18px] w-[18px] stroke-[1.5]', active ? 'text-[#555]' : 'text-[#888]')}
-        />
-        {!col && (
-          <span className="flex-1 text-[15px] uppercase tracking-wide text-[#333] leading-none whitespace-nowrap">
-            {item.label}
-          </span>
-        )}
-        {!col && item.chevron && (
-          <ChevronRight className="flex-shrink-0 h-[14px] w-[14px] text-[#bbb]" />
-        )}
-      </>
-    )
-
-    const cls = cn(
-      'flex items-center w-full gap-[13px] px-[16px] py-[13px] transition-colors duration-100',
-      active ? 'bg-[#ebebeb]' : 'bg-white hover:bg-[#f5f5f5]',
-      col && 'justify-center px-0'
-    )
-
-    if (isRep) return (
-      <div
-        ref={reportsRef}
-        onMouseEnter={() => {
-          if (reportsRef.current) setFlyoutTop(reportsRef.current.getBoundingClientRect().top)
-          setReportsOpen(true)
-        }}
-        onMouseLeave={() => setReportsOpen(false)}
-      >
-        <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>{inner}</Link>
-        <ReportsFlyout visible={reportsOpen} top={flyoutTop} />
-      </div>
-    )
-
-    return (
-      <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>
-        {inner}
-      </Link>
-    )
-  }
-
-  /* ── section label ── */
-  const Section = ({ label }: { label: string }) =>
-    col ? null : (
-      <p className="px-[16px] pt-[18px] pb-[7px] text-[11px] font-semibold text-[#aaa] uppercase tracking-widest">
-        {label}
-      </p>
-    )
+  const col = isCollapsed && !isMobileOpen // true when desktop-collapsed
 
   return (
     <>
@@ -194,31 +213,52 @@ export function Sidebar() {
 
         {/* ── Nav ── */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden">
+          {topItems.map((i) => (
+            <NavRow
+              key={i.href}
+              item={i}
+              pathname={pathname}
+              col={col}
+              reportsRef={reportsRef}
+              setFlyoutTop={setFlyoutTop}
+              setReportsOpen={setReportsOpen}
+              reportsOpen={reportsOpen}
+              flyoutTop={flyoutTop}
+              setMobileOpen={setMobileOpen}
+            />
+          ))}
 
-          {topItems.map(i => <Row key={i.href} item={i} />)}
+          <Section label="Analyze" col={col} />
+          {analyzeItems.map((i) => (
+            <NavRow
+              key={i.href}
+              item={i}
+              pathname={pathname}
+              col={col}
+              reportsRef={reportsRef}
+              setFlyoutTop={setFlyoutTop}
+              setReportsOpen={setReportsOpen}
+              reportsOpen={reportsOpen}
+              flyoutTop={flyoutTop}
+              setMobileOpen={setMobileOpen}
+            />
+          ))}
 
-          <Section label="Analyze" />
-          {analyzeItems.map(i => <Row key={i.href} item={i} />)}
-
-          <Section label="Manage" />
-          {manageItems.map(i => <Row key={i.href} item={i} />)}
-
-          {/* Show More
-          {!col && (
-            <button
-              onClick={() => setShowMore(v => !v)}
-              className="flex items-center gap-[13px] w-full px-[16px] py-[13px] bg-white hover:bg-[#f5f5f5] transition-colors"
-            >
-              {showMore
-                ? <ChevronUp   className="h-[14px] w-[14px] text-[#bbb]" />
-                : <ChevronDown className="h-[14px] w-[14px] text-[#bbb]" />}
-              <span className="text-[15px] uppercase tracking-wide text-[#aaa]">
-                {showMore ? 'Show Less' : 'Show More'}
-              </span>
-            </button>
-          )} */}
-
-          
+          <Section label="Manage" col={col} />
+          {manageItems.map((i) => (
+            <NavRow
+              key={i.href}
+              item={i}
+              pathname={pathname}
+              col={col}
+              reportsRef={reportsRef}
+              setFlyoutTop={setFlyoutTop}
+              setReportsOpen={setReportsOpen}
+              reportsOpen={reportsOpen}
+              flyoutTop={flyoutTop}
+              setMobileOpen={setMobileOpen}
+            />
+          ))}
         </nav>
 
         {/* ── Clockify «» collapse button ── */}

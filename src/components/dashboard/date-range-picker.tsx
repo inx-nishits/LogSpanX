@@ -32,6 +32,7 @@ interface DateRangePickerProps {
     initialRange: DateRange
     onRangeChange: (range: DateRange) => void
     label?: string
+    className?: string
 }
 
 const PRESETS = [
@@ -46,7 +47,7 @@ const PRESETS = [
     { label: 'Last year', getValue: () => ({ from: startOfYear(subMonths(new Date(), 12)), to: endOfYear(subMonths(new Date(), 12)) }) },
 ]
 
-export function DateRangePicker({ initialRange, onRangeChange, label }: DateRangePickerProps) {
+export function DateRangePicker({ initialRange, onRangeChange, label, className }: DateRangePickerProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [range, setRange] = useState<DateRange>(initialRange)
     const [viewDate, setViewDate] = useState(startOfMonth(initialRange.from))
@@ -135,7 +136,7 @@ export function DateRangePicker({ initialRange, onRangeChange, label }: DateRang
                                     "h-9 w-10 flex items-center justify-center text-[13px] relative transition-colors cursor-pointer",
                                     !isCurrentMonth ? "text-[#ccc]" : "text-[#333] hover:bg-[#f5f7f9]",
                                     isInRange && isCurrentMonth && "bg-[#f2f9ff]",
-                                    isSelected && isCurrentMonth && "bg-[#4285f4] text-white hover:bg-[#4285f4] z-10"
+                                    isSelected && isCurrentMonth && "bg-[#03a9f4] text-white hover:bg-[#03a9f4] z-10"
                                 )}
                             >
                                 {format(day, 'd')}
@@ -197,8 +198,9 @@ export function DateRangePicker({ initialRange, onRangeChange, label }: DateRang
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "flex items-center bg-white border border-[#d0d8de] h-[36px] px-3 gap-3 cursor-pointer transition-colors hover:border-[#4285f4]",
-                    isOpen && "border-[#4285f4]"
+                    "flex items-center bg-white border border-[#d0d8de] h-[36px] px-3 gap-3 cursor-pointer transition-colors hover:border-[#03a9f4]",
+                    isOpen && "border-[#03a9f4]",
+                    className
                 )}
             >
                 <CalendarDays className="h-[16px] w-[16px] text-[#999]" />
@@ -219,7 +221,7 @@ export function DateRangePicker({ initialRange, onRangeChange, label }: DateRang
                                 className={cn(
                                     "w-full text-left px-5 py-2.5 text-[14px] transition-colors cursor-pointer",
                                     activePreset === preset.label
-                                        ? "bg-[#4285f4] text-white"
+                                        ? "bg-[#03a9f4] text-white"
                                         : "text-[#555] hover:bg-[#f5f7f9]"
                                 )}
                             >

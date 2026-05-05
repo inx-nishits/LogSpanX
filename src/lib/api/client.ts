@@ -17,15 +17,13 @@ export class ApiError extends Error {
   }
 }
 
-function getApiBaseUrl() {
+export const COOKIE_SESSION_TOKEN = '__trackify_cookie_session__'
+
+function getConfiguredApiBaseUrl() {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()
 
   if (baseUrl) {
     return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
-  }
-
-  if (typeof window !== 'undefined') {
-    return window.location.origin
   }
 
   throw new ApiError(
@@ -36,7 +34,13 @@ function getApiBaseUrl() {
 
 function buildUrl(path: string, query?: Record<string, string | number | boolean | null | undefined>) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  const url = new URL(`${getApiBaseUrl()}${normalizedPath}`)
+  const isBrowser = typeof window !== 'undefined'
+  const browserPath = normalizedPath.startsWith('/api/')
+    ? normalizedPath
+    : `/api/backend${normalizedPath}`
+  const url = isBrowser
+    ? new URL(browserPath, window.location.origin)
+    : new URL(`${getConfiguredApiBaseUrl()}${normalizedPath}`)
 
   if (query) {
     for (const [key, value] of Object.entries(query)) {
@@ -70,13 +74,32 @@ function getMessage(payload: unknown, fallback: string) {
   return message || fallback
 }
 
-// ─── Token refresh logic ──────────────────────────────────────────────────────
-// Prevents multiple concurrent refresh calls — all queued requests wait for
-// the single in-flight refresh to resolve, then retry with the new token.
+async function parseResponsePayload(response: Response) {
+  const contentType = response.headers.get('Content-Type')
+  const isJson = contentType?.includes('application/json')
+  
+  if (!isJson) {
+    const text = await response.text()
+    if (!text) return null
+    return { message: text }
+  }
+
+  try {
+    return await response.json()
+  } catch (err) {
+    const text = await response.text().catch(() => '')
+    return { 
+      message: 'Failed to parse JSON response', 
+      parseError: err instanceof Error ? err.message : String(err),
+      rawBody: text.slice(0, 500) // Limit size
+    }
+  }
+}
+
 let isRefreshing = false
 let refreshQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = []
 
-async function doRefresh(expiredToken: string): Promise<string> {
+async function doRefresh(): Promise<string> {
   if (isRefreshing) {
     return new Promise<string>((resolve, reject) => {
       refreshQueue.push({ resolve, reject })
@@ -86,35 +109,20 @@ async function doRefresh(expiredToken: string): Promise<string> {
   isRefreshing = true
 
   try {
-    const { useAuthStore } = await import('@/lib/stores/auth-store')
-    const refreshToken = useAuthStore.getState().refreshToken
-
-    // No refresh token stored — nothing to attempt
-    if (!refreshToken) throw new ApiError('No refresh token available', 401)
-
-    const res = await fetch(buildUrl('/auth/refresh'), {
-      method: 'POST',
+    const res = await fetch(buildUrl('/api/auth/session'), {
+      method: 'GET',
+      credentials: 'same-origin',
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refreshToken }),
     })
 
     if (!res.ok) throw new ApiError('Refresh failed', res.status)
 
-    const raw = await res.json()
-    const unwrapped = unwrapApiPayload(raw) as { token?: string, refreshToken?: string }
-    const newToken = unwrapped?.token
-
-    if (!newToken) throw new ApiError('No token in refresh response', 500)
-
-    useAuthStore.getState().setToken(newToken, unwrapped.refreshToken ?? refreshToken)
-
     const queue = refreshQueue
     refreshQueue = []
-    queue.forEach(({ resolve }) => resolve(newToken))
-    return newToken
+    queue.forEach(({ resolve }) => resolve(COOKIE_SESSION_TOKEN))
+    return COOKIE_SESSION_TOKEN
   } catch (err) {
     const queue = refreshQueue
     refreshQueue = []
@@ -131,54 +139,60 @@ export async function apiRequest<T>(
     headers?: HeadersInit
     query?: Record<string, string | number | boolean | null | undefined>
     token?: string | null
+    timeout?: number
   } = {}
 ): Promise<T> {
-  const { query, token, headers, ...requestInit } = options
+  const { query, token, headers, timeout = 15000, ...requestInit } = options
+
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeout)
 
   const makeRequest = (authToken: string | null | undefined) =>
     fetch(buildUrl(path, query), {
       ...requestInit,
+      signal: controller.signal,
+      credentials: 'same-origin',
       headers: {
         Accept: 'application/json',
         ...(requestInit.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...(authToken && authToken !== COOKIE_SESSION_TOKEN ? { Authorization: `Bearer ${authToken}` } : {}),
         ...headers,
       },
     })
 
-  let response = await makeRequest(token)
+  try {
+    let response = await makeRequest(token)
 
-  // On 401, attempt one token refresh then retry — skip for auth endpoints
-  if (response.status === 401 && token && !path.startsWith('/auth/')) {
-    try {
-      const newToken = await doRefresh(token)
-      response = await makeRequest(newToken)
-    } catch {
-      // Refresh failed — clear session silently without calling logout API
-      // (logout API would also 401 with an expired token, causing a second error)
-      const { useAuthStore } = await import('@/lib/stores/auth-store')
-      useAuthStore.setState({
-        token: null,
-        refreshToken: null,
-        user: null,
-        authStatus: 'unauthenticated',
-        error: null,
-      })
-      throw new ApiError('Session expired. Please log in again.', 401)
+    if (response.status === 401 && token && !path.startsWith('/auth/') && !path.startsWith('/api/auth/')) {
+      try {
+        const newToken = await doRefresh()
+        response = await makeRequest(newToken)
+      } catch {
+        const { useAuthStore } = await import('@/lib/stores/auth-store')
+        useAuthStore.setState({
+          token: null,
+          refreshToken: null,
+          user: null,
+          authStatus: 'unauthenticated',
+          error: null,
+        })
+        throw new ApiError('Session expired. Please log in again.', 401)
+      }
     }
+
+    const payload = await parseResponsePayload(response)
+    const unwrapped = unwrapApiPayload(payload)
+
+    if (!response.ok) {
+      throw new ApiError(getMessage(payload, `Request failed with status ${response.status}`), response.status, payload)
+    }
+
+    if (payload && typeof payload === 'object' && 'success' in payload && payload.success === false) {
+      throw new ApiError(getMessage(payload, 'Request failed'), response.status, payload)
+    }
+
+    return unwrapped as T
+  } finally {
+    clearTimeout(id)
   }
-
-  const rawText = await response.text()
-  const payload = rawText ? JSON.parse(rawText) : null
-  const unwrapped = unwrapApiPayload(payload)
-
-  if (!response.ok) {
-    throw new ApiError(getMessage(payload, `Request failed with status ${response.status}`), response.status, payload)
-  }
-
-  if (payload && typeof payload === 'object' && 'success' in payload && payload.success === false) {
-    throw new ApiError(getMessage(payload, 'Request failed'), response.status, payload)
-  }
-
-  return unwrapped as T
 }

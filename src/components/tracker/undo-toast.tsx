@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { X, RotateCcw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useDataStore } from '@/lib/stores/data-store'
-import { cn } from '@/lib/utils'
 
 export function UndoToast() {
   const { lastDeletedEntries, undoDelete } = useDataStore()
@@ -12,9 +10,12 @@ export function UndoToast() {
 
   useEffect(() => {
     if (lastDeletedEntries.length > 0) {
-      setIsVisible(true)
-      const timer = setTimeout(() => setIsVisible(false), 8000)
-      return () => clearTimeout(timer)
+      const showTimer = setTimeout(() => setIsVisible(true), 10)
+      const hideTimer = setTimeout(() => setIsVisible(false), 8000)
+      return () => {
+        clearTimeout(showTimer)
+        clearTimeout(hideTimer)
+      }
     }
   }, [lastDeletedEntries])
 

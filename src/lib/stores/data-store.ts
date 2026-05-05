@@ -20,6 +20,10 @@ import {
   serializeTimeEntryCreate,
 } from '@/lib/api/mappers'
 import { Client, Group, Project, Tag, Task, TimeEntry, User, ReportFilters } from '@/lib/types'
+import { getProjectTasks } from '@/lib/api/tasks'
+import { getUsers, getUserProfile } from '@/lib/api/users'
+import { getGroups } from '@/lib/api/teams'
+import { getClients } from '@/lib/api/clients'
 
 export interface SummaryReportData {
   totalAmount: number
@@ -88,6 +92,7 @@ interface DataStore {
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>
   updateProjects: (ids: string[], updates: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
+  toggleProjectArchive: (id: string) => Promise<void>
   assignMember: (projectId: string, userId: string, role?: string, hourlyRate?: number) => Promise<void>
   unassignMember: (projectId: string, userId: string) => Promise<void>
 
@@ -154,24 +159,24 @@ function extractArray<T>(payload: unknown): T[] {
 }
 
 async function fetchProjectTasks(projects: Project[]) {
-  const token = useAuthStore.getState().token
-  const CONCURRENCY = 5
+  const CONCURRENCY = 10
   const results: Task[] = []
 
   for (let i = 0; i < projects.length; i += CONCURRENCY) {
     const batch = projects.slice(i, i + CONCURRENCY)
-    const batchResults = await Promise.all(
+    const batchResults = await Promise.allSettled(
       batch.map(async (project) => {
-        try {
-          const tasksRaw = await apiRequest<ApiTask[]>(`/projects/${project.id}/tasks`, { method: 'GET', token })
-          const tasks = extractArray<ApiTask>(tasksRaw)
-          return tasks.map((task) => mapApiTask(task, project.id))
-        } catch {
-          return []
-        }
+        const tasksRaw = await getProjectTasks(project.id)
+        const tasks = extractArray<ApiTask>(tasksRaw)
+        return tasks.map((task) => mapApiTask(task, project.id))
       })
     )
-    results.push(...batchResults.flat())
+    
+    batchResults.forEach(res => {
+      if (res.status === 'fulfilled') {
+        results.push(...res.value)
+      }
+    })
   }
 
   return results
@@ -193,12 +198,9 @@ export const useDataStore = create<DataStore>((set, get) => ({
     let currentUser = useAuthStore.getState().user
     if (!currentUser) {
       try {
-        const profile = await apiRequest<ApiUser>('/auth/me', { method: 'GET', token })
+        const profile = await getUserProfile()
         currentUser = mapApiUser(profile)
-        useAuthStore.getState().setToken(token)
-        // Use set with a function to merge safely without overwriting persisted fields
-        const resolvedUser = currentUser
-        useAuthStore.setState((s) => ({ ...s, user: resolvedUser, authStatus: 'authenticated' as const }))
+        useAuthStore.setState((s) => ({ ...s, user: currentUser, authStatus: 'authenticated' as const }))
       } catch {
         set({ ...initialState(), isInitialized: false })
         return
@@ -208,35 +210,39 @@ export const useDataStore = create<DataStore>((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      const [usersRaw, groupsRaw, clientsRaw, projectsRaw, tagsRaw, timeEntriesResult] = await Promise.all([
-        apiRequest<unknown>('/users', { method: 'GET', token }).catch(() => []),
-        apiRequest<unknown>('/groups', { method: 'GET', token }).catch(() => []),
-        apiRequest<unknown>('/clients', { method: 'GET', token }),
-        apiRequest<unknown>('/projects', { method: 'GET', token }),
-        apiRequest<unknown>('/tags', { method: 'GET', token }),
-        apiRequest<unknown>('/time-entries', {
-          method: 'GET',
-          token,
-        }),
+      // Parallel fetch of core reference data
+      const [usersRaw, groupsRaw, clientsRaw, projectsRaw, tagsRaw] = await Promise.allSettled([
+        getUsers(),
+        getGroups(),
+        getClients(),
+        apiRequest<ApiProject[]>('/projects', { method: 'GET', token }),
+        apiRequest<ApiTag[]>('/tags', { method: 'GET', token }),
       ])
 
-      const usersRawArray = extractArray<ApiUser>(usersRaw)
-      // If /users returned empty or was forbidden, fall back to just the current user
-      const users = usersRawArray.length > 0 ? usersRawArray : [currentUser as unknown as ApiUser]
-      const groups = extractArray<ApiGroup>(groupsRaw)
-      const clients = extractArray<ApiClient>(clientsRaw)
-      const projects = extractArray<ApiProject>(projectsRaw)
-      const tags = extractArray<ApiTag>(tagsRaw)
+      const users = usersRaw.status === 'fulfilled' ? extractArray<ApiUser>(usersRaw.value) : [currentUser as unknown as ApiUser]
+      const groups = groupsRaw.status === 'fulfilled' ? extractArray<ApiGroup>(groupsRaw.value) : []
+      const clients = clientsRaw.status === 'fulfilled' ? extractArray<ApiClient>(clientsRaw.value) : []
+      const projects = projectsRaw.status === 'fulfilled' ? extractArray<ApiProject>(projectsRaw.value) : []
+      const tags = tagsRaw.status === 'fulfilled' ? extractArray<ApiTag>(tagsRaw.value) : []
+      
       const normalizedProjects = projects.map(mapApiProject)
-      const tasks = await fetchProjectTasks(normalizedProjects)
+      
+      // Fetch tasks and time entries (less critical, handle failures gracefully)
+      const [tasks, timeEntriesResult] = await Promise.allSettled([
+        fetchProjectTasks(normalizedProjects),
+        apiRequest<unknown>('/time-entries', { method: 'GET', token }),
+      ])
 
-      const timeEntriesRaw = Array.isArray(timeEntriesResult)
-        ? timeEntriesResult
-        : (timeEntriesResult && typeof timeEntriesResult === 'object' && 'items' in timeEntriesResult && Array.isArray((timeEntriesResult as Record<string, unknown>).items))
-          ? (timeEntriesResult as { items: ApiTimeEntry[] }).items
-          : (timeEntriesResult && typeof timeEntriesResult === 'object' && 'entries' in timeEntriesResult && Array.isArray((timeEntriesResult as Record<string, unknown>).entries))
-            ? (timeEntriesResult as { entries: ApiTimeEntry[] }).entries
-            : extractArray<ApiTimeEntry>(timeEntriesResult)
+      const finalTasks = tasks.status === 'fulfilled' ? tasks.value : []
+      const timeEntriesResultValue = timeEntriesResult.status === 'fulfilled' ? timeEntriesResult.value : []
+      
+      const timeEntriesRaw = Array.isArray(timeEntriesResultValue)
+        ? timeEntriesResultValue
+        : (timeEntriesResultValue && typeof timeEntriesResultValue === 'object' && 'items' in timeEntriesResultValue && Array.isArray((timeEntriesResultValue as Record<string, unknown>).items))
+          ? (timeEntriesResultValue as { items: ApiTimeEntry[] }).items
+          : (timeEntriesResultValue && typeof timeEntriesResultValue === 'object' && 'entries' in timeEntriesResultValue && Array.isArray((timeEntriesResultValue as Record<string, unknown>).entries))
+            ? (timeEntriesResultValue as { entries: ApiTimeEntry[] }).entries
+            : extractArray<ApiTimeEntry>(timeEntriesResultValue)
 
       set({
         users: users.map(mapApiUser),
@@ -245,7 +251,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
         projects: normalizedProjects,
         tags: tags.map(mapApiTag),
         timeEntries: timeEntriesRaw.map(mapApiTimeEntry),
-        tasks,
+        tasks: finalTasks,
         isLoading: false,
         isInitialized: true,
         error: null,
@@ -400,20 +406,35 @@ export const useDataStore = create<DataStore>((set, get) => ({
     }))
   },
 
+  toggleProjectArchive: async (id) => {
+    const token = useAuthStore.getState().token
+    const payload = await apiRequest<{ success: boolean; data: ApiProject }>(`/projects/${id}/archive`, {
+      method: 'PATCH',
+      token,
+    })
+
+    if (payload.data) {
+      const updatedProject = mapApiProject(payload.data)
+      set((state) => ({
+        projects: state.projects.map((project) => (project.id === id ? updatedProject : project)),
+      }))
+    }
+  },
+
   updateProject: async (id, updates) => {
     const token = useAuthStore.getState().token
     const existing = get().projects.find(p => p.id === id)
     const payload = await apiRequest<ApiProject>(`/projects/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       token,
       body: JSON.stringify({
-        name: updates.name ?? existing?.name,
-        color: updates.color ?? existing?.color,
-        clientName: updates.clientName ?? existing?.clientName,
-        leadId: updates.leadId ?? existing?.leadId,
-        billable: updates.billable ?? existing?.billable,
-        archived: updates.archived ?? existing?.archived,
-        members: (updates.members ?? existing?.members)?.map((m) => (typeof m === 'string' ? m : m.userId)),
+        name: updates.name,
+        color: updates.color,
+        clientName: updates.clientName,
+        leadId: updates.leadId,
+        billable: updates.billable,
+        archived: updates.archived,
+        members: updates.members?.map((m) => (typeof m === 'string' ? m : m.userId)),
       }),
     })
 
@@ -759,12 +780,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   getSharedReports: async () => {
     const token = useAuthStore.getState().token
-    const raw = await apiRequest<unknown>('/shared-reports', { method: 'GET', token })
+    const workspaceId = useAuthStore.getState().user?.workspaceId
+    const raw = await apiRequest<unknown>(`/reports/shared?workspaceId=${workspaceId}`, { method: 'GET', token })
     return extractArray<SharedReport>(raw)
   },
 
   getSharedReport: async (token) => {
-    return await apiRequest<SharedReportData>(`/shared-reports/${token}`, {
+    return await apiRequest<SharedReportData>(`/reports/shared/${token}`, {
       method: 'GET',
     })
   },

@@ -7,6 +7,7 @@ export interface User {
   archived?: boolean
   billableRate?: number
   group?: string
+  workspaceId?: string
 }
 
 export interface Group {

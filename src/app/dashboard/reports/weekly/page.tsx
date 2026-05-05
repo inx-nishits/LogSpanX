@@ -6,6 +6,7 @@ import { ChevronDown, Printer, Share2 } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { cn } from '@/lib/utils'
 import { ReportShell, DateRange } from '../_components/report-shell'
+import { Skeleton } from '@/components/ui/skeleton'
 
 function fmtSecs(s: number) {
   const h = Math.floor(s / 3600)
@@ -65,6 +66,7 @@ export default function WeeklyReportPage() {
   const days = useMemo(() => eachDayOfInterval({ start: from, end: to }), [from, to])
 
   const [filtered, setFiltered] = useState<typeof timeEntries>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
@@ -79,6 +81,7 @@ export default function WeeklyReportPage() {
     if (selStatus.length === 1 && selStatus.includes('billable')) params.billable = 'true'
     if (selStatus.length === 1 && selStatus.includes('non-billable')) params.billable = 'false'
 
+    setLoading(true)
     getTimeEntries(params)
       .then((res: any) => {
         if (!active) return
@@ -87,10 +90,8 @@ export default function WeeklyReportPage() {
           entries = Object.values(res || {}).find(v => Array.isArray(v)) || []
         }
 
-        // Map raw API entries to the expected TimeEntry format
         entries = entries.map(mapApiTimeEntry)
 
-        // Apply fallback local filters for descriptions or unhandled statuses
         entries = entries.filter((e: any) => {
           if (descSearch && !e.description?.toLowerCase().includes(descSearch.toLowerCase())) return false
           return true
@@ -99,6 +100,9 @@ export default function WeeklyReportPage() {
         setFiltered(entries)
       })
       .catch(err => console.error(err))
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
     return () => { active = false }
   }, [from, to, selUsers, selProjects, selTags, selStatus, descSearch])
@@ -107,24 +111,40 @@ export default function WeeklyReportPage() {
 
   // Build rows grouped by project or user
   const rows = useMemo(() => {
-    const groups = groupBy === 'User' ? users : projects
-    return groups.map(g => {
-      const isUser = groupBy === 'User'
-      const groupEntries = filtered.filter(e => isUser ? e.userId === (g as any).id : e.projectId === (g as any).id)
-      if (!groupEntries.length) return null
+    const isUserGroup = groupBy === 'User'
+    const grouped: Record<string, Record<string, number>> = {}
+    const groupMeta: Record<string, { count: number }> = {}
 
-      const dayTotals = days.map(day =>
-        groupEntries.filter(e => isSameDay(new Date(e.startTime), day)).reduce((a, e) => a + (e.duration ?? 0), 0)
-      )
+    filtered.forEach(e => {
+      const gid = isUserGroup ? e.userId : (e.projectId || '__none__')
+      const d = new Date(e.startTime)
+      if (isNaN(d.getTime())) return
+      const dateKey = format(d, 'yyyy-MM-dd')
+      
+      if (!grouped[gid]) grouped[gid] = {}
+      if (!groupMeta[gid]) groupMeta[gid] = { count: 0 }
+      
+      grouped[gid][dateKey] = (grouped[gid][dateKey] || 0) + (e.duration ?? 0)
+      groupMeta[gid].count++
+    })
+
+    const groups = isUserGroup ? users : projects
+    const dateKeys = days.map(d => format(d, 'yyyy-MM-dd'))
+
+    return groups.map(g => {
+      const gid = (g as any).id
+      if (!grouped[gid]) return null
+
+      const dayTotals = dateKeys.map(key => grouped[gid][key] || 0)
       const total = dayTotals.reduce((a, b) => a + b, 0)
-      const proj = isUser ? null : (g as typeof projects[0])
+      
+      const proj = isUserGroup ? null : (g as typeof projects[0])
       const color = proj?.color || '#03a9f4'
-      const name = (g as any).name
       const lead = proj?.leadId ? users.find(u => u.id === proj.leadId)?.name : null
       const billable = proj?.billable ?? false
 
-      return { id: (g as any).id, name, color, lead, billable, entryCount: groupEntries.length, dayTotals, total }
-    }).filter(Boolean) as { id: string; name: string; color: string; lead: string | null | undefined; billable: boolean; entryCount: number; dayTotals: number[]; total: number }[]
+      return { id: gid, name: (g as any).name, color, lead, billable, entryCount: groupMeta[gid].count, dayTotals, total }
+    }).filter(Boolean) as any[]
   }, [filtered, projects, users, days, groupBy])
 
   const handleApply = (filters: any) => {
@@ -186,10 +206,17 @@ export default function WeeklyReportPage() {
           </div>
 
           {/* Rows */}
-          {rows.length === 0 ? (
-            <div className="py-20 text-center text-[16px] text-[#aaa] bg-white">No data for selected range</div>
-          ) : (
-            rows.map(row => (
+          <div className="bg-white">
+            {loading ? (
+              <div className="p-4 space-y-4">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : rows.length === 0 ? (
+              <div className="py-20 text-center text-[16px] text-[#aaa] bg-white">No data for selected range</div>
+            ) : (
+              rows.map(row => (
               <div key={row.id} className="flex items-center h-[50px] bg-white border-b border-[#f0f0f0] px-4 hover:bg-[#fafbfc] transition-colors">
                 {/* Count */}
                 <div className="w-6 flex-shrink-0 mr-2 text-[16px] text-[#aaa] tabular-nums text-center">{row.entryCount}</div>
@@ -204,7 +231,7 @@ export default function WeeklyReportPage() {
                 </div>
 
                 {/* Day columns */}
-                {row.dayTotals.map((secs, i) => (
+                {(row.dayTotals as number[]).map((secs: number, i: number) => (
                   <div key={i} className="w-[80px] text-right flex-shrink-0 text-[16px] text-[#333] tabular-nums">
                     {fmtH(secs)}
                   </div>
@@ -219,6 +246,7 @@ export default function WeeklyReportPage() {
           )}
         </div>
       </div>
-    </ReportShell>
+    </div>
+  </ReportShell>
   )
 }

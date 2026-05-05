@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Calendar as CalendarIcon, Check } from 'lucide-react'
+import { X, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -13,6 +13,50 @@ interface BulkEditModalProps {
   onClose: () => void
   onSave: () => void
 }
+
+const CheckboxUI = ({ checked, onClick }: { checked: boolean; onClick: () => void }) => (
+  <div
+    onClick={onClick}
+    className={cn(
+      'w-4 h-4 rounded-sm border flex items-center justify-center cursor-pointer transition-colors flex-shrink-0',
+      checked ? 'bg-[#03a9f4] border-[#03a9f4]' : 'bg-white border-gray-300'
+    )}
+  >
+    {checked && <Check className="w-3 h-3 text-white stroke-[3px]" />}
+  </div>
+)
+
+const Row = ({
+  id,
+  label,
+  children,
+  extraHeight = false,
+  selectedFields,
+  toggleField,
+}: {
+  id: string
+  label: string
+  children: React.ReactNode
+  extraHeight?: boolean
+  selectedFields: Record<string, boolean>
+  toggleField: (id: string) => void
+}) => (
+  <div className={cn(
+    'flex border-b border-gray-100 transition-colors',
+    selectedFields[id] ? 'bg-[#f2f9ff]/40' : 'hover:bg-gray-50/50',
+    extraHeight ? 'py-4 items-start' : 'items-center min-h-[64px] py-1'
+  )}>
+    <div className="w-[120px] flex items-center px-6 gap-3">
+      <CheckboxUI checked={selectedFields[id]} onClick={() => toggleField(id)} />
+      <span className={cn('text-[13px] font-medium', selectedFields[id] ? 'text-gray-900' : 'text-gray-500')}>{label}</span>
+    </div>
+    <div className="flex-1 px-4 pr-6">
+      <div className={cn('transition-opacity duration-200', !selectedFields[id] && 'opacity-40 pointer-events-none')}>
+        {children}
+      </div>
+    </div>
+  </div>
+)
 
 export function BulkEditModal({ entryIds, entryCount, onClose, onSave }: BulkEditModalProps) {
   const { projects, tags, updateTimeEntries } = useDataStore()
@@ -47,46 +91,6 @@ export function BulkEditModal({ entryIds, entryCount, onClose, onSave }: BulkEdi
     onSave()
   }
 
-  const CheckboxUI = ({ checked, onClick }: { checked: boolean; onClick: () => void }) => (
-    <div
-      onClick={onClick}
-      className={cn(
-        'w-4 h-4 rounded-sm border flex items-center justify-center cursor-pointer transition-colors flex-shrink-0',
-        checked ? 'bg-[#03a9f4] border-[#03a9f4]' : 'bg-white border-gray-300'
-      )}
-    >
-      {checked && <Check className="w-3 h-3 text-white stroke-[3px]" />}
-    </div>
-  )
-
-  const Row = ({
-    id,
-    label,
-    children,
-    extraHeight = false,
-  }: {
-    id: string
-    label: string
-    children: React.ReactNode
-    extraHeight?: boolean
-  }) => (
-    <div className={cn(
-      'flex border-b border-gray-100 transition-colors',
-      selectedFields[id] ? 'bg-[#f2f9ff]/40' : 'hover:bg-gray-50/50',
-      extraHeight ? 'py-4 items-start' : 'items-center min-h-[64px] py-1'
-    )}>
-      <div className="w-[120px] flex items-center px-6 gap-3">
-        <CheckboxUI checked={selectedFields[id]} onClick={() => toggleField(id)} />
-        <span className={cn('text-[13px] font-medium', selectedFields[id] ? 'text-gray-900' : 'text-gray-500')}>{label}</span>
-      </div>
-      <div className="flex-1 px-4 pr-6">
-        <div className={cn('transition-opacity duration-200', !selectedFields[id] && 'opacity-40 pointer-events-none')}>
-          {children}
-        </div>
-      </div>
-    </div>
-  )
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-in fade-in duration-200 backdrop-blur-[1px]">
       <div className="bg-white rounded-sm shadow-2xl w-full max-w-[500px] flex flex-col font-sans mb-10 overflow-hidden border border-gray-200">
@@ -102,7 +106,7 @@ export function BulkEditModal({ entryIds, entryCount, onClose, onSave }: BulkEdi
         {/* Form Content */}
         <div className="flex flex-col flex-1 overflow-y-auto bg-white">
 
-          <Row id="description" label="Description">
+          <Row id="description" label="Description" selectedFields={selectedFields} toggleField={toggleField}>
             <Input
               value={description}
               onChange={e => setDescription(e.target.value)}
@@ -111,7 +115,7 @@ export function BulkEditModal({ entryIds, entryCount, onClose, onSave }: BulkEdi
             />
           </Row>
 
-          <Row id="project" label="Project">
+          <Row id="project" label="Project" selectedFields={selectedFields} toggleField={toggleField}>
             <div className="relative">
               <select
                 value={projectId}
@@ -129,7 +133,7 @@ export function BulkEditModal({ entryIds, entryCount, onClose, onSave }: BulkEdi
             </div>
           </Row>
 
-          <Row id="tags" label="Tags" extraHeight={true}>
+          <Row id="tags" label="Tags" extraHeight={true} selectedFields={selectedFields} toggleField={toggleField}>
             <div className="flex flex-col gap-4 w-full">
               <div className="relative">
                 <select
@@ -159,7 +163,7 @@ export function BulkEditModal({ entryIds, entryCount, onClose, onSave }: BulkEdi
             </div>
           </Row>
 
-          <Row id="billable" label="Billable">
+          <Row id="billable" label="Billable" selectedFields={selectedFields} toggleField={toggleField}>
             <div className="flex items-center gap-3 h-[36px]">
               <button
                 onClick={() => setIsBillable(b => !b)}
