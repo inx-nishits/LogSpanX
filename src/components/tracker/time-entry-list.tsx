@@ -222,7 +222,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                   </div>
 
                   <div className="bg-white border-x border-b border-[#e4e8ec]">
-                    {dayEntries.map(entry => {
+                    {dayEntries.map((entry, idx) => {
                       const proj = projects.find(p => p.id === entry.projectId)
                       const lead = users.find(u => u.id === proj?.leadId)
                       const task = tasks.find(t => t.id === entry.taskId)
@@ -231,7 +231,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                       const canEdit = canEditEntry(entry)
 
                       return (
-                        <div key={entry.id}
+                        <div key={`${dKey}-${entry.id}-${idx}`}
                           className={cn('flex items-stretch border-b border-[#f0f0f0] last:border-b-0 hover:bg-[#fafbfc] transition-colors group', isSel && 'bg-[#f0f8ff]')}
                           style={{ height: 54 }}>
 

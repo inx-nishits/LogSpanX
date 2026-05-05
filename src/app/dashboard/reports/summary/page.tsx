@@ -347,7 +347,7 @@ import { ApiTimeEntry, mapApiTimeEntry } from '@/lib/api/mappers'
 
 export default function SummaryReportPage() {
   const router = useRouter()
-  const { projects, users, tags, groups } = useDataStore()
+  const { projects, users, tags, groups, tasks } = useDataStore()
 
   const [dateRange, setDateRange] = useState({
     from: startOfDay(startOfWeek(new Date(), { weekStartsOn: 1 })),
@@ -583,7 +583,8 @@ export default function SummaryReportPage() {
         const map: Record<string, { duration: number; count: number; name: string }> = {}
         entries.forEach(e => {
           const key = e.taskId || '__none__'
-          if (!map[key]) map[key] = { duration: 0, count: 0, name: '(Without Task)' }
+          const taskName = e.taskId ? (tasks.find(t => t.id === e.taskId)?.name || e.taskId) : '(Without Task)'
+          if (!map[key]) map[key] = { duration: 0, count: 0, name: taskName }
           map[key].duration += e.duration ?? 0
           map[key].count++
         })
@@ -781,7 +782,7 @@ export default function SummaryReportPage() {
       const proj = projects.find(p => p.id === e.projectId)
       return { id: String(e.id), title: e.description || '(no description)', color: proj?.color || '#ccc', entryCount: 1, duration: e.duration ?? 0, billable: e.billable }
     })
-  }, [filtered, groupBy, subGroupBy, users, projects, tags])
+  }, [filtered, groupBy, subGroupBy, users, projects, tags, tasks])
 
   const handleExport = (exportFormat: ExportFormat) => {
     const rows = flattenRows(tableRows)

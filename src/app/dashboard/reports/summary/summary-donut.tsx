@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface DonutSlice {
@@ -9,6 +10,11 @@ interface DonutSlice {
 }
 
 export function SummaryDonut({ data, totalLabel }: { data: DonutSlice[]; totalLabel: string }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  if (!mounted) return <div className="w-[300px] h-[300px]" />
+
   return (
     <div className="relative w-[300px] h-[300px] flex-shrink-0">
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>

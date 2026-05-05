@@ -303,7 +303,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
       const token = useAuthStore.getState().token
       const existing = get().timeEntries.find(e => e.id === id)
 
-      // Optimistic update — apply immediately so UI reflects changes without reload
+      // Optimistic update
       if (existing) {
         set((state) => ({
           timeEntries: state.timeEntries.map((entry) =>
@@ -312,27 +312,37 @@ export const useDataStore = create<DataStore>((set, get) => ({
         }))
       }
 
-      // Only send fields that are being changed
+      // Only send changed fields — per API spec
       const body: Record<string, unknown> = {}
       const merged = existing ? { ...existing, ...updates } : updates
 
       if ('description' in updates) body.description = merged.description ?? ''
       if ('projectId' in updates) body.projectId = merged.projectId ?? null
       if ('taskId' in updates) body.taskId = merged.taskId ?? null
-      if ('tagIds' in updates) body.tagIds = (merged.tagIds ?? []).filter(Boolean)
+      if ('tagIds' in updates) body.tagIds = (merged.tagIds ?? []).filter(Boolean) // only when tags changed
       if ('billable' in updates) body.billable = merged.billable ?? false
-      if ('startTime' in updates) body.startTime = merged.startTime instanceof Date ? merged.startTime.toISOString() : merged.startTime
-      if ('endTime' in updates) body.endTime = merged.endTime instanceof Date ? merged.endTime.toISOString() : (merged.endTime ?? null)
-      if ('duration' in updates) body.duration = merged.duration
-      if ('userId' in updates) body.userId = merged.userId // send when PM is reassigning entry
+      if ('startTime' in updates) body.startTime = merged.startTime instanceof Date ? merged.startTime.toISOString() : merged.startTime ? new Date(merged.startTime as string).toISOString() : undefined
+      if ('endTime' in updates) body.endTime = merged.endTime instanceof Date ? merged.endTime.toISOString() : merged.endTime ? new Date(merged.endTime as string).toISOString() : undefined
+      if ('userId' in updates) body.userId = merged.userId
+      // Never send duration — backend calculates from startTime/endTime
 
-      if (Object.keys(body).length === 0) return // nothing to send
+      if (Object.keys(body).length === 0) return
 
-      await apiRequest<ApiTimeEntry>(`/time-entries/${id}`, {
+      const res = await apiRequest<ApiTimeEntry>(`/time-entries/${id}`, {
         method: 'PATCH',
         token,
         body: JSON.stringify(body),
       })
+
+      // Update store with returned data, preserving startTime from response
+      const synced = mapApiTimeEntry(res)
+      if (synced.startTime && !isNaN(synced.startTime.getTime())) {
+        set((state) => ({
+          timeEntries: state.timeEntries.map((entry) =>
+            entry.id !== id ? entry : { ...entry, ...synced }
+          ),
+        }))
+      }
     } catch (err) {
       // Rollback on failure
       const existing = get().timeEntries.find(e => e.id === id)

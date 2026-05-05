@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 
 interface BarDay {
@@ -51,6 +52,10 @@ function CustomStackedBar(props: any) {
 }
 
 export function SummaryBarChart({ data, mode = 'billability', projects = [] }: SummaryBarChartProps) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  if (!mounted) return <div className="h-[420px] w-full" />
   const isProject = mode === 'project'
 
   const chartData = data.map(d => ({

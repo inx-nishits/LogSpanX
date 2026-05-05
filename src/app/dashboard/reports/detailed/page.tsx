@@ -206,12 +206,33 @@ const SortIcon = ({ field, sortField, sortOrder }: { field: string; sortField: s
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function DetailedReportPage() {
-  const { projects, users, tasks, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
+  const { projects, users, tasks, timeEntries, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const { user: currentUser } = useAuthStore()
   const canManageUsers = currentUser?.role === 'owner' || currentUser?.role === 'admin'
+
+  // Team member IDs for team_lead RBAC
+  const teamMemberIds = useMemo(() => {
+    if (currentUser?.role !== 'admin') return new Set<string>()
+    const ids = new Set<string>()
+    projects.forEach(p => {
+      if (p.leadId === currentUser.id) {
+        p.members.forEach(m => ids.add(typeof m === 'string' ? m : m.userId))
+      }
+    })
+    return ids
+  }, [projects, currentUser])
+
+  const canEditEntry = (entry: TimeEntry) => {
+    if (!currentUser) return false
+    if (currentUser.role === 'owner') return true // admin
+    if (currentUser.role === 'admin') { // team_lead
+      return entry.userId === currentUser.id || teamMemberIds.has(entry.userId)
+    }
+    return entry.userId === currentUser.id // member
+  }
 
   const paramFrom = searchParams.get('from')
   const paramTo = searchParams.get('to')
@@ -236,6 +257,15 @@ export default function DetailedReportPage() {
 
   const [filtered, setFiltered] = useState<TimeEntry[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Sync store updates into filtered — so edits on tracker page reflect here instantly
+  useEffect(() => {
+    if (timeEntries.length === 0) return
+    setFiltered(prev => prev.map(e => {
+      const updated = timeEntries.find(t => t.id === e.id)
+      return updated ? { ...e, ...updated } : e
+    }))
+  }, [timeEntries])
 
   useEffect(() => {
     let active = true
@@ -353,8 +383,9 @@ export default function DetailedReportPage() {
   const updateEntry = (id: string, updates: Partial<typeof filtered[0]>) => {
     const existing = filtered.find(e => e.id === id)
     const fullUpdates = existing ? { ...existing, ...updates } : updates
-    updateTimeEntry(id, fullUpdates)
+    // Optimistic local update
     setFiltered(prev => prev.map(e => e.id !== id ? e : { ...e, ...updates }))
+    updateTimeEntry(id, fullUpdates)
   }
 
   const onDup = (e: typeof filtered[0]) => {
@@ -513,6 +544,7 @@ export default function DetailedReportPage() {
                     const entryTask = tasks.find(t => t.id === entry.taskId)
                     const projLead = proj ? users.find(u => u.id === proj.leadId) : undefined
                     const user = users.find(u => u.id === entry.userId)
+                    const canEdit = canEditEntry(entry)
 
                     return (
                       <div key={entry.id} className={cn("flex items-stretch min-h-[56px] bg-white border-b border-[#f0f0f0] transition-colors group relative", selIds.has(entry.id) ? "bg-[#f2f9ff]" : "hover:bg-[#fafbfc]")}>
@@ -530,41 +562,50 @@ export default function DetailedReportPage() {
                             />
                             <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0">
                               <span className="text-gray-300 flex-shrink-0">•</span>
-                              <ProjectPicker selectedProjectId={entry.projectId}
-                                selectedTaskId={entry.taskId}
-                                onSelect={(pid, tid) => updateEntry(entry.id, { projectId: pid, taskId: tid || undefined })}
-                                onClear={() => updateEntry(entry.id, { projectId: undefined, taskId: undefined })}
-                                customTrigger={proj ? (
-                                  <div className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
-                                    <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
-                                    <span className="text-[15px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
-                                    {entryTask && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
-                                    {projLead && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[15px] font-medium opacity-0 group-hover/entry:opacity-100 transition-opacity cursor-pointer">
-                                    <Plus className="h-3 w-3" /> Project
-                                  </div>
-                                )}
-                              />
+                              {canEdit ? (
+                                <ProjectPicker selectedProjectId={entry.projectId}
+                                  selectedTaskId={entry.taskId}
+                                  onSelect={(pid, tid) => updateEntry(entry.id, { projectId: pid, taskId: tid || undefined })}
+                                  onClear={() => updateEntry(entry.id, { projectId: undefined, taskId: undefined })}
+                                  customTrigger={proj ? (
+                                    <div className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
+                                      <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
+                                      <span className="text-[15px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
+                                      {entryTask && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
+                                      {projLead && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[15px] font-medium opacity-0 group-hover/entry:opacity-100 transition-opacity cursor-pointer">
+                                      <Plus className="h-3 w-3" /> Project
+                                    </div>
+                                  )}
+                                />
+                              ) : proj ? (
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
+                                  <span className="text-[15px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
+                                  {entryTask && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
+                                  {projLead && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                           <div className="flex-shrink-0 ml-auto">
-                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={tagIds => updateEntry(entry.id, { tagIds })} />
+                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={canEdit ? tagIds => updateEntry(entry.id, { tagIds }) : () => {}} />
                           </div>
                         </div>
 
                         <div className="w-[80px] flex-shrink-0 flex items-center justify-end px-2 text-[14px] text-[#aaa] tabular-nums">0.00</div>
 
                         <div className="w-[40px] flex-shrink-0 flex items-center justify-center">
-                          <button onClick={() => updateEntry(entry.id, { billable: !entry.billable })}
-                            className={cn('cursor-pointer transition-colors', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc]')}>
+                          <button onClick={() => canEdit && updateEntry(entry.id, { billable: !entry.billable })}
+                            className={cn('transition-colors', canEdit ? 'cursor-pointer' : 'cursor-default', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc]')}>
                             <DollarSign style={{ width: 18, height: 18 }} />
                           </button>
                         </div>
 
                         <div className="w-[150px] flex-shrink-0 flex items-center justify-end px-2">
-                          {canManageUsers ? (
+                          {canManageUsers && canEdit ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="flex items-center justify-end gap-1 text-[14px] text-[#555] hover:text-[#03a9f4] cursor-pointer ml-auto max-w-[130px] truncate">
@@ -585,11 +626,17 @@ export default function DetailedReportPage() {
                         </div>
 
                         <div className="w-[90px] flex-shrink-0 flex items-center justify-center">
-                          <DurCell dur={entry.duration ?? 0} onSave={s => {
-                            const start = new Date(entry.startTime)
-                            const endTime = new Date(start.getTime() + s * 1000)
-                            updateEntry(entry.id, { startTime: start, endTime, duration: s })
-                          }} />
+                          {canEdit ? (
+                            <DurCell dur={entry.duration ?? 0} onSave={s => {
+                              const start = new Date(entry.startTime)
+                              const endTime = new Date(start.getTime() + s * 1000)
+                              updateEntry(entry.id, { startTime: start, endTime })
+                            }} />
+                          ) : (
+                            <span className="text-[17px] font-bold text-[#333] tabular-nums w-[52px] inline-block text-center">
+                              {fmtDur(entry.duration ?? 0)}
+                            </span>
+                          )}
                         </div>
 
                         <div className="w-[100px] flex-shrink-0 flex items-center justify-end pr-4 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -598,17 +645,19 @@ export default function DetailedReportPage() {
                               <Play style={{ width: 16, height: 16 }} />
                             </button>
                           </Tip>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="text-[#ccc] hover:text-[#666] cursor-pointer p-1">
-                                <MoreVertical style={{ width: 16, height: 16 }} />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[140px] shadow-xl bg-white border border-gray-100 rounded-sm">
-                              <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { deleteTimeEntry(entry.id); setFiltered(prev => prev.filter(e => e.id !== entry.id)) }} className="py-2.5 text-[14px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {canEdit && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="text-[#ccc] hover:text-[#666] cursor-pointer p-1">
+                                  <MoreVertical style={{ width: 16, height: 16 }} />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-[140px] shadow-xl bg-white border border-gray-100 rounded-sm">
+                                <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { deleteTimeEntry(entry.id); setFiltered(prev => prev.filter(e => e.id !== entry.id)) }} className="py-2.5 text-[14px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       </div>
                     )
