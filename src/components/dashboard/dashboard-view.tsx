@@ -10,9 +10,11 @@ import { WeeklyBarChart } from './weekly-bar-chart'
 import { ProjectDonutChart } from './project-donut-chart'
 import { TeamActivities } from './team-activities'
 import { ActivityList } from './activity-list'
-import { getTimeEntries } from '@/lib/api/time-entries'
+import { getTimeEntries, type TimeEntryParams } from '@/lib/api/time-entries'
 import { mapApiTimeEntry } from '@/lib/api/mappers'
 import { Skeleton } from '@/components/ui/skeleton'
+import { type TimeEntry } from '@/lib/types'
+import { type DashboardStats } from '@/lib/stores/data-store'
 
 export interface DonutEntry {
     name: string
@@ -37,7 +39,7 @@ export function DashboardView() {
         from: startOfWeek(new Date(), { weekStartsOn: 1 }),
         to: endOfWeek(new Date(), { weekStartsOn: 1 })
     })
-    const [stats, setStats] = useState<{ todayHours: number; weekHours: number; activeProjects: number; topProject: string } | null>(null)
+    const [stats, setStats] = useState<DashboardStats | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {

@@ -206,7 +206,7 @@ export function mapApiTag(tag: ApiTag): Tag {
 export function mapApiTimeEntry(entry: ApiTimeEntry): TimeEntry {
   // userId may be a populated object
   const isUserObj = typeof entry.userId === 'object' && entry.userId !== null
-  const userIdObj = isUserObj ? (entry.userId as any) : null
+  const userIdObj = isUserObj ? (entry.userId as { id?: string; _id?: string; name?: string }) : null
   const userId = isUserObj
     ? (userIdObj._id ?? userIdObj.id ?? '')
     : entry.userId as string
@@ -214,10 +214,10 @@ export function mapApiTimeEntry(entry: ApiTimeEntry): TimeEntry {
 
   // projectId may be a populated object
   const isProjObj = typeof entry.projectId === 'object' && entry.projectId !== null
-  const projObj = isProjObj ? (entry.projectId as any) : null
+  const projObj = isProjObj ? (entry.projectId as { id?: string; _id?: string; name?: string }) : null
   const projectId = isProjObj
     ? (projObj.id ?? projObj._id ?? undefined)
-    : (entry.projectId ?? undefined)
+    : (entry.projectId as string ?? undefined)
   const projectName = isProjObj ? projObj.name : undefined
 
   // tags may be populated objects; fall back to tagIds string array

@@ -246,6 +246,7 @@ export default function WeeklyReportPage() {
           )}
         </div>
       </div>
-    </ReportShell>
+    </div>
+  </ReportShell>
   )
 }

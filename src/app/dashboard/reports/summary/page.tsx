@@ -183,18 +183,7 @@ function ExportDropdown({ onExport }: { onExport: (format: ExportFormat) => void
   )
 }
 
-function extractApiTimeEntries(payload: unknown): ApiTimeEntry[] {
-  if (Array.isArray(payload)) return payload as ApiTimeEntry[]
-
-  if (!payload || typeof payload !== 'object') return []
-
-  const record = payload as Record<string, unknown>
-  if (Array.isArray(record.items)) return record.items as ApiTimeEntry[]
-  if (Array.isArray(record.entries)) return record.entries as ApiTimeEntry[]
-
-  const nestedArray = Object.values(record).find(Array.isArray)
-  return Array.isArray(nestedArray) ? nestedArray as ApiTimeEntry[] : []
-}
+import { extractArray } from '@/lib/api/utils'
 
 // ─── Description filter ──────────────────────────────────────────────────────
 
@@ -440,7 +429,7 @@ export default function SummaryReportPage() {
     getTimeEntries(params)
       .then((res) => {
         if (!active) return
-        let entries = extractApiTimeEntries(res).map(mapApiTimeEntry)
+        let entries = extractArray<ApiTimeEntry>(res).map(mapApiTimeEntry)
 
         entries = entries.filter((e) => {
           if (teamUserIds.length > 0 && !teamUserIds.includes(e.userId)) return false

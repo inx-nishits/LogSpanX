@@ -75,13 +75,24 @@ function getMessage(payload: unknown, fallback: string) {
 }
 
 async function parseResponsePayload(response: Response) {
-  const rawText = await response.text()
-  if (!rawText) return null
+  const contentType = response.headers.get('Content-Type')
+  const isJson = contentType?.includes('application/json')
+  
+  if (!isJson) {
+    const text = await response.text()
+    if (!text) return null
+    return { message: text }
+  }
 
   try {
-    return JSON.parse(rawText)
-  } catch {
-    return { message: rawText }
+    return await response.json()
+  } catch (err) {
+    const text = await response.text().catch(() => '')
+    return { 
+      message: 'Failed to parse JSON response', 
+      parseError: err instanceof Error ? err.message : String(err),
+      rawBody: text.slice(0, 500) // Limit size
+    }
   }
 }
 
@@ -128,13 +139,18 @@ export async function apiRequest<T>(
     headers?: HeadersInit
     query?: Record<string, string | number | boolean | null | undefined>
     token?: string | null
+    timeout?: number
   } = {}
 ): Promise<T> {
-  const { query, token, headers, ...requestInit } = options
+  const { query, token, headers, timeout = 15000, ...requestInit } = options
+
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeout)
 
   const makeRequest = (authToken: string | null | undefined) =>
     fetch(buildUrl(path, query), {
       ...requestInit,
+      signal: controller.signal,
       credentials: 'same-origin',
       headers: {
         Accept: 'application/json',
@@ -144,35 +160,39 @@ export async function apiRequest<T>(
       },
     })
 
-  let response = await makeRequest(token)
+  try {
+    let response = await makeRequest(token)
 
-  if (response.status === 401 && token && !path.startsWith('/auth/') && !path.startsWith('/api/auth/')) {
-    try {
-      const newToken = await doRefresh()
-      response = await makeRequest(newToken)
-    } catch {
-      const { useAuthStore } = await import('@/lib/stores/auth-store')
-      useAuthStore.setState({
-        token: null,
-        refreshToken: null,
-        user: null,
-        authStatus: 'unauthenticated',
-        error: null,
-      })
-      throw new ApiError('Session expired. Please log in again.', 401)
+    if (response.status === 401 && token && !path.startsWith('/auth/') && !path.startsWith('/api/auth/')) {
+      try {
+        const newToken = await doRefresh()
+        response = await makeRequest(newToken)
+      } catch {
+        const { useAuthStore } = await import('@/lib/stores/auth-store')
+        useAuthStore.setState({
+          token: null,
+          refreshToken: null,
+          user: null,
+          authStatus: 'unauthenticated',
+          error: null,
+        })
+        throw new ApiError('Session expired. Please log in again.', 401)
+      }
     }
+
+    const payload = await parseResponsePayload(response)
+    const unwrapped = unwrapApiPayload(payload)
+
+    if (!response.ok) {
+      throw new ApiError(getMessage(payload, `Request failed with status ${response.status}`), response.status, payload)
+    }
+
+    if (payload && typeof payload === 'object' && 'success' in payload && payload.success === false) {
+      throw new ApiError(getMessage(payload, 'Request failed'), response.status, payload)
+    }
+
+    return unwrapped as T
+  } finally {
+    clearTimeout(id)
   }
-
-  const payload = await parseResponsePayload(response)
-  const unwrapped = unwrapApiPayload(payload)
-
-  if (!response.ok) {
-    throw new ApiError(getMessage(payload, `Request failed with status ${response.status}`), response.status, payload)
-  }
-
-  if (payload && typeof payload === 'object' && 'success' in payload && payload.success === false) {
-    throw new ApiError(getMessage(payload, 'Request failed'), response.status, payload)
-  }
-
-  return unwrapped as T
 }

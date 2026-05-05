@@ -25,6 +25,8 @@ interface AuthState {
 }
 
 interface AuthPayload {
+  token: string
+  refreshToken: string
   user: ApiUser
 }
 
@@ -41,10 +43,10 @@ const initialState = {
   error: null,
 }
 
-function authenticatedState(user: ApiUser) {
+function authenticatedState(user: ApiUser, token?: string, refreshToken?: string) {
   return {
-    token: COOKIE_SESSION_TOKEN,
-    refreshToken: null,
+    token: token ?? COOKIE_SESSION_TOKEN,
+    refreshToken: refreshToken ?? null,
     user: mapApiUser(user),
     authStatus: 'authenticated' as const,
     error: null,
@@ -100,7 +102,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         body: JSON.stringify({ email, password }),
         token: null,
       })
-      set(authenticatedState(payload.user))
+      set(authenticatedState(payload.user, payload.token, payload.refreshToken))
       return true
     } catch (error) {
       set({
@@ -122,7 +124,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         body: JSON.stringify({ name, email, password }),
         token: null,
       })
-      set(authenticatedState(payload.user))
+      set(authenticatedState(payload.user, payload.token, payload.refreshToken))
       return true
     } catch (error) {
       set({

@@ -36,7 +36,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-800 mb-3">3. Data Ownership</h2>
               <p>
-                All data, including but not limited to time entries, project structures, client information, and reporting metrics generated within this application, are the exclusive intellectual property of InheritX. You agree not to distribute or export this data outside the company's approved workflows.
+                All data, including but not limited to time entries, project structures, client information, and reporting metrics generated within this application, are the exclusive intellectual property of InheritX. You agree not to distribute or export this data outside the company&apos;s approved workflows.
               </p>
             </section>
 

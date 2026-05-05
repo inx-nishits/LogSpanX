@@ -244,18 +244,8 @@ export default function DetailedReportPage() {
       .then((res: unknown) => {
         if (!active) return
         
-        let entries: any[] = []
-        if (Array.isArray(res)) {
-          entries = res
-        } else if (res && typeof res === 'object') {
-          const r = res as Record<string, any>
-          entries = r.items || r.entries || []
-          if (!Array.isArray(entries)) {
-            entries = Object.values(r).find(v => Array.isArray(v)) || []
-          }
-        }
-
-        let mapped = entries.map(mapApiTimeEntry)
+        const entriesRaw = extractArray<ApiTimeEntry>(res)
+        let mapped = entriesRaw.map(mapApiTimeEntry)
 
         if (filterDesc) {
           mapped = mapped.filter((e) => e.description?.toLowerCase().includes(filterDesc.toLowerCase()))
