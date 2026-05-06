@@ -180,11 +180,12 @@ function FilterDropdown({ label, options, value, onChange }: {
 
 // ─── Access Dropdown ────────────────────────────────────────────────────────
 
-function AccessDropdown({ group, rawUsers, onToggle, onSelectAll }: {
+function AccessDropdown({ group, rawUsers, onToggle, onSelectAll, readOnly = false }: {
   group: ApiGroup
   rawUsers: RawUser[]
   onToggle: (userId: string, checked: boolean) => void
   onSelectAll: (users: RawUser[], selectAll: boolean) => void
+  readOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -199,6 +200,14 @@ function AccessDropdown({ group, rawUsers, onToggle, onSelectAll }: {
   const filtered = rawUsers.filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()))
   const allSelected = filtered.length > 0 && filtered.every(u => group.memberIds.includes(u._id))
   const groupMembers = rawUsers.filter(u => group.memberIds.includes(u._id))
+
+  if (readOnly) {
+    return groupMembers.length > 0 ? (
+      <div className="inline-flex items-center gap-1.5 bg-[#eaf4fb] text-[#5c7b91] text-[13px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] max-w-[400px]">
+        <span className="truncate">{groupMembers.map(u => u.name).join(', ')}</span>
+      </div>
+    ) : <span className="text-[#ccc] text-[13px]">—</span>
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -397,7 +406,7 @@ export default function TeamPage() {
           : Object.values(res as object).find(Array.isArray) ?? []
         setRawUsers(arr)
       })
-      .catch(console.error)
+      .catch(() => setRawUsers([]))
   }, [])
 
   const isProjectLeadGroup = (g: ApiGroup) => g.name.toLowerCase().includes('project lead')
@@ -452,7 +461,7 @@ export default function TeamPage() {
   useEffect(() => {
     getGroups()
       .then(res => setAllGroups(Array.isArray(res) ? res : []))
-      .catch(console.error)
+      .catch(() => setAllGroups([]))
   }, [])
 
   const handleMemberGroupToggle = async (member: User, group: ApiGroup, checked: boolean) => {
@@ -481,11 +490,10 @@ export default function TeamPage() {
     const timer = setTimeout(() => setLoadingGroups(true), 0)
     getGroups()
       .then(res => {
-        // client.ts unwraps { success, data: [...] } so res is already the array
         const arr = Array.isArray(res) ? res : []
         setGroups(arr)
       })
-      .catch(console.error)
+      .catch(() => setGroups([]))
       .finally(() => setLoadingGroups(false))
     return () => clearTimeout(timer)
   }, [activeTab])
@@ -651,7 +659,9 @@ export default function TeamPage() {
                 </thead>
                 <tbody className="divide-y divide-[#f1f4f7]">
                   {filteredUsers.map(member => {
-                    const memberGroup = allGroups.find(g => g.memberIds.includes(member.id))
+                    const memberGroup = member.group
+                      ? allGroups.find(g => g.name === member.group) ?? { _id: '', name: member.group, memberIds: [] }
+                      : allGroups.find(g => g.memberIds.includes(member.id))
                     const isActive = member.id in activeOverrides ? activeOverrides[member.id] : (member.isActive !== false)
                     return (
                       <tr key={member.id} className="hover:bg-[#f9fafb] transition-colors group text-[14px] h-[60px]">
@@ -699,29 +709,37 @@ export default function TeamPage() {
                           )}
                         </td>
                         <td className="px-4 py-2">
-                          <GroupDropdown
-                            member={member}
-                            allGroups={allGroups}
-                            onToggle={(group, checked) => handleMemberGroupToggle(member, group, checked)}
-                            trigger={
-                              memberGroup ? (
-                                <div className="inline-flex items-center bg-[#eaf4fb] text-[#5c7b91] text-[14px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] gap-1">
-                                  {memberGroup.name} <ChevronDown className="h-3 w-3 opacity-60" />
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[14px]">
-                                  <Plus className="h-3.5 w-3.5" /> Group
-                                </div>
-                              )
-                            }
-                          />
+                          {canInvite ? (
+                            <GroupDropdown
+                              member={member}
+                              allGroups={allGroups}
+                              onToggle={(group, checked) => handleMemberGroupToggle(member, group, checked)}
+                              trigger={
+                                memberGroup ? (
+                                  <div className="inline-flex items-center bg-[#eaf4fb] text-[#5c7b91] text-[14px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] gap-1">
+                                    {memberGroup.name} <ChevronDown className="h-3 w-3 opacity-60" />
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[14px]">
+                                    <Plus className="h-3.5 w-3.5" /> Group
+                                  </div>
+                                )
+                              }
+                            />
+                          ) : memberGroup ? (
+                            <div className="inline-flex items-center bg-[#eaf4fb] text-[#5c7b91] text-[14px] px-2.5 py-1 rounded-sm border border-[#d6e5ef]">
+                              {memberGroup.name}
+                            </div>
+                          ) : <span className="text-[#ccc] text-[14px]">—</span>}
                         </td>
                         <td className="px-4 py-2 text-center">
-                          <MemberActionsDropdown
-                            member={{ ...member, isActive }}
-                            onEdit={setEditingMember}
-                            onToggleActive={handleToggleActive}
-                          />
+                          {(canInvite || canDelete) && (
+                            <MemberActionsDropdown
+                              member={{ ...member, isActive }}
+                              onEdit={setEditingMember}
+                              onToggleActive={handleToggleActive}
+                            />
+                          )}
                         </td>
                       </tr>
                     )
@@ -813,6 +831,7 @@ export default function TeamPage() {
                             rawUsers={rawUsers}
                             onToggle={(userId, checked) => handleGroupAccessToggle(group, userId, checked)}
                             onSelectAll={(users, selectAll) => handleGroupAccessSelectAll(group, users, selectAll)}
+                            readOnly={!canInvite}
                           />
                         </td>
                         <td className="px-5 py-2 text-right">

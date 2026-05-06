@@ -28,8 +28,8 @@ function parseDuration(raw: string): number | null {
 }
 
 function fmtDuration(s: number) {
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
 function Sep() {
@@ -100,7 +100,7 @@ export function TimerBar() {
   const [taskId, setTaskId] = useState('')
   const [tagIds, setTagIds] = useState<string[]>([])
   const [billable, setBillable] = useState(false)
-  const [durationInput, setDurationInput] = useState('00:00:00')
+  const [durationInput, setDurationInput] = useState('00:00')
   const [durationEditing, setDurationEditing] = useState(false)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [calOpen, setCalOpen] = useState(false)
@@ -140,7 +140,7 @@ export function TimerBar() {
       setTaskId('')
       setTagIds([])
       setBillable(false)
-      setDurationInput('00:00:00')
+      setDurationInput('00:00')
       setSelectedDate(new Date())
     } catch (err) {
       console.error('Failed to add time entry', err)
@@ -234,7 +234,7 @@ export function TimerBar() {
             onChange={e => setDurationInput(e.target.value)}
             onBlur={e => commitDuration(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') commitDuration(durationInput) }}
-            className="text-[20px] font-bold tabular-nums tracking-wide text-[#333] bg-transparent border-none outline-none w-[110px] text-center"
+            className="text-[20px] font-bold tabular-nums tracking-wide text-[#333] bg-transparent border-none outline-none w-[80px] text-center"
           />
         ) : (
           <span onClick={() => setDurationEditing(true)}
