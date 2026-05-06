@@ -113,14 +113,12 @@ export function TimeEntryList({ userId }: { userId: string }) {
   // RBAC: can this user edit a given entry?
   const canEditEntry = (entry: typeof timeEntries[0]) => {
     if (!user) return false
-    if (user.role === 'owner') return true // project manager — can edit anyone
-    if (user.role === 'admin') {
-      // team lead — can edit entries of members in their projects
+    if (user.role === 'project_manager') return true
+    if (user.role === 'team_lead') {
       const entryProject = projects.find(p => p.id === entry.projectId)
       if (!entryProject) return entry.userId === user.id
       return entryProject.leadId === user.id || entry.userId === user.id
     }
-    // member — own entries only
     return entry.userId === user.id
   }
   const [bulkMode, setBulkMode] = useState(false)

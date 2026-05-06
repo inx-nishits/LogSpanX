@@ -386,7 +386,7 @@ function TasksTab({
   onDeleteTask: (taskId: string) => Promise<void>
 }) {
   const { user: currentUser } = useAuthStore()
-  const canManageAssignees = currentUser?.role === 'owner' || currentUser?.role === 'admin'
+  const canManageAssignees = currentUser?.role === 'project_manager' || currentUser?.role === 'team_lead'
 
   // Seed is handled at page level
 

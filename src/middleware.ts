@@ -2,20 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ACCESS_COOKIE, REFRESH_COOKIE, ROLE_COOKIE } from '@/lib/auth-constants'
 import type { User } from '@/lib/types'
 
-const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password']
+const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/check-email', '/verify-email']
 
 const restrictedRoutes: Array<{ prefix: string; allowedRoles: User['role'][] }> = [
-  { prefix: '/dashboard/pm', allowedRoles: ['owner'] },
-  { prefix: '/dashboard/tl', allowedRoles: ['owner', 'admin'] },
-  { prefix: '/dashboard/projects', allowedRoles: ['owner', 'admin', 'member'] },
-  { prefix: '/dashboard/team', allowedRoles: ['owner', 'admin'] },
-  { prefix: '/dashboard/tags', allowedRoles: ['owner', 'admin'] },
-  { prefix: '/dashboard/project-lead', allowedRoles: ['owner', 'admin'] },
+  { prefix: '/dashboard/pm',           allowedRoles: ['project_manager'] },
+  { prefix: '/dashboard/tl',           allowedRoles: ['project_manager', 'team_lead'] },
+  { prefix: '/dashboard/tags',         allowedRoles: ['project_manager', 'team_lead'] },
+  { prefix: '/dashboard/project-lead', allowedRoles: ['project_manager', 'team_lead'] },
+  { prefix: '/dashboard/projects/',    allowedRoles: ['project_manager'] },
 ]
 
 function getSafeRole(role: string | undefined): User['role'] {
-  if (role === 'owner' || role === 'admin' || role === 'member') return role
-  return 'member'
+  if (role === 'project_manager') return 'project_manager'
+  if (role === 'team_lead') return 'team_lead'
+  return 'team_member'
 }
 
 function isPathAllowedForRole(path: string, role: User['role']) {

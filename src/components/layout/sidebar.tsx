@@ -65,7 +65,7 @@ function ReportsFlyout({ visible, top }: { visible: boolean; top: number }) {
 interface MenuItem { label: string; icon: React.ElementType; href: string; chevron?: boolean }
 
 const getMenuItems = (role: User['role']) => {
-  const dashHref = role === 'owner' ? '/dashboard/pm' : role === 'admin' ? '/dashboard/tl' : '/dashboard/member'
+  const dashHref = role === 'project_manager' ? '/dashboard/pm' : role === 'team_lead' ? '/dashboard/tl' : '/dashboard/member'
 
   const topItems: MenuItem[] = [
     { label: 'Time Tracker', icon: Clock,    href: '/dashboard/tracker'  },
@@ -82,7 +82,7 @@ const getMenuItems = (role: User['role']) => {
     { label: 'Tags',         icon: Tag,        href: '/dashboard/tags'         },
   ]
 
-  const filteredManage = (role === 'admin' || role === 'member')
+  const filteredManage = role === 'team_member'
     ? manageItems.filter(i => !['Tags', 'Project Lead'].includes(i.label))
     : manageItems
 
@@ -176,7 +176,7 @@ export function Sidebar() {
   const [flyoutTop, setFlyoutTop] = useState(0)
   const reportsRef = useRef<HTMLDivElement>(null)
 
-  const { topItems, analyzeItems, manageItems } = getMenuItems(user?.role || 'member')
+  const { topItems, analyzeItems, manageItems } = getMenuItems(user?.role || 'team_member')
   const col = isCollapsed && !isMobileOpen // true when desktop-collapsed
 
   return (

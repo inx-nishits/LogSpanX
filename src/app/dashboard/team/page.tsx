@@ -12,7 +12,7 @@ import {
 } from '@/lib/api/teams'
 import { toggleUserActive } from '@/lib/api/users'
 import { User } from '@/lib/types'
-import { canInviteMembers, canDeleteUser, canChangeUserRole } from '@/lib/rbac'
+import { canInviteMembers, canUpdateUserRole, canDeleteGroup } from '@/lib/rbac'
 import { mapApiUser } from '@/lib/api/mappers'
 
 interface RawUser { _id: string; id?: string; name: string; email: string; archived?: boolean; isActive?: boolean }
@@ -132,14 +132,14 @@ function EditMemberModal({ member, onClose, onSave }: {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function roleLabel(role: string) {
-  if (role === 'owner') return 'Project Manager'
-  if (role === 'admin') return 'Team Lead'
+  if (role === 'project_manager') return 'Project Manager'
+  if (role === 'team_lead') return 'Team Lead'
   return 'Team Member'
 }
 
 function roleBadgeColor(role: string) {
-  if (role === 'owner') return 'bg-[#03a9f4] text-white'
-  if (role === 'admin') return 'bg-[#e3f2fd] text-[#0288d1]'
+  if (role === 'project_manager') return 'bg-[#03a9f4] text-white'
+  if (role === 'team_lead') return 'bg-[#e3f2fd] text-[#0288d1]'
   return 'bg-[#f5f5f5] text-[#666]'
 }
 
@@ -371,8 +371,8 @@ export default function TeamPage() {
   const { users, groups: storeGroups, createGroup: storeCreateGroup, updateGroup: storeUpdateGroup, deleteGroup: storeDeleteGroup } = useDataStore()
 
   const canInvite = user ? canInviteMembers(user.role) : false
-  const canDelete = user ? canDeleteUser(user.role) : false
-  const canChangeRole = user ? canChangeUserRole(user.role) : false
+  const canDeleteGroupItem = user ? canDeleteGroup(user.role) : false
+  const canChangeRole = user ? canUpdateUserRole(user.role) : false
 
   const [activeTab, setActiveTab] = useState<'MEMBERS' | 'GROUPS' | 'REMINDERS'>('MEMBERS')
 
@@ -691,9 +691,9 @@ export default function TeamPage() {
                               currentRole={roleOverrides[member.id]
                                 ? (() => {
                                     const v = roleOverrides[member.id]
-                                    if (v === 'admin') return 'owner'
-                                    if (v === 'team_lead') return 'admin'
-                                    return 'member'
+                                    if (v === 'project_manager') return 'project_manager'
+                                    if (v === 'team_lead') return 'team_lead'
+                                    return 'team_member'
                                   })()
                                 : member.role}
                               onRoleChange={handleRoleChange}
@@ -733,7 +733,7 @@ export default function TeamPage() {
                           ) : <span className="text-[#ccc] text-[14px]">—</span>}
                         </td>
                         <td className="px-4 py-2 text-center">
-                          {(canInvite || canDelete) && (
+                          {canInvite && (
                             <MemberActionsDropdown
                               member={{ ...member, isActive }}
                               onEdit={setEditingMember}
@@ -842,7 +842,7 @@ export default function TeamPage() {
                                 <Pencil className="h-4 w-4" />
                               </button>
                             )}
-                            {canDelete && (
+                            {canDeleteGroupItem && (
                               <button onClick={() => handleDeleteGroup(group._id, group.name)}
                                 className="text-[#ccc] hover:text-[#f44336] cursor-pointer transition-colors">
                                 <X className="h-4 w-4" />

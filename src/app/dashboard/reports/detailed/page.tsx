@@ -138,10 +138,7 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
   }
 
   const { user: currentUser } = useAuthStore()
-  const canManageUsers = currentUser?.role === 'owner' || currentUser?.role === 'admin'
-
-  return (
-    <div className="flex items-center h-[54px] bg-white border-b border-[#e4eaee] px-4 relative z-[200]">
+  const canManageUsers = currentUser?.role === 'project_manager' || currentUser?.role === 'team_lead'
       <div className="w-[44px] flex-shrink-0" />
 
       <div className="flex-1 min-w-0 pr-4">
@@ -211,11 +208,11 @@ export default function DetailedReportPage() {
   const router = useRouter()
   const pathname = usePathname()
   const { user: currentUser } = useAuthStore()
-  const canManageUsers = currentUser?.role === 'owner' || currentUser?.role === 'admin'
+  const canManageUsers = currentUser?.role === 'project_manager' || currentUser?.role === 'team_lead'
 
   // Team member IDs for team_lead RBAC
   const teamMemberIds = useMemo(() => {
-    if (currentUser?.role !== 'admin') return new Set<string>()
+    if (currentUser?.role !== 'team_lead') return new Set<string>()
     const ids = new Set<string>()
     projects.forEach(p => {
       if (p.leadId === currentUser.id) {
@@ -227,11 +224,11 @@ export default function DetailedReportPage() {
 
   const canEditEntry = (entry: TimeEntry) => {
     if (!currentUser) return false
-    if (currentUser.role === 'owner') return true // admin
-    if (currentUser.role === 'admin') { // team_lead
+    if (currentUser.role === 'project_manager') return true
+    if (currentUser.role === 'team_lead') {
       return entry.userId === currentUser.id || teamMemberIds.has(entry.userId)
     }
-    return entry.userId === currentUser.id // member
+    return entry.userId === currentUser.id
   }
 
   const paramFrom = searchParams.get('from')

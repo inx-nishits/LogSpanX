@@ -22,13 +22,13 @@ interface InviteMemberModalProps {
 
 const ROLES: { id: UserType['role']; title: string; desc: string; icon: any }[] = [
     {
-        id: 'admin',
-        title: 'Team Lead (Admin)',
+        id: 'team_lead',
+        title: 'Team Lead',
         desc: 'Can manage projects, assign tasks, and approve team timesheets.',
         icon: Shield
     },
     {
-        id: 'member' as const,
+        id: 'team_member',
         title: 'Team Member',
         desc: 'Can track time on assigned tasks and view personal reports.',
         icon: User
@@ -37,7 +37,7 @@ const ROLES: { id: UserType['role']; title: string; desc: string; icon: any }[] 
 
 export function InviteMemberModal({ isOpen, onClose, onInvite }: InviteMemberModalProps) {
     const [email, setEmail] = useState('')
-    const [selectedRole, setSelectedRole] = useState<UserType['role']>('member')
+    const [selectedRole, setSelectedRole] = useState<UserType['role']>('team_member')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +48,7 @@ export function InviteMemberModal({ isOpen, onClose, onInvite }: InviteMemberMod
         try {
             await onInvite(email, selectedRole)
             setEmail('')
-            setSelectedRole('member')
+            setSelectedRole('team_member')
             onClose()
         } catch (error) {
             console.error('Failed to invite:', error)

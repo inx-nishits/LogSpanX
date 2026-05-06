@@ -39,13 +39,13 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
         const storeUserIds = users.map(u => u.id)
         const allRelevantIds = Array.from(new Set([...activeUserIds, ...storeUserIds]))
 
-        return allRelevantIds.map((uid, i) => {
+        return allRelevantIds.filter(Boolean).map((uid, i) => {
             const userObj = users.find(u => u.id === uid)
             const userEntries = entries.filter(e => e.userId === uid)
 
             const nameFromEntries = userEntries.find(e => e.userName)?.userName
-            const name = userObj?.name || nameFromEntries || `User (${uid.substring(0, 4)})`
-            const role = userObj?.role || 'member'
+            const name = userObj?.name || nameFromEntries || `User (${uid?.substring(0, 4) ?? '?'})`
+            const role = userObj?.role || 'team_member'
 
 
             const totalSec = userEntries.reduce((a, c) => a + (c.duration ?? 0), 0)

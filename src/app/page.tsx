@@ -17,9 +17,9 @@ export default function HomePage() {
     }
 
     const role = user.role
-    if (role === 'owner') {
+    if (role === 'project_manager') {
       router.replace('/dashboard/pm')
-    } else if (role === 'admin') {
+    } else if (role === 'team_lead') {
       router.replace('/dashboard/tl')
     } else {
       router.replace('/dashboard/member')
