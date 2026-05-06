@@ -27,13 +27,13 @@ function cloneForwardHeaders(request: NextRequest, token: string | null) {
   return headers
 }
 
-async function forward(request: NextRequest, path: string, token: string | null) {
+async function forward(request: NextRequest, path: string, token: string | null, bodyBuffer?: ArrayBuffer) {
   const hasBody = !['GET', 'HEAD'].includes(request.method)
 
   return fetch(backendUrl(path, request.nextUrl.search), {
     method: request.method,
     headers: cloneForwardHeaders(request, token),
-    body: hasBody ? await request.arrayBuffer() : undefined,
+    body: hasBody ? bodyBuffer : undefined,
     cache: 'no-store',
   })
 }
@@ -42,13 +42,17 @@ async function handler(request: NextRequest, context: RouteContext) {
   const { path: pathParts } = await context.params
   const path = `/${pathParts.join('/')}`
   let token = await getAccessToken()
-  let backendResponse = await forward(request, path, token)
+
+  const hasBody = !['GET', 'HEAD'].includes(request.method)
+  const bodyBuffer = hasBody ? await request.arrayBuffer() : undefined
+
+  let backendResponse = await forward(request, path, token, bodyBuffer)
   const cookieResponse = NextResponse.next()
 
   if (backendResponse.status === 401 && token && !path.startsWith('/auth/')) {
     token = await applyRefreshCookies(cookieResponse)
     if (token) {
-      backendResponse = await forward(request, path, token)
+      backendResponse = await forward(request, path, token, bodyBuffer)
     }
   }
 
