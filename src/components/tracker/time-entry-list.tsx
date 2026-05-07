@@ -94,12 +94,12 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
       onChange={e => setVal(e.target.value)}
       onBlur={e => commit(e.target.value)}
       onKeyDown={e => e.key === 'Enter' && commit(val)}
-      style={{ fontSize: 16, fontWeight: 700, color: '#222', background: 'transparent', border: 'none', outline: 'none', width: 52, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}
+      style={{ fontSize: 14, fontWeight: 700, color: '#222', background: 'transparent', border: 'none', outline: 'none', width: 52, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}
     />
   )
   return (
     <span onClick={() => { setEditing(true); setVal(fmtDur(dur)) }}
-      style={{ fontSize: 16, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums', cursor: 'pointer', width: 52, display: 'inline-block', textAlign: 'center' }}
+      style={{ fontSize: 14, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums', cursor: 'pointer', width: 52, display: 'inline-block', textAlign: 'center' }}
       className="hover:text-[#03a9f4]">
       {fmtDur(dur)}
     </span>
@@ -174,8 +174,8 @@ export function TimeEntryList({ userId }: { userId: string }) {
             <div className="flex items-center justify-between px-1 py-2">
               <span style={{ fontSize: 14, color: '#333', fontWeight: 400 }}>{weekLabel(new Date(wKey))}</span>
               <div className="flex items-center gap-1.5">
-                <span style={{ fontSize: 13, color: '#999' }}>Week total:</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums' }}>{fmtDur(wTotal)}</span>
+                <span style={{ fontSize: 12, color: '#999' }}>Week total:</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums' }}>{fmtDur(wTotal)}</span>
               </div>
             </div>
 
@@ -199,7 +199,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                           {allSel && <Check className="h-3 w-3 text-white stroke-[3px]" />}
                         </div>
                       )}
-                      <span style={{ fontSize: 14, color: '#666' }}>{dayLabel(dKey)}</span>
+                      <span style={{ fontSize: 13, color: '#666' }}>{dayLabel(dKey)}</span>
                       {bulkMode && someSel && (
                         <div className="flex items-center gap-3 ml-2">
                           <button onClick={() => setBulkEdit(true)} className="text-[#03a9f4] text-[11px] font-bold uppercase tracking-widest hover:underline cursor-pointer">Bulk Edit</button>
@@ -208,8 +208,8 @@ export function TimeEntryList({ userId }: { userId: string }) {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span style={{ fontSize: 13, color: '#999' }}>Total:</span>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums' }}>{fmtDur(dayTotal)}</span>
+                      <span style={{ fontSize: 12, color: '#999' }}>Total:</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums' }}>{fmtDur(dayTotal)}</span>
                       <Tip label="Bulk edit">
                         <button onClick={() => setBulkMode(b => !b)}
                           className={cn('p-1 rounded cursor-pointer', bulkMode ? 'text-[#03a9f4]' : 'text-[#aaa] hover:text-[#666]')}>
@@ -248,7 +248,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                               onBlur={e => canEdit && updateTimeEntry(entry.id, { description: e.target.value })}
                               readOnly={!canEdit}
                               placeholder="Add description"
-                              style={{ fontSize: 15, color: '#222', background: 'transparent', border: 'none', outline: 'none', flexShrink: 0, width: 220, minWidth: 0, cursor: canEdit ? 'text' : 'default' }}
+                              style={{ fontSize: 13, color: '#222', background: 'transparent', border: 'none', outline: 'none', flexShrink: 0, width: 220, minWidth: 0, cursor: canEdit ? 'text' : 'default' }}
                               className="placeholder-[#bbb] truncate"
                             />
                             <div className="flex items-center gap-2 min-w-0 overflow-hidden flex-shrink-0">
@@ -262,9 +262,9 @@ export function TimeEntryList({ userId }: { userId: string }) {
                                     proj ? (
                                       <div className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-75 transition-opacity" onClick={e => e.stopPropagation()}>
                                         <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: proj.color, flexShrink: 0 }} />
-                                        <span style={{ fontSize: 15, color: '#03a9f4' }} className="truncate">{proj.name}</span>
-                                        {task && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {task.name}</span>}
-                                        {lead && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {lead.name}</span>}
+                                        <span style={{ fontSize: 13, color: '#03a9f4' }} className="truncate">{proj.name}</span>
+                                        {task && <span style={{ fontSize: 13, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {task.name}</span>}
+                                        {lead && <span style={{ fontSize: 13, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {lead.name}</span>}
                                       </div>
                                     ) : undefined
                                   }
@@ -272,9 +272,9 @@ export function TimeEntryList({ userId }: { userId: string }) {
                               ) : proj ? (
                                 <div className="flex items-center gap-2 min-w-0">
                                   <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: proj.color, flexShrink: 0 }} />
-                                  <span style={{ fontSize: 15, color: '#03a9f4' }} className="truncate">{proj.name}</span>
-                                  {task && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {task.name}</span>}
-                                  {lead && <span style={{ fontSize: 15, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {lead.name}</span>}
+                                  <span style={{ fontSize: 13, color: '#03a9f4' }} className="truncate">{proj.name}</span>
+                                  {task && <span style={{ fontSize: 13, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {task.name}</span>}
+                                  {lead && <span style={{ fontSize: 13, color: '#999', flexShrink: 0, whiteSpace: 'nowrap' }}>- {lead.name}</span>}
                                 </div>
                               ) : null}
                             </div>
@@ -301,7 +301,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                                 updateTimeEntry(entry.id, { startTime: start, endTime, duration: s })
                               }} />
                             ) : (
-                              <span style={{ fontSize: 16, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums', width: 52, display: 'inline-block', textAlign: 'center' }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums', width: 52, display: 'inline-block', textAlign: 'center' }}>
                                 {fmtDur(liveDur)}
                               </span>
                             )}

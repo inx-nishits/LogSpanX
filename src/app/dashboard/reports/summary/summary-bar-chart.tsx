@@ -55,7 +55,7 @@ export function SummaryBarChart({ data, mode = 'billability', projects = [] }: S
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  if (!mounted) return <div className="h-[420px] w-full" />
+  if (!mounted) return <div className="h-[220px] w-full" />
   const isProject = mode === 'project'
 
   const chartData = data.map(d => ({
@@ -68,14 +68,14 @@ export function SummaryBarChart({ data, mode = 'billability', projects = [] }: S
   }))
 
   return (
-    <div className="h-[420px] w-full min-w-0">
+    <div className="h-[220px] w-full min-w-0">
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <BarChart data={chartData} margin={{ top: 32, right: 16, left: 0, bottom: 8 }} barCategoryGap="20%">
+        <BarChart data={chartData} margin={{ top: 20, right: 16, left: 0, bottom: 4 }} barCategoryGap="20%">
           <CartesianGrid vertical={false} stroke="#efefef" strokeDasharray="0" />
-          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#999' }} dy={10} />
+          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#999' }} dy={10} />
           <YAxis
             axisLine={false} tickLine={false}
-            tick={{ fontSize: 11, fill: '#bbb' }}
+            tick={{ fontSize: 10, fill: '#bbb' }}
             tickFormatter={v => v === 0 ? '0h' : `${Number(v).toFixed(1)}h`}
             width={46} tickCount={8}
           />
@@ -146,7 +146,7 @@ export function SummaryBarChart({ data, mode = 'billability', projects = [] }: S
                   <LabelList
                     dataKey="totalLabel"
                     position="top"
-                    style={{ fill: '#555', fontSize: 12 }}
+                    style={{ fill: '#555', fontSize: 10 }}
                     formatter={(v: any) => v?.toString() || ''}
                     offset={6}
                   />
@@ -165,7 +165,7 @@ export function SummaryBarChart({ data, mode = 'billability', projects = [] }: S
               <LabelList
                 dataKey="totalLabel"
                 position="top"
-                style={{ fill: '#555', fontSize: 12 }}
+                style={{ fill: '#555', fontSize: 10 }}
                 formatter={(v: any) => v?.toString() || '0:00'}
                 offset={6}
               />

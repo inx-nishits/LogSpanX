@@ -37,7 +37,7 @@ function TableRow({
     <>
       <div
         className={cn(
-          'flex items-center h-[48px] border-b border-[#f0f0f0] transition-colors group',
+          'flex items-center h-[40px] border-b border-[#f0f0f0] transition-colors group',
           depth === 0 ? 'bg-white' : 'bg-[#fafbfc]',
           clickable ? 'hover:bg-[#f0f7fb] cursor-pointer' : 'hover:bg-[#fafbfc]'
         )}
@@ -59,7 +59,7 @@ function TableRow({
         <div className="w-[9px] h-[9px] rounded-full flex-shrink-0 mr-3" style={{ backgroundColor: row.color }} />
 
         <span className={cn(
-          'flex-1 text-[14px] truncate min-w-0',
+          'flex-1 text-[13px] truncate min-w-0',
           clickable ? 'text-[#03a9f4] group-hover:underline' : 'text-[#333]'
         )}>
           {row.title}
@@ -69,11 +69,11 @@ function TableRow({
           <ExternalLink className="h-3.5 w-3.5 text-[#03a9f4] opacity-0 group-hover:opacity-100 flex-shrink-0 mr-2" />
         )}
 
-        <span className="w-[120px] text-right text-[14px] font-bold text-[#333] tabular-nums flex-shrink-0">
+        <span className="w-[120px] text-right text-[13px] font-bold text-[#333] tabular-nums flex-shrink-0">
           {fmt(row.duration)}
         </span>
 
-        <span className="w-[120px] text-right text-[14px] text-[#aaa] tabular-nums flex-shrink-0">
+        <span className="w-[120px] text-right text-[13px] text-[#aaa] tabular-nums flex-shrink-0">
           {row.billable ? '—' : '0.00 USD'}
         </span>
       </div>
@@ -92,14 +92,14 @@ export function SummaryTable({ rows, onRowClick }: { rows: SummaryRow[]; onRowCl
         <div className="w-5 flex-shrink-0" />
         <div className="w-7 flex-shrink-0 mr-2" />
         <div className="w-[9px] mr-3 flex-shrink-0" />
-        <div className="flex-1 flex items-center gap-1 text-[11px] font-bold text-[#aaa] uppercase tracking-wider">
+        <div className="flex-1 flex items-center gap-1 text-[10px] font-bold text-[#aaa] uppercase tracking-wider">
           <ChevronDown className="h-3 w-3" />
           <span>Title</span>
         </div>
-        <div className="w-[120px] text-right text-[11px] font-bold text-[#aaa] uppercase tracking-wider flex-shrink-0">
+        <div className="w-[120px] text-right text-[10px] font-bold text-[#aaa] uppercase tracking-wider flex-shrink-0">
           Duration
         </div>
-        <div className="w-[120px] text-right text-[11px] font-bold text-[#aaa] uppercase tracking-wider flex-shrink-0">
+        <div className="w-[120px] text-right text-[10px] font-bold text-[#aaa] uppercase tracking-wider flex-shrink-0">
           Amount
         </div>
       </div>

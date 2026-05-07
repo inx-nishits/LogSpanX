@@ -13,18 +13,18 @@ export function SummaryDonut({ data, totalLabel }: { data: DonutSlice[]; totalLa
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  if (!mounted) return <div className="w-[300px] h-[300px]" />
+  if (!mounted) return <div className="w-[200px] h-[200px]" />
 
   return (
-    <div className="relative w-[300px] h-[300px] flex-shrink-0">
+    <div className="relative w-[200px] h-[200px] flex-shrink-0">
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <PieChart>
           <Pie
             data={data.length ? data : [{ name: '', value: 1, color: '#e4eaee' }]}
             cx="50%"
             cy="50%"
-            innerRadius={90}
-            outerRadius={145}
+            innerRadius={60}
+            outerRadius={95}
             paddingAngle={0}
             dataKey="value"
             strokeWidth={0}
@@ -54,7 +54,7 @@ export function SummaryDonut({ data, totalLabel }: { data: DonutSlice[]; totalLa
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="text-[18px] font-medium text-[#333] tabular-nums">{totalLabel}</span>
+        <span className="text-[14px] font-medium text-[#333] tabular-nums">{totalLabel}</span>
       </div>
     </div>
   )

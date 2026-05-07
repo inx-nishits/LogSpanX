@@ -124,24 +124,24 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
   return (
     <div className="flex flex-col bg-[#f2f6f8] min-h-screen">
       {/* Tab bar */}
-      <div className="flex items-center justify-between px-6 m-6 h-[56px] bg-white border-b border-[#e4eaee] flex-shrink-0">
+      <div className="flex items-center justify-between px-6 m-4 h-[48px] bg-white border-b border-[#e4eaee] flex-shrink-0">
         <div className="flex items-center gap-1">
           <div className="relative" ref={timeReportRef}>
             <button
               onClick={() => setTimeReportOpen(o => !o)}
-              className="flex items-center gap-1.5 px-3 h-[34px] text-[14px] text-[#555] bg-white border border-[#d0d8de] rounded mr-3 hover:border-[#aaa] cursor-pointer font-medium"
+              className="flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] bg-white border border-[#d0d8de] rounded mr-3 hover:border-[#aaa] cursor-pointer font-medium"
             >
               TIME REPORT <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
             </button>
             {timeReportOpen && (
               <div className="absolute top-full left-0 mt-1 bg-white border border-[#e4eaee] shadow-lg z-[200] min-w-[180px] py-1">
-                <button className="w-full text-left px-4 py-2.5 text-[14px] text-[#333] hover:bg-[#f5f7f9] cursor-pointer font-medium bg-[#f5f7f9]">
+                <button className="w-full text-left px-4 py-2 text-[13px] text-[#333] hover:bg-[#f5f7f9] cursor-pointer font-medium bg-[#f5f7f9]">
                   Time report
                 </button>
-                <button className="w-full text-left px-4 py-2.5 text-[14px] text-[#555] hover:bg-[#f5f7f9] cursor-pointer">
+                <button className="w-full text-left px-4 py-2 text-[13px] text-[#555] hover:bg-[#f5f7f9] cursor-pointer">
                   Team report
                 </button>
-                <button className="w-full text-left px-4 py-2.5 text-[14px] text-[#555] hover:bg-[#f5f7f9] cursor-pointer">
+                <button className="w-full text-left px-4 py-2 text-[13px] text-[#555] hover:bg-[#f5f7f9] cursor-pointer">
                   Expense report
                 </button>
               </div>
@@ -152,7 +152,7 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
               key={tab.href}
               href={tab.href}
               className={cn(
-                'px-4 h-[56px] flex items-center text-[14px] transition-colors border-b-2 -mb-px',
+                'px-4 h-[48px] flex items-center text-[13px] transition-colors border-b-2 -mb-px',
                 pathname === tab.href
                   ? 'text-[#333] font-bold border-b-[#333]'
                   : 'text-[#777] hover:text-[#333] border-b-transparent font-normal'
@@ -165,7 +165,7 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
         <div className="flex items-center gap-0">
           <button 
             onClick={() => onRangeChange({ from: addDays(dateRange.from, -7), to: addDays(dateRange.to, -7) })} 
-            className="w-[36px] h-[36px] flex items-center justify-center border border-[#d0d8de] rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer transition-colors"
+            className="w-[32px] h-[32px] flex items-center justify-center border border-[#d0d8de] rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -176,7 +176,7 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
           />
           <button 
             onClick={() => onRangeChange({ from: addDays(dateRange.from, 7), to: addDays(dateRange.to, 7) })} 
-            className="w-[36px] h-[36px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer transition-colors"
+            className="w-[32px] h-[32px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -185,7 +185,7 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
 
       {/* Filter bar */}
       {showFilters && (
-        <div className="flex items-center px-6 h-[65px] m-6 bg-white border-b border-[#e4eaee] flex-shrink-0">
+        <div className="flex items-center px-6 h-[54px] m-4 bg-white border-b border-[#e4eaee] flex-shrink-0">
           <FilterVisibilityDropdown visible={visibleFilters} onChange={setVisibleFilters} />
           {visibleFilters.includes('Team') && (
             <><div className="w-px h-5 bg-[#e4eaee] flex-shrink-0" />
@@ -210,7 +210,7 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
           )}
           <button
             onClick={() => onApply?.({ team: selTeam, lead: selLead, project: selProject, tasks: selTask, tags: selTag, status: selStatus, description: selDesc })}
-            className="ml-auto px-5 h-[32px] text-[13px] font-bold uppercase tracking-wide text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm cursor-pointer whitespace-nowrap"
+            className="ml-auto px-5 h-[30px] text-[12px] font-bold uppercase tracking-wide text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm cursor-pointer whitespace-nowrap"
           >
             APPLY FILTER
           </button>

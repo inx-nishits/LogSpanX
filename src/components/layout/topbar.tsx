@@ -41,9 +41,6 @@ export function Topbar() {
         >
           <Menu className="h-5 w-5 stroke-[1.5px]" />
         </button>
-        <span className="text-xl font-medium text-gray-700 tracking-tight hidden sm:inline">
-          Trackify
-        </span>
       </div>
 
       {/* Right side: App Actions & User */}
@@ -89,7 +86,7 @@ export function Topbar() {
                 </span>
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-900 truncate">{user?.name || 'Nishit Sangani'}</p>
+                <p className="text-[13px] font-bold text-gray-900 truncate">{user?.name || 'Nishit Sangani'}</p>
                 <p className="text-[11px] text-gray-500 truncate">{user?.email || 'nishit@inheritx.com'}</p>
               </div>
             </div>

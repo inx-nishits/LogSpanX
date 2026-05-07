@@ -48,7 +48,7 @@ function FilterDropdown({
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
-          flex items-center gap-1.5 px-4 py-2 text-[14px] font-medium rounded-sm border cursor-pointer transition-colors
+          flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium rounded-sm border cursor-pointer transition-colors
           ${isOpen
                         ? 'border-[#03a9f4] text-[#03a9f4] bg-white'
                         : 'border-[#d0d8de] text-[#555] bg-white hover:border-[#03a9f4] hover:text-[#03a9f4]'
@@ -66,7 +66,7 @@ function FilterDropdown({
                             key={opt.value}
                             onClick={() => { setSelected(opt.value); onChange(opt.value); setIsOpen(false) }}
                             className={`
-                w-full text-left px-4 py-2 text-[14px] transition-colors cursor-pointer
+                w-full text-left px-4 py-2 text-[13px] transition-colors cursor-pointer
                 ${selected === opt.value
                                     ? 'bg-[#03a9f4] text-white font-medium'
                                     : 'text-[#555] hover:bg-[#f0f4f8]'
@@ -85,7 +85,7 @@ function FilterDropdown({
 export function DashboardHeader({ role, filters, onFilterChange, currentRange, onRangeChange }: DashboardHeaderProps) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-[24px] font-normal text-[#333]">Dashboard</h1>
+            <h1 className="text-[20px] font-normal text-[#333]">Dashboard</h1>
 
             <div className="flex flex-wrap items-center gap-2">
                 <FilterDropdown
@@ -119,7 +119,7 @@ export function DashboardHeader({ role, filters, onFilterChange, currentRange, o
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-[38px] w-8 text-[#999] hover:bg-[#f0f4f8] rounded-sm rounded-r-none border border-[#d0d8de] border-r-0 bg-white"
+                        className="h-[32px] w-8 text-[#999] hover:bg-[#f0f4f8] rounded-sm rounded-r-none border border-[#d0d8de] border-r-0 bg-white"
                         onClick={() => {
                             const isSingleDay = isSameDay(currentRange.from, currentRange.to)
                             if (isSingleDay) {
@@ -140,7 +140,7 @@ export function DashboardHeader({ role, filters, onFilterChange, currentRange, o
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-[38px] w-8 text-[#999] hover:bg-[#f0f4f8] rounded-sm rounded-l-none border border-[#d0d8de] border-l-0 bg-white"
+                        className="h-[32px] w-8 text-[#999] hover:bg-[#f0f4f8] rounded-sm rounded-l-none border border-[#d0d8de] border-l-0 bg-white"
                         onClick={() => {
                             const isSingleDay = isSameDay(currentRange.from, currentRange.to)
                             if (isSingleDay) {

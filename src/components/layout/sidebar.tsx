@@ -48,7 +48,7 @@ function ReportsFlyout({ visible, top }: { visible: boolean; top: number }) {
               key={item.href}
               href={item.href}
               className={cn(
-                'block px-4 py-[9px] text-[15px] uppercase tracking-wide hover:bg-[#f0f0f0]',
+                'block px-4 py-[9px] text-[13px] uppercase tracking-wide hover:bg-[#f0f0f0]',
                 pathname.startsWith(item.href) ? 'bg-[#f0f0f0] text-[#333]' : 'text-[#555]'
               )}
             >
@@ -128,7 +128,7 @@ const NavRow = ({
         className={cn('flex-shrink-0 h-[18px] w-[18px] stroke-[1.5]', active ? 'text-[#555]' : 'text-[#888]')}
       />
       {!col && (
-        <span className="flex-1 text-[15px] uppercase tracking-wide text-[#333] leading-none whitespace-nowrap">
+        <span className="flex-1 text-[13px] uppercase tracking-wide text-[#333] leading-none whitespace-nowrap">
           {item.label}
         </span>
       )}
@@ -203,8 +203,8 @@ export function Sidebar() {
             <Menu className="h-[18px] w-[18px] stroke-[1.5]" />
           </button>
           {!col && (
-            <span className="text-[22px] font-black text-[#333] tracking-tight leading-none ml-2">
-              <Image src="/Trackify.svg" alt="Trackify" width={110} height={28} className="object-contain w-auto" />
+            <span className="flex items-center ml-2">
+              <Image src="/Trackify.svg" alt="Trackify" width={130} height={20} className="w-[110px] h-[20px] object-contain" />
             </span>
           )}
           <button onClick={toggleMobile} className="md:hidden ml-auto text-[#999] hover:text-[#555]">

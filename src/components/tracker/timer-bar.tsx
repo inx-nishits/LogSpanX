@@ -165,7 +165,7 @@ export function TimerBar() {
         value={description}
         onChange={e => setDescription(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') void handleAdd() }}
-        className="flex-1 text-[15px] text-gray-700 bg-transparent outline-none placeholder-gray-400 min-w-0"
+        className="flex-1 text-[13px] text-gray-700 bg-transparent outline-none placeholder-gray-400 min-w-0"
       />
 
       {/* Project picker */}
@@ -183,7 +183,7 @@ export function TimerBar() {
                   <line x1="8" y1="4.5" x2="8" y2="11.5" />
                   <line x1="4.5" y1="8" x2="11.5" y2="8" />
                 </svg>
-                <span className="text-[14px] font-medium">Project</span>
+                <span className="text-[13px] font-medium">Project</span>
               </div>
             )
           }
@@ -213,7 +213,7 @@ export function TimerBar() {
       {/* Date picker */}
       <div className="px-4 flex-shrink-0 relative" ref={calRef}>
         <button onClick={() => setCalOpen(o => !o)}
-          className={cn('flex items-center gap-1.5 text-[14px] cursor-pointer transition-colors',
+          className={cn('flex items-center gap-1.5 text-[13px] cursor-pointer transition-colors',
             calOpen || !isToday(selectedDate) ? 'text-[#03a9f4]' : 'text-gray-400 hover:text-gray-600')}>
           <Calendar style={{ width: 16, height: 16 }} strokeWidth={1.5} />
           <span>{dateLabel}</span>
@@ -234,11 +234,11 @@ export function TimerBar() {
             onChange={e => setDurationInput(e.target.value)}
             onBlur={e => commitDuration(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') commitDuration(durationInput) }}
-            className="text-[20px] font-bold tabular-nums tracking-wide text-[#333] bg-transparent border-none outline-none w-[80px] text-center"
+            className="text-[18px] font-bold tabular-nums tracking-wide text-[#333] bg-transparent border-none outline-none w-[80px] text-center"
           />
         ) : (
           <span onClick={() => setDurationEditing(true)}
-            className="text-[20px] font-bold tabular-nums tracking-wide text-[#333] cursor-pointer hover:text-[#03a9f4] transition-colors select-none">
+            className="text-[18px] font-bold tabular-nums tracking-wide text-[#333] cursor-pointer hover:text-[#03a9f4] transition-colors select-none">
             {durationInput}
           </span>
         )}

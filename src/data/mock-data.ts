@@ -1,12 +1,12 @@
 import { User, Project, Client, TimeEntry, Task, Report, Notification, Group } from '@/lib/types'
 
 export const mockUsers: User[] = [
-  { id: 'user_1', email: 'nishit@inheritx.com', name: 'Nishit Sangani', role: 'owner', archived: false, billableRate: 50.00, group: 'Management' },
-  { id: 'user_2', email: 'aiyub@inheritx.com', name: 'Aiyub Munshi', role: 'admin', archived: false, billableRate: 45.00, group: 'Project Manager' },
-  { id: 'user_3', email: 'jaydeep@inheritx.com', name: 'Jaydeep Vegad', role: 'member', archived: false, billableRate: 35.00, group: 'MEAR-Front End' },
-  { id: 'user_4', email: 'sonu@inheritx.com', name: 'Sonu Gupta', role: 'member', archived: false, billableRate: 30.00, group: 'Team Flutter' },
-  { id: 'user_5', email: 'vrutik@inheritx.com', name: 'Vrutik Patel', role: 'member', archived: false, billableRate: 25.00, group: 'Quality Assurance' },
-  { id: 'user_6', email: 'ram@inheritx.com', name: 'Ram Jangid', role: 'member', archived: false, billableRate: 20.00, group: 'Sales' },
+  { id: 'user_1', email: 'nishit@inheritx.com', name: 'Nishit Sangani', role: 'project_manager', archived: false, billableRate: 50.00, group: 'Management' },
+  { id: 'user_2', email: 'aiyub@inheritx.com', name: 'Aiyub Munshi', role: 'team_lead', archived: false, billableRate: 45.00, group: 'Project Manager' },
+  { id: 'user_3', email: 'jaydeep@inheritx.com', name: 'Jaydeep Vegad', role: 'team_member', archived: false, billableRate: 35.00, group: 'MEAR-Front End' },
+  { id: 'user_4', email: 'sonu@inheritx.com', name: 'Sonu Gupta', role: 'team_member', archived: false, billableRate: 30.00, group: 'Team Flutter' },
+  { id: 'user_5', email: 'vrutik@inheritx.com', name: 'Vrutik Patel', role: 'team_member', archived: false, billableRate: 25.00, group: 'Quality Assurance' },
+  { id: 'user_6', email: 'ram@inheritx.com', name: 'Ram Jangid', role: 'team_member', archived: false, billableRate: 20.00, group: 'Sales' },
 ]
 
 

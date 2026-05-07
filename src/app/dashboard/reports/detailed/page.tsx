@@ -72,12 +72,12 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
       onChange={e => setVal(e.target.value)}
       onBlur={e => commit(e.target.value)}
       onKeyDown={e => e.key === 'Enter' && commit(val)}
-      className="w-[52px] text-[17px] font-bold text-[#333] bg-transparent border-none outline-none tabular-nums text-center p-0 m-0"
+      className="w-[52px] text-[15px] font-bold text-[#333] bg-transparent border-none outline-none tabular-nums text-center p-0 m-0"
     />
   )
   return (
     <span onClick={() => setEditing(true)}
-      className="text-[17px] font-bold text-[#333] tabular-nums cursor-pointer w-[52px] inline-block text-center hover:text-[#03a9f4] p-0 m-0 leading-none">
+      className="text-[15px] font-bold text-[#333] tabular-nums cursor-pointer w-[52px] inline-block text-center hover:text-[#03a9f4] p-0 m-0 leading-none">
       {fmtDur(dur)}
     </span>
   )
@@ -139,11 +139,13 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
 
   const { user: currentUser } = useAuthStore()
   const canManageUsers = currentUser?.role === 'project_manager' || currentUser?.role === 'team_lead'
+  return (
+    <div className="flex items-center h-[46px] bg-[#f9fbfc] border-b border-[#e4eaee]">
       <div className="w-[44px] flex-shrink-0" />
 
       <div className="flex-1 min-w-0 pr-4">
         <input type="text" placeholder="Add description" value={desc} onChange={e => setDesc(e.target.value)}
-          className="w-full text-[15px] outline-none bg-transparent placeholder-[#bbb]" />
+          className="w-full text-[13px] outline-none bg-transparent placeholder-[#bbb]" />
       </div>
 
       <div className="flex items-center gap-4 flex-shrink-0">
@@ -151,7 +153,7 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
           {canManageUsers ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 text-[16px] text-[#555] hover:text-[#03a9f4] cursor-pointer">
+                <button className="flex items-center gap-1.5 text-[14px] text-[#555] hover:text-[#03a9f4] cursor-pointer">
                   {users.find(u => u.id === uid)?.name || 'User'} <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
                 </button>
               </DropdownMenuTrigger>
@@ -164,7 +166,7 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <span className="text-[16px] text-[#555]">{users.find(u => u.id === uid)?.name || 'User'}</span>
+            <span className="text-[14px] text-[#555]">{users.find(u => u.id === uid)?.name || 'User'}</span>
           )}
         </D>
 
@@ -187,10 +189,10 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
           onChange={e => setDurInput(e.target.value)}
           onBlur={e => { const s = parseDur(e.target.value); setDurInput(s != null ? fmtDurInline(s) : '00:00:00') }}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
-          className="text-[16px] font-bold tabular-nums text-[#333] bg-transparent border-none outline-none w-[90px] text-center cursor-text hover:text-[#03a9f4] transition-colors"
+          className="text-[15px] font-bold tabular-nums text-[#333] bg-transparent border-none outline-none w-[90px] text-center cursor-text hover:text-[#03a9f4] transition-colors"
         />
 
-        <button onClick={handleAdd} className="px-5 h-[32px] bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[16px] font-bold rounded-sm cursor-pointer transition-colors uppercase tracking-wide">ADD</button>
+        <button onClick={handleAdd} className="px-5 h-[30px] bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[13px] font-bold rounded-sm cursor-pointer transition-colors uppercase tracking-wide">ADD</button>
       </div>
     </div>
   )
@@ -495,7 +497,7 @@ export default function DetailedReportPage() {
             <button className="flex items-center gap-1.5 px-3 h-[32px] text-[14px] text-[#555] bg-white border border-[#d0d8de] rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm">
               Time audit <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
             </button>
-            <button onClick={() => setShowEntryBar(!showEntryBar)} className={cn("flex items-center gap-1.5 px-3 h-[32px] text-[14px] text-[#555] border rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm transition-colors", showEntryBar ? "bg-[#f2f6f8] border-[#03a9f4] text-[#03a9f4]" : "bg-white border-[#d0d8de]")}>
+            <button onClick={() => setShowEntryBar(!showEntryBar)} className={cn("flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] border rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm transition-colors", showEntryBar ? "bg-[#f2f6f8] border-[#03a9f4] text-[#03a9f4]" : "bg-white border-[#d0d8de]")}>
               Add time for others <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
             </button>
           </div>
@@ -510,12 +512,12 @@ export default function DetailedReportPage() {
 
           {/* Stats bar */}
           <div className="flex items-center justify-between bg-[#f2f6f8] border-b border-[#e4eaee] px-4 h-[42px] flex-shrink-0">
-            <div className="flex items-center gap-6 text-[16px]">
-              <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{dispDur(totalSecs)}</strong></span>
-              <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{dispDur(billableSecs)}</strong></span>
-              <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[15px]">0.00 USD</strong></span>
+            <div className="flex items-center gap-6 text-[13px]">
+              <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[13px]">{dispDur(totalSecs)}</strong></span>
+              <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[13px]">{dispDur(billableSecs)}</strong></span>
+              <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[13px]">0.00 USD</strong></span>
             </div>
-            <div className="flex items-center gap-4 text-[15px] text-[#555]">
+            <div className="flex items-center gap-4 text-[13px] text-[#555]">
               <div className="flex items-center gap-2">
                 <button className="hover:text-[#03a9f4] cursor-pointer flex items-center gap-1 border border-[#d0d8de] px-2.5 py-1 rounded bg-white h-[26px]">Export <ChevronDown className="h-3 w-3" /></button>
                 <button className="hover:text-[#03a9f4] cursor-pointer"><Printer className="h-4 w-4" /></button>
@@ -526,14 +528,14 @@ export default function DetailedReportPage() {
                 <div onClick={() => setRounding(!rounding)} className={cn("relative inline-flex h-3.5 w-8 items-center rounded-full cursor-pointer transition-colors", rounding ? "bg-[#03a9f4]" : "bg-gray-200")}>
                   <span className={cn("inline-block h-2.5 w-2.5 rounded-full bg-white transition-transform", rounding ? "translate-x-4.5" : "translate-x-1")} />
                 </div>
-                <span className="text-[14px]">Rounding</span>
+                <span className="text-[13px]">Rounding</span>
               </div>
-              <button className="hover:text-[#03a9f4] cursor-pointer flex items-center gap-1 text-[14px]">Show amount <ChevronDown className="h-3.5 w-3.5" /></button>
+              <button className="hover:text-[#03a9f4] cursor-pointer flex items-center gap-1 text-[13px]">Show amount <ChevronDown className="h-3.5 w-3.5" /></button>
             </div>
           </div>
 
           {/* Table header / Bulk Actions */}
-          <div className={cn("flex items-center h-[42px] border-b border-[#e4eaee] px-0 text-[15px] font-bold uppercase tracking-wider flex-shrink-0", selIds.size > 0 ? "bg-[#333] text-white" : "bg-[#f5f7f9] text-[#aaa]")}>
+          <div className={cn("flex items-center h-[36px] border-b border-[#e4eaee] px-0 text-[13px] font-bold uppercase tracking-wider flex-shrink-0", selIds.size > 0 ? "bg-[#333] text-white" : "bg-[#f5f7f9] text-[#aaa]")}>
             <div className="w-[44px] flex-shrink-0 flex items-center justify-center">
               <input type="checkbox" checked={selIds.size === filtered.length && filtered.length > 0} onChange={toggleAll} className="h-4 w-4 rounded-sm accent-[#03a9f4] cursor-pointer" />
             </div>
@@ -591,7 +593,7 @@ export default function DetailedReportPage() {
                 }, {} as Record<string, typeof filtered>)
               ).map(([dateLabel, entries]) => (
                 <div key={dateLabel}>
-                  <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2.5 text-[14px] font-bold text-[#777] flex items-center">
+                  <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2 text-[13px] font-bold text-[#777] flex items-center">
                     <span>{dateLabel}</span>
                     <div className="flex-1 min-w-0" />
                       {/* <div className="w-[80px] text-right flex-shrink-0 px-2 flex items-center justify-end text-[16px] font-bold text-[#333] tabular-nums">
@@ -607,7 +609,7 @@ export default function DetailedReportPage() {
                     const canEdit = canEditEntry(entry)
 
                     return (
-                      <div key={entry.id} className={cn("flex items-stretch min-h-[56px] bg-white border-b border-[#f0f0f0] transition-colors group relative", selIds.has(entry.id) ? "bg-[#f2f9ff]" : "hover:bg-[#fafbfc]")}>
+                      <div key={entry.id} className={cn("flex items-stretch min-h-[46px] bg-white border-b border-[#f0f0f0] transition-colors group relative", selIds.has(entry.id) ? "bg-[#f2f9ff]" : "hover:bg-[#fafbfc]")}>
                         <div className="w-[44px] flex-shrink-0 flex items-center justify-center border-r border-transparent">
                           <input type="checkbox" checked={selIds.has(entry.id)} onChange={() => toggleOne(entry.id)} className="h-4 w-4 rounded-sm accent-[#03a9f4] cursor-pointer" />
                         </div>
@@ -618,7 +620,7 @@ export default function DetailedReportPage() {
                             <input type="text" defaultValue={entry.description}
                               onBlur={e => updateEntry(entry.id, { description: e.target.value })}
                               placeholder="Add description"
-                              className="text-[14px] text-[#333] outline-none bg-transparent placeholder-[#bbb] truncate flex-initial w-auto min-w-[120px]"
+                              className="text-[13px] text-[#333] outline-none bg-transparent placeholder-[#bbb] truncate flex-initial w-auto min-w-[120px]"
                             />
                             <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0">
                               <span className="text-gray-300 flex-shrink-0">•</span>
@@ -630,9 +632,9 @@ export default function DetailedReportPage() {
                                   customTrigger={proj ? (
                                     <div className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
                                       <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
-                                      <span className="text-[15px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
-                                      {entryTask && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
-                                      {projLead && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
+                                      <span className="text-[13px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
+                                      {entryTask && <span className="text-[12px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
+                                      {projLead && <span className="text-[12px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
                                     </div>
                                   ) : (
                                     <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[15px] font-medium opacity-0 group-hover/entry:opacity-100 transition-opacity cursor-pointer">
@@ -643,9 +645,9 @@ export default function DetailedReportPage() {
                               ) : proj ? (
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
-                                  <span className="text-[15px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
-                                  {entryTask && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
-                                  {projLead && <span className="text-[14px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
+                                  <span className="text-[13px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
+                                  {entryTask && <span className="text-[12px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
+                                  {projLead && <span className="text-[12px] text-[#999] flex-shrink-0 whitespace-nowrap">- {projLead.name}</span>}
                                 </div>
                               ) : null}
                             </div>
@@ -693,7 +695,7 @@ export default function DetailedReportPage() {
                               updateEntry(entry.id, { startTime: start, endTime })
                             }} />
                           ) : (
-                            <span className="text-[17px] font-bold text-[#333] tabular-nums w-[52px] inline-block text-center">
+                            <span className="text-[15px] font-bold text-[#333] tabular-nums w-[52px] inline-block text-center">
                               {fmtDur(entry.duration ?? 0)}
                             </span>
                           )}

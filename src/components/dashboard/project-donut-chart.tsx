@@ -71,7 +71,7 @@ export function ProjectDonutChart({ data, totalTime, isTaskView }: ProjectDonutC
 
                     {/* Center Label */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                        <p className="text-[15px] font-normal text-[#333]">
+                        <p className="text-[14px] font-normal text-[#333]">
                             {isTaskView ? `${data.reduce((a, d) => a + d.value, 0)} tasks` : totalTime}
                         </p>
                     </div>
@@ -89,13 +89,13 @@ export function ProjectDonutChart({ data, totalTime, isTaskView }: ProjectDonutC
                             return (
                                 <div key={i} className="flex items-center py-[9px] border-b border-[#f5f5f5] last:border-0 hover:bg-[#fafbfc] px-1 rounded-sm">
                                     <div className="flex-1 min-w-0 mr-6 text-right">
-                                        <div className="text-[14px] truncate leading-tight">
+                                        <div className="text-[12px] truncate leading-tight">
                                             <span className="text-[#333]">{item.name}</span>
                                             {item.leadName && <span className="text-[#999] ml-1.5">- {item.leadName}</span>}
                                         </div>
                                     </div>
                                     <div className="w-[80px] text-right flex-shrink-0 mr-6">
-                                        <span className="text-[14px] font-normal text-[#333] tabular-nums">
+                                        <span className="text-[12px] font-normal text-[#333] tabular-nums">
                                             {isTaskView ? `${item.value} tasks` : displayTime}
                                         </span>
                                     </div>
@@ -103,7 +103,7 @@ export function ProjectDonutChart({ data, totalTime, isTaskView }: ProjectDonutC
                                         <div className="h-full" style={{ width: `${barFillWidth}%`, backgroundColor: item.color }} />
                                     </div>
                                     <div className="w-[60px] text-right flex-shrink-0">
-                                        <span className="text-[14px] text-[#999] tabular-nums">{item.percentage}%</span>
+                                        <span className="text-[12px] text-[#999] tabular-nums">{item.percentage}%</span>
                                     </div>
                                 </div>
                             )
@@ -114,7 +114,7 @@ export function ProjectDonutChart({ data, totalTime, isTaskView }: ProjectDonutC
                         <div className="mt-8 pt-4 border-t border-[#f5f5f5] flex justify-center">
                             <button
                                 onClick={() => setVisibleCount(prev => prev + 10)}
-                                className="text-[13px] text-[#777] border border-[#dce0e4] px-4 py-1.5 rounded-sm hover:bg-[#f5f7f9] hover:text-[#333] transition-colors cursor-pointer bg-white"
+                                className="text-[11px] text-[#777] border border-[#dce0e4] px-4 py-1.5 rounded-sm hover:bg-[#f5f7f9] hover:text-[#333] transition-colors cursor-pointer bg-white"
                             >
                                 Load more ({remaining} left)
                             </button>

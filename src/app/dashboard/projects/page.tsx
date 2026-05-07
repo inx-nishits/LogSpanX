@@ -458,9 +458,9 @@ export default function ProjectsPage() {
 
             {/* Filter Bar */}
             <div className="relative z-[100] mb-6">
-              <div className="flex bg-white border border-[#e4eaee] items-center h-[64px] rounded-md shadow-sm text-[14px] px-2">
+              <div className="flex bg-white border border-[#e4eaee] items-center h-[54px] rounded-md shadow-sm text-[13px] px-2">
                 <div className="flex items-center pl-4 pr-3 h-full">
-                  <span className="text-[14px] font-bold text-[#999999] uppercase tracking-widest">Filter</span>
+                  <span className="text-[13px] font-bold text-[#999999] uppercase tracking-widest">Filter</span>
                 </div>
 
                 <div className="h-8 w-[1px] border-l border-dotted border-[#c6d2d9]" />
@@ -471,7 +471,7 @@ export default function ProjectsPage() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-[160px] bg-white rounded-sm shadow-xl border border-[#e4eaee] py-1 z-[200]">
                     {['Active', 'Archived', 'All'].map(s => (
-                      <DropdownMenuItem key={s} onClick={() => setStatusFilter(s)} className={`py-2.5 px-4 cursor-pointer text-[14px] transition-colors ${statusFilter === s ? 'bg-[#eaf4fb] text-[#03a9f4] font-semibold' : 'text-gray-700 focus:bg-[#eaf4fb]'}`}>{s}</DropdownMenuItem>
+                      <DropdownMenuItem key={s} onClick={() => setStatusFilter(s)} className={`py-1.5 px-4 cursor-pointer text-[12px] transition-colors ${statusFilter === s ? 'bg-[#eaf4fb] text-[#03a9f4] font-semibold' : 'text-gray-700 focus:bg-[#eaf4fb]'}`}>{s}</DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -492,34 +492,34 @@ export default function ProjectsPage() {
                     <div className="p-3 border-b border-[#e4eaee]">
                       <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999]" />
-                        <input type="text" placeholder="Search Project Lead" value={leadSearchQuery} onChange={(e) => setLeadSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-[7px] text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
+                        <input type="text" placeholder="Search by name" value={leadSearchQuery} onChange={(e) => setLeadSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-1.5 text-[12px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
                       </div>
                     </div>
                     <div className="flex flex-col border-b border-[#e4eaee]">
-                      <div className="flex items-center justify-between px-4 py-[11px] cursor-pointer hover:bg-[#fcfdfe]" onClick={(e) => { e.stopPropagation(); setIsLeadStatusFilterOpen(!isLeadStatusFilterOpen) }}>
-                        <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">Show</span>
-                        <div className="flex items-center gap-1 text-[14px] text-[#666]">
+                      <div className="flex items-center justify-between px-4 py-[9px] cursor-pointer hover:bg-[#fcfdfe]" onClick={(e) => { e.stopPropagation(); setIsLeadStatusFilterOpen(!isLeadStatusFilterOpen) }}>
+                        <span className="text-[12px] font-bold text-[#999] uppercase tracking-widest">Show</span>
+                        <div className="flex items-center gap-1 text-[12px] text-[#666]">
                           {leadStatusFilter} <ChevronDown className={`h-3.5 w-3.5 text-[#999] transition-transform ${isLeadStatusFilterOpen ? 'rotate-180' : ''}`} />
                         </div>
                       </div>
                       {isLeadStatusFilterOpen && (
                         <div className="bg-[#fcfdfe] py-1 border-t border-[#e4eaee]/50">
                           {['Active & Archived', 'Active', 'Archived'].map(opt => (
-                            <div key={opt} onClick={(e) => { e.stopPropagation(); setLeadStatusFilter(opt); setIsLeadStatusFilterOpen(false) }} className={`py-2 px-10 text-[14px] cursor-pointer transition-colors ${leadStatusFilter === opt ? 'bg-[#eaf4fb] text-[#333]' : 'text-[#666] hover:bg-[#eaf4fb]'}`}>{opt}</div>
+                            <div key={opt} onClick={(e) => { e.stopPropagation(); setLeadStatusFilter(opt); setIsLeadStatusFilterOpen(false) }} className={`py-1.5 px-10 text-[12px] cursor-pointer transition-colors ${leadStatusFilter === opt ? 'bg-[#eaf4fb] text-[#333]' : 'text-[#666] hover:bg-[#eaf4fb]'}`}>{opt}</div>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="max-h-[220px] overflow-y-auto py-2 scrollbar-hide text-[14px]">
+                    <div className="max-h-[220px] overflow-y-auto py-1 scrollbar-hide text-[12px]">
                       {!leadSearchQuery && (
                         <>
-                          <div className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={toggleAllLeads}>
+                          <div className="flex items-center px-4 py-1.5 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={toggleAllLeads}>
                             <div className={`w-[14px] h-[14px] border ${allVisibleLeadsSelected ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] mr-3 flex items-center justify-center`}>
                               {allVisibleLeadsSelected && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                             </div>
                             Select all
                           </div>
-                          <div className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={toggleWithoutLead}>
+                          <div className="flex items-center px-4 py-1.5 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={toggleWithoutLead}>
                             <div className={`w-[14px] h-[14px] border ${includeWithoutLead ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] mr-3 flex items-center justify-center`}>
                               {includeWithoutLead && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                             </div>
@@ -528,7 +528,7 @@ export default function ProjectsPage() {
                         </>
                       )}
                       {filteredLeads.map(lead => (
-                        <div key={lead.name} className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleLead(lead.name)}>
+                        <div key={lead.name} className="flex items-center px-4 py-1.5 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleLead(lead.name)}>
                           <div className={`w-[14px] h-[14px] border ${selectedLeadNames.includes(lead.name) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] mr-3 flex items-center justify-center`}>
                             {selectedLeadNames.includes(lead.name) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                           </div>
@@ -551,41 +551,41 @@ export default function ProjectsPage() {
                       </div>
                     )}
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-[300px] p-0 bg-white shadow-2xl border border-[#e4eaee] z-[200]">
+                  <DropdownMenuContent align="end" className="w-[300px] p-0 bg-white shadow-2xl border border-[#e4eaee] z-[200]">
                     <div className="p-3 border-b border-[#e4eaee]">
                       <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999]" />
-                        <input type="text" placeholder="Search users or groups" value={accessSearchQuery} onChange={(e) => setAccessSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-[7px] text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
+                        <input type="text" placeholder="Search users or groups" value={accessSearchQuery} onChange={(e) => setAccessSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-1.5 text-[12px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
                       </div>
                     </div>
                     <div className="flex flex-col border-b border-[#e4eaee]">
-                      <div className="flex items-center justify-between px-4 py-[11px] cursor-pointer hover:bg-[#fcfdfe]" onClick={(e) => { e.stopPropagation(); setIsAccessStatusFilterOpen(!isAccessStatusFilterOpen) }}>
-                        <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">Show</span>
-                        <div className="flex items-center gap-1 text-[14px] text-[#666]">
+                      <div className="flex items-center justify-between px-4 py-[9px] cursor-pointer hover:bg-[#fcfdfe]" onClick={(e) => { e.stopPropagation(); setIsAccessStatusFilterOpen(!isAccessStatusFilterOpen) }}>
+                        <span className="text-[12px] font-bold text-[#999] uppercase tracking-widest">Show</span>
+                        <div className="flex items-center gap-1 text-[12px] text-[#666]">
                           {accessStatusFilter} <ChevronDown className={`h-3.5 w-3.5 text-[#999] transition-transform ${isAccessStatusFilterOpen ? 'rotate-180' : ''}`} />
                         </div>
                       </div>
                       {isAccessStatusFilterOpen && (
                         <div className="bg-[#fcfdfe] py-1 border-t border-[#e4eaee]/50">
                           {['All', 'Active', 'Inactive'].map(opt => (
-                            <div key={opt} onClick={(e) => { e.stopPropagation(); setAccessStatusFilter(opt); setIsAccessStatusFilterOpen(false) }} className={`py-2 px-10 text-[14px] cursor-pointer transition-colors ${accessStatusFilter === opt ? 'bg-[#eaf4fb] text-[#333]' : 'text-[#666] hover:bg-[#eaf4fb]'}`}>{opt}</div>
+                            <div key={opt} onClick={(e) => { e.stopPropagation(); setAccessStatusFilter(opt); setIsAccessStatusFilterOpen(false) }} className={`py-1.5 px-10 text-[12px] cursor-pointer transition-colors ${accessStatusFilter === opt ? 'bg-[#eaf4fb] text-[#333]' : 'text-[#666] hover:bg-[#eaf4fb]'}`}>{opt}</div>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="max-h-[280px] overflow-y-auto py-2 scrollbar-hide text-[14px]">
-                      <div className="px-4 py-2 pt-3 uppercase text-[14px] font-bold text-[#999] tracking-widest">Groups</div>
+                    <div className="max-h-[280px] overflow-y-auto py-1 scrollbar-hide text-[12px]">
+                      <div className="px-4 py-1.5 pt-2 uppercase text-[12px] font-bold text-[#999] tracking-widest">Groups</div>
                       {filteredGroups.map(group => (
-                        <div key={group.name} className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleAccessGroup(group.name)}>
+                        <div key={group.name} className="flex items-center px-4 py-1.5 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleAccessGroup(group.name)}>
                           <div className={`w-[14px] h-[14px] border ${selectedAccessGroups.includes(group.name) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] mr-3 flex items-center justify-center`}>
                             {selectedAccessGroups.includes(group.name) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                           </div>
                           {group.name}
                         </div>
                       ))}
-                      <div className="px-4 py-2 pt-4 uppercase text-[14px] font-bold text-[#999] tracking-widest">Users</div>
+                      <div className="px-4 py-1.5 pt-3 uppercase text-[12px] font-bold text-[#999] tracking-widest">Users</div>
                       {filteredAccessUsers.map(user => (
-                        <div key={user.id} className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleAccessUser(user.name)}>
+                        <div key={user.id} className="flex items-center px-4 py-1.5 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleAccessUser(user.name)}>
                           <div className={`w-[14px] h-[14px] border ${selectedAccessUsers.includes(user.name) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] mr-3 flex items-center justify-center`}>
                             {selectedAccessUsers.includes(user.name) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                           </div>
@@ -608,9 +608,9 @@ export default function ProjectsPage() {
                       </div>
                     )}
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-[180px] p-0 py-2 bg-white shadow-2xl border border-[#e4eaee] z-[200]">
+                  <DropdownMenuContent align="end" className="w-[180px] p-0 py-1 bg-white shadow-2xl border border-[#e4eaee] z-[200]">
                     {['Billable', 'Non billable'].map(status => (
-                      <div key={status} className="flex items-center px-4 py-2 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666]" onClick={() => toggleBilling(status)}>
+                      <div key={status} className="flex items-center px-4 py-1.5 cursor-pointer hover:bg-[#eaf4fb] transition-colors text-[#666] text-[12px]" onClick={() => toggleBilling(status)}>
                         <div className={`w-[14px] h-[14px] border ${selectedBillingStatuses.includes(status) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] mr-3 flex items-center justify-center`}>
                           {selectedBillingStatuses.includes(status) && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                         </div>
@@ -632,7 +632,7 @@ export default function ProjectsPage() {
                   />
                 </div>
                 <div className="flex items-center pr-4 pl-2">
-                  <Button onClick={handleApplyFilter} className="bg-[#03a9f4] hover:bg-[#0288d1] text-[14px] font-bold tracking-widest px-4 h-8 rounded-sm shadow-md uppercase text-white transition-all">APPLY FILTER</Button>
+                  <Button onClick={handleApplyFilter} className="bg-[#03a9f4] hover:bg-[#0288d1] text-[13px] font-bold tracking-widest px-3 h-8 rounded-sm shadow-md uppercase text-white transition-all">APPLY FILTER</Button>
                 </div>
               </div>
             </div>
@@ -649,7 +649,7 @@ export default function ProjectsPage() {
                 <table className="border-collapse table-auto w-full">
                   <thead>
                     <tr className="bg-[#f0f7fb] border-b border-[#d6e5ef]">
-                      <th colSpan={6} className="p-4 py-[14px] text-[16px] text-[#5c7b91] font-bold uppercase tracking-tight text-left">
+                      <th colSpan={6} className="px-4 py-3 text-[14px] text-[#5c7b91] font-bold uppercase tracking-tight text-left">
                         Projects
                       </th>
                     </tr>
@@ -664,7 +664,7 @@ export default function ProjectsPage() {
                         <th
                           key={col.label}
                           style={{ width: col.width }}
-                          className="pl-4 pr-3 py-3 text-[16px] font-normal uppercase tracking-widest cursor-pointer text-[#666] transition-colors"
+                          className="pl-4 pr-3 py-2.5 text-[12px] font-normal uppercase tracking-widest cursor-pointer text-[#666] transition-colors"
                           onClick={() => handleSort(col.label)}
                         >
                           <div className="flex items-center gap-2">
@@ -695,7 +695,7 @@ export default function ProjectsPage() {
                       </tr>
                     )}
                     {sortedProjects.map((project) => (
-                      <tr key={project.id} className={`hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7] h-[56px] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''} ${project.archived ? 'bg-gray-50/50' : ''}`}>
+                      <tr key={project.id} className={`hover:bg-[#f2f6f8] group transition-colors border-b border-[#f1f4f7] h-[46px] ${selectedProjectIds.includes(project.id) ? 'bg-[#f0f7fb]' : ''} ${project.archived ? 'bg-gray-50/50' : ''}`}>
                         {/* Name */}
                         <td className="pl-4 pr-3 py-4 whitespace-nowrap overflow-hidden">
                           <div className="flex items-center gap-4">
@@ -713,7 +713,7 @@ export default function ProjectsPage() {
                                 {project.name}
                               </span>
                             ) : (
-                              <Link href={`/dashboard/projects/${project.id}`} className={`text-[14px] font-normal truncate hover:underline cursor-pointer ${project.archived ? 'line-through text-[#999]' : 'text-[#333]'}`}>
+                              <Link href={`/dashboard/projects/${project.id}`} className={`text-[13px] font-normal truncate hover:underline cursor-pointer ${project.archived ? 'line-through text-[#999]' : 'text-[#333]'}`}>
                                 {project.name}
                               </Link>
                             )}
@@ -721,20 +721,20 @@ export default function ProjectsPage() {
                         </td>
                         {/* Lead */}
                         <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[14px] text-[#666] font-normal">{project.lead}</span>
+                          <span className="text-[13px] text-[#666] font-normal">{project.lead}</span>
                         </td>
                         {/* Tracked */}
                         <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[14px] text-[#666] font-normal">{project.tracked}</span>
+                          <span className="text-[13px] text-[#666] font-normal">{project.tracked}</span>
                         </td>
                         {/* Progress */}
                         <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
-                          <span className="text-[14px] text-[#666]">-</span>
+                          <span className="text-[13px] text-[#666]">-</span>
                         </td>
                         {/* Access + actions */}
                         <td className="p-4 border-l border-dotted border-[#e4eaee] whitespace-nowrap">
                           <div className="flex items-center justify-between w-full">
-                            <span className="text-[14px] text-[#666] font-normal">{project.access}</span>
+                            <span className="text-[13px] text-[#666] font-normal">{project.access}</span>
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Star
                                 onClick={() => toggleFavorite(project.name)}

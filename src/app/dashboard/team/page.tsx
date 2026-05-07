@@ -53,13 +53,13 @@ function MemberActionsDropdown({ member, onEdit, onToggleActive }: {
         >
           <button
             onClick={() => { onEdit(member); setOpen(false) }}
-            className="w-full text-left px-4 py-2.5 text-[14px] text-[#333] hover:bg-[#f0f4f8] cursor-pointer"
+            className="w-full text-left px-4 py-1.5 text-[12px] text-[#333] hover:bg-[#f0f4f8] cursor-pointer"
           >
             Edit
           </button>
           <button
             onClick={() => { onToggleActive(member); setOpen(false) }}
-            className={cn('w-full text-left px-4 py-2.5 text-[14px] cursor-pointer',
+            className={cn('w-full text-left px-4 py-1.5 text-[12px] cursor-pointer',
               member.isActive !== false ? 'text-[#f44336] hover:bg-[#fff5f5]' : 'text-[#4caf50] hover:bg-[#f5fff5]'
             )}
           >
@@ -159,7 +159,7 @@ function FilterDropdown({ label, options, value, onChange }: {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1 px-3 h-[34px] text-[14px] text-[#555] bg-white border border-[#d0d8de] rounded-sm hover:border-[#aaa] transition-colors cursor-pointer"
+        className="flex items-center gap-1 px-3 h-[30px] text-[12px] text-[#555] bg-white border border-[#d0d8de] rounded-sm hover:border-[#aaa] transition-colors cursor-pointer"
       >
         {value} <ChevronDown className="h-3 w-3 text-[#aaa]" />
       </button>
@@ -167,7 +167,7 @@ function FilterDropdown({ label, options, value, onChange }: {
         <div className="absolute top-full left-0 mt-0.5 bg-white border border-[#ddd] shadow-lg z-50 min-w-[140px] py-0.5 rounded-sm">
           {options.map(opt => (
             <button key={opt} onClick={() => { onChange(opt); setOpen(false) }}
-              className={cn('w-full text-left px-3 py-2 text-[14px] cursor-pointer transition-colors',
+              className={cn('w-full text-left px-3 py-1.5 text-[12px] cursor-pointer transition-colors',
                 value === opt ? 'bg-[#03a9f4] text-white' : 'text-[#555] hover:bg-[#f0f4f8]')}>
               {opt}
             </button>
@@ -206,48 +206,48 @@ function AccessDropdown({ group, rawUsers, onToggle, onSelectAll, readOnly = fal
       <div className="inline-flex items-center gap-1.5 bg-[#eaf4fb] text-[#5c7b91] text-[13px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] max-w-[400px]">
         <span className="truncate">{groupMembers.map(u => u.name).join(', ')}</span>
       </div>
-    ) : <span className="text-[#ccc] text-[13px]">—</span>
+    ) : <span className="text-[#ccc] text-[12px]">—</span>
   }
 
   return (
     <div className="relative" ref={ref}>
       {groupMembers.length > 0 ? (
         <div onClick={() => setOpen(o => !o)}
-          className="inline-flex items-center gap-1.5 bg-[#eaf4fb] text-[#5c7b91] text-[13px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] cursor-pointer hover:bg-[#d6edf8] transition-colors max-w-[400px]">
+          className="inline-flex items-center gap-1.5 bg-[#eaf4fb] text-[#5c7b91] text-[12px] px-2.5 py-0.5 rounded-sm border border-[#d6e5ef] cursor-pointer hover:bg-[#d6edf8] transition-colors max-w-[400px]">
           <span className="truncate">{groupMembers.map(u => u.name).join(', ')}</span>
           <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
         </div>
       ) : (
         <button onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[14px]">
-          <Plus className="h-3.5 w-3.5" /> Access
+          className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[12px]">
+          <Plus className="h-3 w-3" /> Access
         </button>
       )}
       {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[260px] rounded-sm">
+        <div className="absolute top-full right-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[260px] rounded-sm">
           <div className="flex items-center border-b border-[#eee] px-3 py-2">
             <Search className="h-3.5 w-3.5 text-[#bbb] shrink-0" />
             <input autoFocus placeholder="Search users…" value={search}
               onChange={e => setSearch(e.target.value)}
-              className="flex-1 ml-2 text-[13px] outline-none placeholder:text-[#bbb]" />
+              className="flex-1 ml-2 text-[12px] outline-none placeholder:text-[#bbb]" />
           </div>
           <div className="max-h-[240px] overflow-y-auto py-1">
             {!search && (
-              <label className="flex items-center gap-2 px-3 py-2 hover:bg-[#f0f4f8] cursor-pointer border-b border-[#f0f0f0]">
+              <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f0f4f8] cursor-pointer border-b border-[#f0f0f0]">
                 <input type="checkbox" checked={allSelected}
                   onChange={() => onSelectAll(filtered, !allSelected)}
                   className="accent-[#03a9f4] w-[14px] h-[14px]" />
-                <span className="text-[13px] text-[#555] font-medium">Select all</span>
+                <span className="text-[12px] text-[#555] font-medium">Select all</span>
               </label>
             )}
             {filtered.map(u => {
               const checked = group.memberIds.includes(u._id)
               return (
-                <label key={u._id} className="flex items-center gap-2 px-3 py-2 hover:bg-[#f0f4f8] cursor-pointer">
+                <label key={u._id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f0f4f8] cursor-pointer">
                   <input type="checkbox" checked={checked}
                     onChange={e => onToggle(u._id, e.target.checked)}
                     className="accent-[#03a9f4] w-[14px] h-[14px]" />
-                  <span className="text-[13px] text-[#333]">{u.name}</span>
+                  <span className="text-[12px] text-[#333]">{u.name}</span>
                 </label>
               )
             })}
@@ -283,7 +283,7 @@ function RoleDropdown({ memberId, currentRole, onRoleChange }: {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className={cn('px-2.5 py-1 rounded-sm text-[14px] font-medium flex items-center gap-1', roleBadgeColor(currentRole))}
+        className={cn('px-2.5 py-0.5 rounded-sm text-[12px] font-medium flex items-center gap-1', roleBadgeColor(currentRole))}
       >
         {roleLabel(currentRole)} <ChevronDown className="h-3 w-3 opacity-60" />
       </button>
@@ -292,7 +292,7 @@ function RoleDropdown({ memberId, currentRole, onRoleChange }: {
           {ROLE_OPTIONS.map(opt => (
             <button key={opt.value}
               onClick={() => { onRoleChange(memberId, opt.value); setOpen(false) }}
-              className={cn('w-full text-left px-3 py-2 text-[14px] cursor-pointer transition-colors',
+              className={cn('w-full text-left px-3 py-1.5 text-[12px] cursor-pointer transition-colors',
                 roleLabel(currentRole) === opt.label ? 'bg-[#03a9f4] text-white' : 'text-[#555] hover:bg-[#f0f4f8]'
               )}>
               {opt.label}
@@ -329,7 +329,7 @@ function GroupDropdown({ member, allGroups, onToggle, trigger }: {
     <div className="relative" ref={ref}>
       <div onClick={() => setOpen(o => !o)} className="cursor-pointer">{trigger}</div>
       {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[260px] rounded-sm">
+        <div className="absolute top-full right-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[260px] rounded-sm">
           <div className="flex items-center border-b border-[#eee] px-3 py-2">
             <Search className="h-3.5 w-3.5 text-[#bbb] flex-shrink-0" />
             <input
@@ -337,23 +337,23 @@ function GroupDropdown({ member, allGroups, onToggle, trigger }: {
               placeholder="Add/Search groups"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="flex-1 ml-2 text-[14px] outline-none placeholder:text-[#bbb]"
+              className="flex-1 ml-2 text-[12px] outline-none placeholder:text-[#bbb]"
             />
           </div>
           <div className="max-h-[220px] overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <div className="px-3 py-2 text-[14px] text-[#aaa]">No groups found</div>
+              <div className="px-3 py-2 text-[12px] text-[#aaa]">No groups found</div>
             ) : filtered.map(g => {
               const checked = memberGroupIds.includes(g._id)
               return (
-                <label key={g._id} className="flex items-center gap-2 px-3 py-2 hover:bg-[#f0f4f8] cursor-pointer">
+                <label key={g._id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f0f4f8] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={e => { onToggle(g, e.target.checked); }}
                     className="accent-[#03a9f4] w-[14px] h-[14px]"
                   />
-                  <span className="text-[14px] text-[#333]">{g.name}</span>
+                  <span className="text-[12px] text-[#333]">{g.name}</span>
                 </label>
               )
             })}
@@ -572,10 +572,10 @@ export default function TeamPage() {
       {/* Tabs + Add button */}
       <div className="w-full px-5 pt-0 pb-0 shrink-0">
         <div className="flex items-end justify-between mt-4">
-          <div className="flex items-center gap-0 h-[40px]">
+          <div className="flex items-center gap-0 h-[36px]">
             {(['MEMBERS', 'GROUPS', 'REMINDERS'] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={cn('px-8 h-full text-[14px] font-bold tracking-widest border transition-all uppercase',
+                className={cn('px-8 h-full text-[12px] font-bold tracking-widest border transition-all uppercase',
                   activeTab === tab
                     ? 'bg-white border-[#e4eaee] border-b-white text-[#333] relative z-20'
                     : 'bg-[#eaecee] border-transparent text-[#999] hover:bg-[#dde0e3]'
@@ -597,7 +597,7 @@ export default function TeamPage() {
             <>
               {/* Filter bar */}
               <div className="px-5 py-3 border-b border-[#e4eaee] flex items-center gap-3 flex-wrap">
-                <span className="text-[14px] font-bold text-[#999] uppercase tracking-widest">FILTER</span>
+                <span className="text-[12px] font-bold text-[#999] uppercase tracking-widest">FILTER</span>
                 <div className="h-6 w-px bg-[#e0e0e0]" />
                 <FilterDropdown label="Active" options={['Active', 'Inactive', 'All']} value={statusFilter} onChange={setStatusFilter} />
                 <FilterDropdown label="Billable rate" options={['Billable rate', 'Hidden', 'Visible']} value={billableFilter} onChange={setBillableFilter} />
@@ -605,15 +605,15 @@ export default function TeamPage() {
                 <FilterDropdown label="Group" options={groupNames} value={groupFilter} onChange={setGroupFilter} />
                 <div className="flex-1" />
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-white border border-[#c6d2d9] rounded-sm h-[34px] w-[260px] focus-within:border-[#03a9f4] transition-all">
+                  <div className="flex items-center bg-white border border-[#c6d2d9] rounded-sm h-[30px] w-[260px] focus-within:border-[#03a9f4] transition-all">
                     <Search className="h-4 w-4 text-[#bbb] ml-3 flex-shrink-0" />
                     <input placeholder="Search by name or email" value={memberSearch}
                       onChange={e => setMemberSearch(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleApplyFilter()}
-                      className="flex-1 px-2 text-[14px] outline-none placeholder:text-[#bbb] bg-transparent" />
+                      className="flex-1 px-2 text-[12px] outline-none placeholder:text-[#bbb] bg-transparent" />
                   </div>
                   <button onClick={handleApplyFilter}
-                    className="px-4 h-[34px] bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[14px] font-bold uppercase rounded-sm transition-colors tracking-widest">
+                    className="px-4 h-[30px] bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[12px] font-bold uppercase rounded-sm transition-colors tracking-widest">
                     APPLY FILTER
                   </button>
                 </div>
@@ -622,7 +622,7 @@ export default function TeamPage() {
               {/* Clear filters */}
               {(memberSearch || statusFilter !== 'All' || roleFilter !== 'Role' || groupFilter !== 'Group') && (
                 <div className="flex justify-end px-5 py-1 border-b border-[#f0f0f0]">
-                  <button onClick={handleClearFilters} className="text-[14px] text-[#03a9f4] hover:underline cursor-pointer">
+                  <button onClick={handleClearFilters} className="text-[12px] text-[#03a9f4] hover:underline cursor-pointer">
                     Clear filters
                   </button>
                 </div>
@@ -630,8 +630,8 @@ export default function TeamPage() {
 
               {/* Section bar */}
               <div className="bg-[#f2f6fb] px-5 py-[10px] border-b border-[#e4eaee] flex items-center justify-between">
-                <span className="text-[14px] text-[#999]">Members</span>
-                <button className="flex items-center gap-1 text-[14px] text-[#555] hover:text-[#03a9f4]">
+                <span className="text-[13px] text-[#999]">Members</span>
+                <button className="flex items-center gap-1 text-[13px] text-[#555] hover:text-[#03a9f4]">
                   Export <ChevronDown className="h-3 w-3" />
                 </button>
               </div>
@@ -643,18 +643,18 @@ export default function TeamPage() {
                     <th className="px-4 py-3 w-[40px]">
                       <div className="w-[14px] h-[14px] border border-[#c6d2d9] rounded-sm bg-white" />
                     </th>
-                    <th className="px-4 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[22%]">
+                    <th className="px-4 py-2 text-[11px] font-normal text-[#666] uppercase tracking-wider w-[22%]">
                       <div className="flex items-center gap-1">NAME <ChevronDown className="h-3 w-3" /></div>
                     </th>
-                    <th className="px-4 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[22%]">
+                    <th className="px-4 py-2 text-[11px] font-normal text-[#666] uppercase tracking-wider w-[22%]">
                       <div className="flex items-center gap-1">EMAIL <ChevronDown className="h-3 w-3" /></div>
                     </th>
-                    <th className="px-4 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[20%] text-center">
+                    <th className="px-4 py-2 text-[11px] font-normal text-[#666] uppercase tracking-wider w-[20%] text-center">
                       <div className="flex items-center justify-center gap-1">BILLABLE RATE (USD) <ChevronDown className="h-3 w-3" /></div>
                     </th>
-                    <th className="px-4 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[18%]">ROLE</th>
-                    <th className="px-4 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[14%]">GROUP</th>
-                    <th className="px-4 py-3 w-[40px]" />
+                    <th className="px-4 py-2 text-[11px] font-normal text-[#666] uppercase tracking-wider w-[18%]">ROLE</th>
+                    <th className="px-4 py-2 text-[11px] font-normal text-[#666] uppercase tracking-wider w-[14%]">GROUP</th>
+                    <th className="px-4 py-2 w-[40px]" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f1f4f7]">
@@ -664,7 +664,7 @@ export default function TeamPage() {
                       : allGroups.find(g => g.memberIds.includes(member.id))
                     const isActive = member.id in activeOverrides ? activeOverrides[member.id] : (member.isActive !== false)
                     return (
-                      <tr key={member.id} className="hover:bg-[#f9fafb] transition-colors group text-[14px] h-[60px]">
+                      <tr key={member.id} className="hover:bg-[#f9fafb] transition-colors group text-[12px] h-[40px]">
                         <td className={cn('px-4 py-2', !isActive && 'opacity-50')}>
                           <div className="w-[14px] h-[14px] border border-[#c6d2d9] rounded-sm bg-white" />
                         </td>
@@ -674,11 +674,11 @@ export default function TeamPage() {
                         <td className={cn('px-4 py-2 text-[#999] hover:text-[#03a9f4] cursor-pointer transition-colors', !isActive && 'opacity-50')}>{member.email}</td>
                         <td className={cn('px-4 py-2', !isActive && 'opacity-50')}>
                           <div className="flex items-center justify-center">
-                            <div className="flex bg-[#f2f6fb] border border-[#e4eaee] rounded-sm overflow-hidden w-[130px]">
-                              <div className="px-3 py-1.5 text-[#333] flex-1 text-center">
+                            <div className="flex items-center bg-[#f2f6fb] border border-[#e4eaee] rounded-sm overflow-hidden w-[130px] h-[26px]">
+                              <div className="px-3 text-[#333] flex-1 text-center text-[12px]">
                                 {member.billableRate ? member.billableRate.toFixed(2) : '—'}
                               </div>
-                              <button className="bg-white px-3 py-1.5 text-[#03a9f4] text-[14px] border-l border-[#e4eaee] hover:bg-gray-50 uppercase">
+                              <button className="bg-white px-3 h-full flex items-center text-[#03a9f4] text-[11px] border-l border-[#e4eaee] hover:bg-gray-50 uppercase font-medium">
                                 Change
                               </button>
                             </div>
@@ -699,12 +699,12 @@ export default function TeamPage() {
                               onRoleChange={handleRoleChange}
                             />
                           ) : member.role ? (
-                            <span className={cn('px-2.5 py-1 rounded-sm text-[14px] font-medium', roleBadgeColor(member.role))}>
+                            <span className={cn('px-2.5 py-0.5 rounded-sm text-[12px] font-medium', roleBadgeColor(member.role))}>
                               {roleLabel(member.role)}
                             </span>
                           ) : (
-                            <button className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[14px]">
-                              <Plus className="h-3.5 w-3.5" /> Role
+                            <button className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[12px]">
+                              <Plus className="h-3 w-3" /> Role
                             </button>
                           )}
                         </td>
@@ -716,21 +716,21 @@ export default function TeamPage() {
                               onToggle={(group, checked) => handleMemberGroupToggle(member, group, checked)}
                               trigger={
                                 memberGroup ? (
-                                  <div className="inline-flex items-center bg-[#eaf4fb] text-[#5c7b91] text-[14px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] gap-1">
+                                  <div className="inline-flex items-center bg-[#eaf4fb] text-[#5c7b91] text-[12px] px-2.5 py-0.5 rounded-sm border border-[#d6e5ef] gap-1">
                                     {memberGroup.name} <ChevronDown className="h-3 w-3 opacity-60" />
                                   </div>
                                 ) : (
-                                  <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[14px]">
-                                    <Plus className="h-3.5 w-3.5" /> Group
+                                  <div className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[12px]">
+                                    <Plus className="h-3 w-3" /> Group
                                   </div>
                                 )
                               }
                             />
                           ) : memberGroup ? (
-                            <div className="inline-flex items-center bg-[#eaf4fb] text-[#5c7b91] text-[14px] px-2.5 py-1 rounded-sm border border-[#d6e5ef]">
+                            <div className="inline-flex items-center bg-[#eaf4fb] text-[#5c7b91] text-[12px] px-2.5 py-0.5 rounded-sm border border-[#d6e5ef]">
                               {memberGroup.name}
                             </div>
-                          ) : <span className="text-[#ccc] text-[14px]">—</span>}
+                          ) : <span className="text-[#ccc] text-[12px]">—</span>}
                         </td>
                         <td className="px-4 py-2 text-center">
                           {canInvite && (
@@ -754,22 +754,22 @@ export default function TeamPage() {
             <>
               {/* Search + Add */}
               <div className="px-5 py-3 border-b border-[#e4eaee] flex items-center justify-between gap-4">
-                <div className="flex items-center bg-white border border-[#c6d2d9] rounded-sm h-[36px] w-[320px] focus-within:border-[#03a9f4] transition-all">
+                <div className="flex items-center bg-white border border-[#c6d2d9] rounded-sm h-[30px] w-[320px] focus-within:border-[#03a9f4] transition-all">
                   <Search className="h-4 w-4 text-[#bbb] ml-3 flex-shrink-0" />
                   <input placeholder="Search by username or group name" value={groupSearch}
                     onChange={e => setGroupSearch(e.target.value)}
-                    className="flex-1 px-2 text-[14px] outline-none placeholder:text-[#bbb] bg-transparent" />
+                    className="flex-1 px-2 text-[12px] outline-none placeholder:text-[#bbb] bg-transparent" />
                 </div>
                 {canInvite && (
                   <div className="flex items-center gap-2">
-                    <div className="border border-[#c6d2d9] rounded-sm h-[36px] flex items-center px-3 bg-white focus-within:border-[#03a9f4] w-[200px]">
+                    <div className="border border-[#c6d2d9] rounded-sm h-[30px] flex items-center px-3 bg-white focus-within:border-[#03a9f4] w-[200px]">
                       <input placeholder="Add new group" value={newGroupName}
                         onChange={e => setNewGroupName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAddGroup()}
-                        className="w-full text-[14px] outline-none placeholder:text-[#bbb]" />
+                        className="w-full text-[12px] outline-none placeholder:text-[#bbb]" />
                     </div>
                     <button onClick={handleAddGroup}
-                      className="bg-[#03a9f4] text-white px-6 h-[36px] text-[14px] font-bold rounded-sm hover:bg-[#0288d1] uppercase tracking-widest">
+                      className="bg-[#03a9f4] text-white px-6 h-[30px] text-[12px] font-bold rounded-sm hover:bg-[#0288d1] uppercase tracking-widest">
                       ADD
                     </button>
                   </div>
@@ -778,8 +778,8 @@ export default function TeamPage() {
 
               {/* Section bar */}
               <div className="bg-[#f2f6fb] px-5 py-[10px] border-b border-[#e4eaee] flex items-center justify-between">
-                <span className="text-[14px] text-[#999]">Groups</span>
-                <button className="flex items-center gap-1 text-[14px] text-[#555] hover:text-[#03a9f4]">
+                <span className="text-[13px] text-[#999]">Groups</span>
+                <button className="flex items-center gap-1 text-[13px] text-[#555] hover:text-[#03a9f4]">
                   Export <ChevronDown className="h-3 w-3" />
                 </button>
               </div>
@@ -788,11 +788,11 @@ export default function TeamPage() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="text-left border-b border-[#e4eaee] bg-white">
-                    <th className="px-5 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[25%]">
+                    <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest w-[25%]">
                       <div className="flex items-center gap-1">NAME <ChevronDown className="h-3 w-3" /></div>
                     </th>
-                    <th className="px-5 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest">ACCESS</th>
-                    <th className="px-5 py-3 w-[80px]" />
+                    <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest">ACCESS</th>
+                    <th className="px-5 py-2 w-[80px]" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f1f4f7]">
@@ -808,14 +808,14 @@ export default function TeamPage() {
                     const isEditing = editingGroup?._id === group._id
 
                     return (
-                      <tr key={group._id} className="hover:bg-[#f9fafb] transition-colors group text-[14px] h-[60px]">
-                        <td className="px-5 py-2 font-normal text-[#333]">
+                      <tr key={group._id} className="hover:bg-[#f9fafb] transition-colors group text-[12px] h-[45px]">
+                        <td className="px-5 py-3 text-[#333] text-[12px]">
                           {isEditing ? (
                             <div className="flex items-center gap-2">
                               <input value={editName} onChange={e => setEditName(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') setEditingGroup(null) }}
                                 autoFocus
-                                className="border border-[#03a9f4] rounded-sm px-2 py-1 text-[14px] outline-none w-[160px]" />
+                                className="border border-[#03a9f4] rounded-sm px-2 py-1 text-[12px] outline-none w-[160px]" />
                               <button onClick={handleSaveEdit} className="text-[#03a9f4] hover:text-[#0288d1]">
                                 <Check className="h-4 w-4" />
                               </button>

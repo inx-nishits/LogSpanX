@@ -224,7 +224,7 @@ export function DashboardView() {
     const isPersonal = filters.teamScope === 'only-me'
 
     return (
-        <div className="p-4 lg:p-10 space-y-4 bg-[#f2f6f8] min-h-full">
+        <div className="p-4 lg:p-6 space-y-2 bg-[#f2f6f8] min-h-full">
             <DashboardHeader
                 role={user.role}
                 filters={filters}
@@ -245,7 +245,7 @@ export function DashboardView() {
                 </div>
             ) : isPersonal ? (
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                    <div className="lg:col-span-3 space-y-4">
+                    <div className="lg:col-span-3 space-y-2">
                         <StatsSummary
                             totalTime={dashboardData.totalTime}
                             topProject={dashboardData.topProject}
@@ -264,7 +264,7 @@ export function DashboardView() {
                     </div>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
                     <StatsSummary
                         totalTime={dashboardData.totalTime}
                         topProject={dashboardData.topProject}

@@ -282,8 +282,8 @@ export default function CalendarPage() {
             <ChevronDown style={{ width: 15, height: 15, color: '#aaa' }} />
           </button>
 
-          <button onClick={navigatePrev} style={btn({ width: 32, height: 36 })}>
-            <ChevronLeft style={{ width: 17, height: 17 }} />
+          <button onClick={navigatePrev} style={btn({ width: 32, height: 32 })}>
+            <ChevronLeft style={{ width: 15, height: 15 }} />
           </button>
 
           <DateRangePicker
@@ -293,8 +293,8 @@ export default function CalendarPage() {
             label={datePickerLabel}
           />
 
-          <button onClick={navigateNext} style={btn({ width: 32, height: 36 })}>
-            <ChevronRight style={{ width: 17, height: 17 }} />
+          <button onClick={navigateNext} style={btn({ width: 32, height: 32 })}>
+            <ChevronRight style={{ width: 15, height: 15 }} />
           </button>
         </div>
       </div>

@@ -16,11 +16,11 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                     {isTaskView ? 'Tasks per Day by Project' : 'Time Tracked per Day'}
                 </span>
             </div>
-            <div className="h-[380px] w-full pl-2 pr-6 pt-5 pb-3">
+            <div className="h-[220px] w-full pl-2 pr-6 pt-3 pb-2">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart
                         data={data}
-                        margin={{ top: 28, right: 5, left: 5, bottom: 5 }}
+                        margin={{ top: 15, right: 5, left: 5, bottom: 5 }}
                         barCategoryGap="10%"
                         barGap={0}
                     >
@@ -35,7 +35,7 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                         <YAxis
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fontSize: 13, fill: '#999', fontWeight: 400 }}
+                            tick={{ fontSize: 11, fill: '#999', fontWeight: 400 }}
                             domain={[0, 'auto']}
                             allowDecimals={!isTaskView}
                             tickFormatter={(v) => isTaskView ? `${v}` : `${Number(v).toFixed(1)}h`}
@@ -65,7 +65,7 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                                         </div>
                                         <div className="flex items-center justify-between border-t border-[#555] pt-2">
                                             <span className="opacity-70 uppercase">Total</span>
-                                            <span className="font-bold text-[14px]">
+                                            <span className="font-bold text-[13px]">
                                                 {isTaskView ? `${total} tasks` : `${th}:${String(tm).padStart(2, '0')}:00`}
                                             </span>
                                         </div>
@@ -90,7 +90,7 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                                     <LabelList
                                         dataKey="displayTotal"
                                         position="top"
-                                        style={{ fill: '#333', fontSize: 12, fontWeight: 400 }}
+                                        style={{ fill: '#333', fontSize: 10, fontWeight: 400 }}
                                         formatter={(v: any) => v || ''}
                                         offset={8}
                                     />

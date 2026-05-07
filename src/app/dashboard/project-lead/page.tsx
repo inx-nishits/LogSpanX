@@ -150,7 +150,7 @@ export default function ProjectLeadPage() {
           <div className="relative" ref={statusRef}>
             <button
               onClick={() => setStatusOpen(o => !o)}
-              className="flex items-center gap-1.5 px-3 h-[34px] text-[14px] text-[#555] bg-white border border-[#c6d2d9] rounded-sm hover:border-[#aaa] transition-colors"
+              className="flex items-center gap-1.5 px-3 h-[34px] text-[13px] text-[#555] bg-white border border-[#c6d2d9] rounded-sm hover:border-[#aaa] transition-colors"
             >
               {statusLabel} <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
             </button>
@@ -158,7 +158,7 @@ export default function ProjectLeadPage() {
               <div className="absolute top-full left-0 mt-0.5 bg-white border border-[#ddd] shadow-lg z-50 min-w-[150px] py-0.5 rounded-sm">
                 {(['active', 'inactive', 'all'] as const).map(s => (
                   <button key={s} onClick={() => { setStatusFilter(s); setStatusOpen(false) }}
-                    className={cn('w-full text-left px-3 py-2 text-[14px] cursor-pointer transition-colors',
+                    className={cn('w-full text-left px-3 py-2 text-[12px] cursor-pointer transition-colors',
                       statusFilter === s ? 'bg-[#03a9f4] text-white' : 'text-[#555] hover:bg-[#f0f4f8]')}>
                     {s === 'active' ? 'Show active' : s === 'inactive' ? 'Show inactive' : 'Show all'}
                   </button>
@@ -174,7 +174,7 @@ export default function ProjectLeadPage() {
               placeholder="Search by name"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="flex-1 px-2 text-[14px] outline-none placeholder:text-[#bbb] bg-transparent"
+              className="flex-1 px-2 text-[13px] outline-none placeholder:text-[#bbb] bg-transparent"
             />
           </div>
 
@@ -188,15 +188,15 @@ export default function ProjectLeadPage() {
                 value={addSearch}
                 onChange={e => { setAddSearch(e.target.value); setAddDropOpen(true) }}
                 onFocus={() => setAddDropOpen(true)}
-                className="h-[34px] px-3 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] w-[240px] bg-white"
+                className="h-[34px] px-3 text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] w-[240px] bg-white"
               />
               {addDropOpen && (
                 <div className="absolute top-full left-0 mt-0.5 bg-white border border-[#ddd] shadow-lg z-50 w-[240px] max-h-[220px] overflow-y-auto rounded-sm">
                   {addableUsers.length === 0 ? (
-                    <div className="px-3 py-2 text-[13px] text-[#aaa]">{addSearch ? 'No users found' : 'All users already added'}</div>
+                    <div className="px-3 py-2 text-[12px] text-[#aaa]">{addSearch ? 'No users found' : 'All users already added'}</div>
                   ) : addableUsers.map(u => (
                     <button key={u._id} onClick={() => handleAdd(u)} disabled={adding}
-                      className="w-full text-left px-3 py-2 text-[14px] text-[#333] hover:bg-[#eaf4fb] transition-colors cursor-pointer">
+                      className="w-full text-left px-3 py-2 text-[12px] text-[#333] hover:bg-[#eaf4fb] transition-colors cursor-pointer">
                       {u.name}
                     </button>
                   ))}
@@ -209,8 +209,8 @@ export default function ProjectLeadPage() {
         {/* Table */}
         <div className="bg-white border border-[#e4eaee] shadow-sm">
           {/* Section header */}
-          <div className="bg-[#f2f6fb] px-5 py-[10px] border-b border-[#e4eaee]">
-            <span className="text-[14px] text-[#666] font-medium">Project Lead</span>
+          <div className="bg-[#f0f7fb] px-5 py-[10px] border-b border-[#d6e5ef]">
+            <span className="text-[14px] text-[#5c7b91] font-bold uppercase tracking-tight">Project Lead</span>
           </div>
 
           <table className="w-full border-collapse">
@@ -228,9 +228,9 @@ export default function ProjectLeadPage() {
                     {allSelected && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[30%]">Name</th>
-                <th className="px-4 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[35%]">Address</th>
-                <th className="px-4 py-3 text-[14px] font-normal text-[#666] uppercase tracking-widest w-[20%]">Currency</th>
+                <th className="px-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest w-[30%]">Name</th>
+                <th className="px-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest w-[35%]">Address</th>
+                <th className="px-4 py-3 text-[12px] font-normal text-[#666] uppercase tracking-widest w-[20%]">Currency</th>
                 <th className="px-4 py-3 w-[80px]" />
               </tr>
             </thead>
@@ -252,9 +252,9 @@ export default function ProjectLeadPage() {
                       {selectedIds.includes(m._id) && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-[14px] text-[#333]">{m.name}</td>
-                  <td className="px-4 py-2 text-[14px] text-[#999]">—</td>
-                  <td className="px-4 py-2 text-[14px] text-[#333]">USD</td>
+                  <td className="px-4 py-2 text-[13px] text-[#333]">{m.name}</td>
+                  <td className="px-4 py-2 text-[13px] text-[#999]">—</td>
+                  <td className="px-4 py-2 text-[13px] text-[#333]">USD</td>
                   <td className="px-4 py-2">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuRef}>
                       <button
@@ -304,14 +304,14 @@ export default function ProjectLeadPage() {
           </div>
           <div className="px-6 py-5 flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-bold text-[#999] uppercase tracking-widest">Name</label>
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest">Name</label>
               <input value={editName} onChange={e => setEditName(e.target.value)}
-                className="w-full px-3 py-2.5 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
+                className="w-full px-3 py-2.5 text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-bold text-[#999] uppercase tracking-widest">Email</label>
+              <label className="text-[11px] font-bold text-[#999] uppercase tracking-widest">Email</label>
               <input value={editEmail} onChange={e => setEditEmail(e.target.value)}
-                className="w-full px-3 py-2.5 text-[14px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
+                className="w-full px-3 py-2.5 text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4]" />
             </div>
           </div>
           <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#e4eaee]">

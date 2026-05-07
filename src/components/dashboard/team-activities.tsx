@@ -155,27 +155,27 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
                                     {initials}
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[13px] font-medium text-[#333] truncate">{member.name}</p>
-                                    <p className="text-[11px] text-[#999] capitalize">{member.role}</p>
+                                    <p className="text-[12px] font-medium text-[#333] truncate">{member.name}</p>
+                                    <p className="text-[10px] text-[#999] capitalize">{member.role}</p>
                                 </div>
                             </div>
 
                             <div className="col-span-4 min-w-0 pr-4">
                                 {member.hasActivity ? (
                                     <>
-                                        <p className="text-[13px] text-[#333] truncate">{member.latestActivity}</p>
+                                        <p className="text-[12px] text-[#333] truncate">{member.latestActivity}</p>
                                         <div className="flex items-center gap-1.5 mt-0.5">
                                             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: member.latestProjectColor }} />
-                                            <p className="text-[12px] text-[#999] truncate">{member.latestProject}</p>
+                                            <p className="text-[11px] text-[#999] truncate">{member.latestProject}</p>
                                         </div>
                                     </>
                                 ) : (
-                                    <p className="text-[13px] text-[#ccc] italic">No activity</p>
+                                    <p className="text-[12px] text-[#ccc] italic">No activity</p>
                                 )}
                             </div>
 
                             <div className="col-span-6 flex items-center justify-end space-x-4">
-                                <span className="text-[14px] font-bold text-[#333] tabular-nums w-[52px] text-right flex-shrink-0">
+                                <span className="text-[13px] font-bold text-[#333] tabular-nums w-[52px] text-right flex-shrink-0">
                                     {member.totalDisplay}
                                 </span>
                                 <div className="flex-1 max-w-[200px]">

@@ -111,9 +111,9 @@ export function DateRangePicker({ initialRange, onRangeChange, label, className 
         })
 
         return (
-            <div className="w-[300px]">
-                <div className="flex items-center justify-center mb-4 px-2">
-                    <span className="text-[14px] font-bold text-[#333]">
+            <div className="w-[240px]">
+                <div className="flex items-center justify-center mb-2 px-2">
+                    <span className="text-[13px] font-bold text-[#333]">
                         {format(monthDate, 'MMM yyyy')}
                     </span>
                 </div>
@@ -133,7 +133,7 @@ export function DateRangePicker({ initialRange, onRangeChange, label, className 
                                 key={idx}
                                 onClick={() => handleDayClick(day)}
                                 className={cn(
-                                    "h-9 w-10 flex items-center justify-center text-[13px] relative transition-colors cursor-pointer",
+                                    "h-7 w-8 flex items-center justify-center text-[12px] relative transition-colors cursor-pointer",
                                     !isCurrentMonth ? "text-[#ccc]" : "text-[#333] hover:bg-[#f5f7f9]",
                                     isInRange && isCurrentMonth && "bg-[#f2f9ff]",
                                     isSelected && isCurrentMonth && "bg-[#03a9f4] text-white hover:bg-[#03a9f4] z-10"
@@ -198,28 +198,28 @@ export function DateRangePicker({ initialRange, onRangeChange, label, className 
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "flex items-center bg-white border border-[#d0d8de] h-[36px] px-3 gap-3 cursor-pointer transition-colors hover:border-[#03a9f4]",
+                    "flex items-center bg-white border border-[#d0d8de] h-[32px] px-3 gap-2 cursor-pointer transition-colors hover:border-[#03a9f4]",
                     isOpen && "border-[#03a9f4]",
                     className
                 )}
             >
-                <CalendarDays className="h-[16px] w-[16px] text-[#999]" />
-                <span className="text-[15px] font-normal text-[#333] whitespace-nowrap min-w-[170px] text-left">
+                <CalendarDays className="h-[14px] w-[14px] text-[#999]" />
+                <span className="text-[13px] font-normal text-[#333] whitespace-nowrap min-w-[150px] text-left">
                     {rangeDisplay}
                 </span>
-                <ChevronDown className="h-[15px] w-[15px] text-[#999]" />
+                <ChevronDown className="h-[14px] w-[14px] text-[#999]" />
             </button>
 
             {isOpen && (
                 <div className="absolute top-full right-0 mt-1 bg-white border border-[#e4eaee] rounded-sm shadow-xl z-[100] flex animate-in fade-in slide-in-from-top-1 duration-200">
                     {/* Preset Sidebar */}
-                    <div className="w-[180px] border-r border-[#e4eaee] py-2">
+                    <div className="w-[140px] border-r border-[#e4eaee] py-2">
                         {PRESETS.map(preset => (
                             <button
                                 key={preset.label}
                                 onClick={() => handlePresetClick(preset)}
                                 className={cn(
-                                    "w-full text-left px-5 py-2.5 text-[14px] transition-colors cursor-pointer",
+                                    "w-full text-left px-4 py-2 text-[13px] transition-colors cursor-pointer",
                                     activePreset === preset.label
                                         ? "bg-[#03a9f4] text-white"
                                         : "text-[#555] hover:bg-[#f5f7f9]"
@@ -231,9 +231,9 @@ export function DateRangePicker({ initialRange, onRangeChange, label, className 
                     </div>
 
                     {/* Calendar Area */}
-                    <div className="p-4 relative">
+                    <div className="p-3 relative">
                         {/* Navigation */}
-                        <div className="absolute top-4 left-4 right-4 flex justify-between z-10">
+                        <div className="absolute top-3 left-3 right-3 flex justify-between z-10">
                             <button
                                 onClick={() => setViewDate(subMonths(viewDate, 1))}
                                 className="p-1 hover:bg-[#f5f7f9] rounded-sm transition-colors text-[#555]"
@@ -248,7 +248,7 @@ export function DateRangePicker({ initialRange, onRangeChange, label, className 
                             </button>
                         </div>
 
-                        <div className="flex gap-8">
+                        <div className="flex gap-4">
                             {renderMonth(viewDate)}
                             {renderMonth(addMonths(viewDate, 1))}
                         </div>

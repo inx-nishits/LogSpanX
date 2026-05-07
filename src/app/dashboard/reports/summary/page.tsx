@@ -172,7 +172,7 @@ function ExportDropdown({ onExport }: { onExport: (format: ExportFormat) => void
                 onExport(option.format)
                 setOpen(false)
               }}
-              className="w-full text-left px-3 py-2 text-[14px] text-[#555] hover:bg-[#f5f7f9] hover:text-[#03a9f4] cursor-pointer"
+              className="w-full text-left px-3 py-2 text-[13px] text-[#555] hover:bg-[#f5f7f9] hover:text-[#03a9f4] cursor-pointer"
             >
               {option.label}
             </button>
@@ -205,7 +205,7 @@ function DescriptionFilter({ value, onChange }: { value: string; onChange: (v: s
       <button
         onClick={() => setOpen(o => !o)}
         className={cn(
-          'flex items-center gap-1 px-4 h-[52px] text-[16px] transition-colors cursor-pointer',
+          'flex items-center gap-1 px-4 h-[52px] text-[14px] transition-colors cursor-pointer',
           open || value ? 'text-[#03a9f4]' : 'text-[#555] hover:text-[#333]'
         )}
       >
@@ -225,7 +225,7 @@ function DescriptionFilter({ value, onChange }: { value: string; onChange: (v: s
               value={value === '__without__' ? '' : value}
               onChange={e => onChange(e.target.value)}
               placeholder="Enter description..."
-              className="flex-1 text-[16px] outline-none placeholder:text-[#bbb] bg-transparent"
+              className="flex-1 text-[14px] outline-none placeholder:text-[#bbb] bg-transparent"
             />
             {value && value !== '__without__' && (
               <button onClick={() => onChange('')} className="text-[#bbb] hover:text-[#555]">
@@ -244,7 +244,7 @@ function DescriptionFilter({ value, onChange }: { value: string; onChange: (v: s
             )}>
               {value === '__without__' && <Check className="h-2.5 w-2.5 text-white stroke-[3px]" />}
             </div>
-            <span className="text-[16px] text-[#333]">Without description</span>
+            <span className="text-[14px] text-[#333]">Without description</span>
           </div>
         </div>
       )}
@@ -270,7 +270,7 @@ function SimpleDropdown({ value, options, onChange }: { value: string; options: 
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1 px-2.5 h-[28px] text-[15px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] transition-colors cursor-pointer"
+        className="flex items-center gap-1 px-2.5 h-[28px] text-[13px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] transition-colors cursor-pointer"
       >
         {value} <ChevronDown className="h-3 w-3 text-[#aaa]" />
       </button>
@@ -281,7 +281,7 @@ function SimpleDropdown({ value, options, onChange }: { value: string; options: 
               key={opt}
               onClick={() => { onChange(opt); setOpen(false) }}
               className={cn(
-                'w-full text-left px-3 py-1.5 text-[15px] transition-colors cursor-pointer',
+                'w-full text-left px-3 py-1.5 text-[13px] transition-colors cursor-pointer',
                 value === opt ? 'bg-[#03a9f4] text-white' : 'text-[#555] hover:bg-[#f0f4f8]'
               )}
             >
@@ -315,7 +315,7 @@ function BillabilityDropdown({ mode, onChange }: { mode: 'billability' | 'projec
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 h-[28px] text-[15px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer"
+        className="flex items-center gap-1.5 px-3 h-[28px] text-[13px] text-[#555] border border-[#d0d8de] rounded hover:border-[#aaa] cursor-pointer"
       >
         {selected} <ChevronDown className="h-3 w-3 text-[#aaa]" />
       </button>
@@ -326,7 +326,7 @@ function BillabilityDropdown({ mode, onChange }: { mode: 'billability' | 'projec
               key={opt}
               onClick={() => { onChange(opt === 'Project' ? 'project' : 'billability'); setOpen(false) }}
               className={cn(
-                'w-full text-left px-3 py-2 text-[15px] transition-colors cursor-pointer flex items-center justify-between',
+                'w-full text-left px-3 py-2 text-[13px] transition-colors cursor-pointer flex items-center justify-between',
                 selected === opt ? 'bg-[#f0f4f8] text-[#333] font-medium' : 'text-[#555] hover:bg-[#f5f5f5]'
               )}
             >
@@ -876,13 +876,13 @@ export default function SummaryReportPage() {
       <div className="flex-1 overflow-y-auto bg-[#f2f6f8] min-h-0">
         <div className="m-6">
           {/* Stats bar */}
-          <div className="flex items-center justify-between px-6 h-[48px] bg-[#e4eaee] border-b border-[#e4eaee]">
-            <div className="flex items-center gap-6 text-[16px]">
-              <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{fmtSecs(totalSecs)}</strong></span>
-              <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{fmtSecs(billableSecs)}</strong></span>
-              <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[15px]">0.00 USD</strong></span>
+          <div className="flex items-center justify-between px-6 h-[40px] bg-[#e4eaee] border-b border-[#e4eaee]">
+            <div className="flex items-center gap-6 text-[13px]">
+              <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[13px]">{fmtSecs(totalSecs)}</strong></span>
+              <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[13px]">{fmtSecs(billableSecs)}</strong></span>
+              <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[13px]">0.00 USD</strong></span>
             </div>
-            <div className="flex items-center gap-4 text-[15px] text-[#555]">
+            <div className="flex items-center gap-4 text-[13px] text-[#555]">
               <button className="hover:text-[#03a9f4] cursor-pointer">Create invoice</button>
               <ExportDropdown onExport={handleExport} />
               <button className="hover:text-[#03a9f4] cursor-pointer"><Printer className="h-4 w-4" /></button>
