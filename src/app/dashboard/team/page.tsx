@@ -224,7 +224,7 @@ function AccessDropdown({ group, rawUsers, onToggle, onSelectAll, readOnly = fal
         </button>
       )}
       {open && (
-        <div className="absolute top-full right-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[260px] rounded-sm">
+        <div className="absolute top-full left-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[260px] rounded-sm">
           <div className="flex items-center border-b border-[#eee] px-3 py-2">
             <Search className="h-3.5 w-3.5 text-[#bbb] shrink-0" />
             <input autoFocus placeholder="Search users…" value={search}
@@ -403,7 +403,7 @@ export default function TeamPage() {
       .then(res => {
         const arr: RawUser[] = Array.isArray(res) ? res
           : Array.isArray((res as any)?.data) ? (res as any).data
-          : Object.values(res as object).find(Array.isArray) ?? []
+            : Object.values(res as object).find(Array.isArray) ?? []
         setRawUsers(arr)
       })
       .catch(() => setRawUsers([]))
@@ -519,7 +519,7 @@ export default function TeamPage() {
     g.memberIds.some(id => users.find(u => u.id === id)?.name.toLowerCase().includes(groupSearch.toLowerCase()))
   )
 
-  const handleApplyFilter = () => {} // filters apply instantly on change
+  const handleApplyFilter = () => { } // filters apply instantly on change
 
   const handleClearFilters = () => {
     setMemberSearch(''); setStatusFilter('All'); setBillableFilter('Billable rate')
@@ -690,11 +690,11 @@ export default function TeamPage() {
                               memberId={member.id}
                               currentRole={roleOverrides[member.id]
                                 ? (() => {
-                                    const v = roleOverrides[member.id]
-                                    if (v === 'project_manager') return 'project_manager'
-                                    if (v === 'team_lead') return 'team_lead'
-                                    return 'team_member'
-                                  })()
+                                  const v = roleOverrides[member.id]
+                                  if (v === 'project_manager') return 'project_manager'
+                                  if (v === 'team_lead') return 'team_lead'
+                                  return 'team_member'
+                                })()
                                 : member.role}
                               onRoleChange={handleRoleChange}
                             />

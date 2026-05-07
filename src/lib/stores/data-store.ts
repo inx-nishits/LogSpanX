@@ -272,21 +272,29 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   addTimeEntry: async (entry) => {
     const token = useAuthStore.getState().token
-    const payload = await apiRequest<{ id: string; description?: string; duration?: number; userId?: string }>('/time-entries', {
+    const payload = await apiRequest<{ id?: string; _id?: string; description?: string; duration?: number; userId?: string | { _id?: string; id?: string } }>('/time-entries', {
       method: 'POST',
       token,
       body: JSON.stringify(serializeTimeEntryCreate(entry)),
     })
 
+    // Resolve ID: backend may return `id` or `_id` (MongoDB convention)
+    const resolvedId = payload.id ?? payload._id ?? ''
+
+    // Resolve userId from response (may be a populated object)
+    const resolvedUserId = typeof payload.userId === 'object' && payload.userId !== null
+      ? (payload.userId._id ?? payload.userId.id ?? entry.userId)
+      : (payload.userId ?? entry.userId)
+
     const now = new Date()
     const createdEntry: TimeEntry = {
-      id: payload.id,
+      id: resolvedId,
       description: payload.description ?? entry.description,
       projectId: entry.projectId,
       taskId: entry.taskId,
       tagIds: entry.tagIds ?? [],
       billable: entry.billable,
-      userId: payload.userId ?? entry.userId,
+      userId: resolvedUserId,
       startTime: entry.startTime instanceof Date ? entry.startTime : new Date(entry.startTime),
       endTime: entry.endTime ? (entry.endTime instanceof Date ? entry.endTime : new Date(entry.endTime)) : undefined,
       duration: payload.duration ?? entry.duration,

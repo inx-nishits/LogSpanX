@@ -23,7 +23,7 @@ const fmtDur = (s: number) => {
 const PROJECT_COLORS = [
   '#03a9f4', '#e91e63', '#9c27b0', '#673ab7',
   '#3f51b5', '#4caf50', '#ff9800', '#f44336',
-  '#00bcd4', '#009688', '#795548', '#607d8b',
+  '#00bcd4', '#009688', '#795548',
 ]
 
 // ─── New Project Modal ───────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e4eaee] shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-            <h2 className="text-[16px] font-semibold text-[#333]">New Project</h2>
+            <h2 className="text-[13px] font-semibold text-[#333]">New Project</h2>
           </div>
           <button onClick={onClose} className="text-[#bbb] hover:text-[#555] transition-colors">
             <X className="h-5 w-5" />

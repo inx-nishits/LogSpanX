@@ -6,9 +6,10 @@ interface WeeklyBarChartProps {
     data: any[]
     projects: { id: string; name: string; color: string }[]
     isTaskView?: boolean
+    onBarClick?: (dayName: string) => void
 }
 
-export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartProps) {
+export function WeeklyBarChart({ data, projects, isTaskView, onBarClick }: WeeklyBarChartProps) {
     return (
         <div className="bg-white rounded-sm border border-[#e4eaee]">
             <div className="px-4 pt-4 pb-1 border-b border-[#f5f5f5] flex items-center justify-between">
@@ -23,6 +24,11 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                         margin={{ top: 15, right: 5, left: 5, bottom: 5 }}
                         barCategoryGap="10%"
                         barGap={0}
+                        onClick={onBarClick ? (chartData: any) => {
+                            const name = chartData?.activePayload?.[0]?.payload?.fullDate
+                            if (name) onBarClick(name)
+                        } : undefined}
+                        style={onBarClick ? { cursor: 'pointer' } : undefined}
                     >
                         <CartesianGrid vertical={false} stroke="#efefef" strokeDasharray="0" />
                         <XAxis
@@ -37,8 +43,7 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                             tickLine={false}
                             tick={{ fontSize: 11, fill: '#999', fontWeight: 400 }}
                             domain={[0, 'auto']}
-                            allowDecimals={!isTaskView}
-                            tickFormatter={(v) => isTaskView ? `${v}` : `${Number(v).toFixed(1)}h`}
+                            tickFormatter={(v) => `${Number(v).toFixed(1)}h`}
                         />
                         <Tooltip
                             cursor={{ fill: 'rgba(0,0,0,0.02)' }}
@@ -53,20 +58,20 @@ export function WeeklyBarChart({ data, projects, isTaskView }: WeeklyBarChartPro
                                         <div className="space-y-1.5 mb-2 max-h-[200px] overflow-y-auto">
                                             {payload.filter(p => Number(p.value) > 0).map((p, i) => (
                                                 <div key={i} className="flex items-center justify-between">
-                                                    <div className="flex items-center space-x-2 truncate">
+                                                    <div className="flex items-center space-x-2 truncate pr-4">
                                                         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
                                                         <span className="truncate opacity-90">{p.name}</span>
                                                     </div>
-                                                    <span className="font-bold tabular-nums ml-2">
-                                                        {isTaskView ? `${p.value} tasks` : `${Number(p.value).toFixed(1)}h`}
+                                                    <span className="font-bold tabular-nums ml-2 flex-shrink-0">
+                                                        {`${Number(p.value).toFixed(2)}h`}
                                                     </span>
                                                 </div>
                                             ))}
                                         </div>
                                         <div className="flex items-center justify-between border-t border-[#555] pt-2">
                                             <span className="opacity-70 uppercase">Total</span>
-                                            <span className="font-bold text-[13px]">
-                                                {isTaskView ? `${total} tasks` : `${th}:${String(tm).padStart(2, '0')}:00`}
+                                            <span className="font-bold text-[13px] tabular-nums">
+                                                {`${th}:${String(tm).padStart(2, '0')}:00`}
                                             </span>
                                         </div>
                                     </div>

@@ -119,10 +119,20 @@ async function doRefresh(): Promise<string> {
 
     if (!res.ok) throw new ApiError('Refresh failed', res.status)
 
+    // Try to extract the new token from the response body so we can
+    // use it immediately without waiting for the browser to apply the
+    // Set-Cookie header (which may not be ready before the retry fires)
+    let freshToken = COOKIE_SESSION_TOKEN
+    try {
+      const body = await res.clone().json()
+      const t = body?.token ?? body?.data?.token ?? body?.user?.token
+      if (t && typeof t === 'string') freshToken = t
+    } catch { /* ignore — fall back to cookie-based token */ }
+
     const queue = refreshQueue
     refreshQueue = []
-    queue.forEach(({ resolve }) => resolve(COOKIE_SESSION_TOKEN))
-    return COOKIE_SESSION_TOKEN
+    queue.forEach(({ resolve }) => resolve(freshToken))
+    return freshToken
   } catch (err) {
     const queue = refreshQueue
     refreshQueue = []

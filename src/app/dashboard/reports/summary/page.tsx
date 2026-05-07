@@ -410,20 +410,10 @@ export default function SummaryReportPage() {
   useEffect(() => {
     let active = true
 
-    // Only one value per filter for simplistic passing to API as per normal backend params
     const params: TimeEntryParams = {
       startDate: from.toISOString(),
       endDate: to.toISOString(),
     }
-
-    // Convert array filters to strings or omit if empty. 
-    // Usually arrays are comma separated or just pick the first.
-    if (appliedFilters.team.length) params.userId = appliedFilters.team[0]
-    if (appliedFilters.project.length) params.projectId = appliedFilters.project[0]
-    // The backend endpoints primarily support userId, projectId, billable, tagId
-    if (appliedFilters.tag.length) params.tagId = appliedFilters.tag[0]
-    if (appliedFilters.status.length === 1 && appliedFilters.status.includes('billable')) params.billable = 'true'
-    if (appliedFilters.status.length === 1 && appliedFilters.status.includes('non-billable')) params.billable = 'false'
 
     setLoading(true)
     getTimeEntries(params)
@@ -431,31 +421,58 @@ export default function SummaryReportPage() {
         if (!active) return
         let entries = extractArray<ApiTimeEntry>(res).map(mapApiTimeEntry)
 
-        entries = entries.filter((e) => {
-          if (teamUserIds.length > 0 && !teamUserIds.includes(e.userId)) return false
-          if (leadUserIds.length > 0) {
-            const proj = projects.find(p => p.id === e.projectId)
-            if (!proj || !leadUserIds.includes(proj.leadId ?? '')) return false
+        if (leadUserIds.length > 0) {
+          const wantWithout = leadUserIds.includes('__without__')
+          const leadIds = leadUserIds.filter(l => l !== '__without__')
+          const matchingProjectIds = new Set(
+            projects
+              .filter(p => wantWithout ? !p.leadId : leadIds.includes(p.leadId ?? ''))
+              .map(p => p.id)
+          )
+          entries = entries.filter(e => {
+            if (!e.projectId) return wantWithout
+            return matchingProjectIds.has(e.projectId)
+          })
+        }
+        if (teamUserIds.length > 0) {
+          entries = entries.filter(e => teamUserIds.includes(e.userId))
+        }
+        if (appliedFilters.project.length > 0) {
+          const wantWithout = appliedFilters.project.includes('__without__')
+          const projectIds = appliedFilters.project.filter(p => p !== '__without__')
+          entries = entries.filter(e => {
+            if (!e.projectId) return wantWithout
+            return projectIds.length === 0 ? wantWithout : projectIds.includes(e.projectId)
+          })
+        }
+        if (appliedFilters.tag.length > 0) {
+          const wantWithout = appliedFilters.tag.includes('__without__')
+          const tagIds = appliedFilters.tag.filter(t => t !== '__without__')
+          entries = entries.filter(e => {
+            if (!e.tagIds?.length) return wantWithout
+            return tagIds.length === 0 ? wantWithout : e.tagIds.some(t => tagIds.includes(t))
+          })
+        }
+        if (appliedFilters.task.length > 0) {
+          const wantWithout = appliedFilters.task.includes('__without__')
+          const taskIds = appliedFilters.task.filter(t => t !== '__without__')
+          entries = entries.filter(e => {
+            if (!e.taskId) return wantWithout
+            return taskIds.length === 0 ? wantWithout : taskIds.includes(e.taskId)
+          })
+        }
+        const hasBillable = appliedFilters.status.includes('billable')
+        const hasNonBillable = appliedFilters.status.includes('non-billable')
+        if (hasBillable && !hasNonBillable) entries = entries.filter(e => e.billable === true)
+        else if (hasNonBillable && !hasBillable) entries = entries.filter(e => e.billable !== true)
+
+        if (appliedFilters.desc) {
+          if (appliedFilters.desc === '__without__') {
+            entries = entries.filter(e => !e.description?.trim())
+          } else {
+            entries = entries.filter(e => e.description?.toLowerCase().includes(appliedFilters.desc.toLowerCase()))
           }
-          if (appliedFilters.task.length > 0) {
-            const wantWithout = appliedFilters.task.includes('__without__')
-            const tIds = appliedFilters.task.filter(id => id !== '__without__')
-            if (!e.taskId) {
-              if (!wantWithout) return false
-            } else {
-              if (tIds.length > 0 && !tIds.includes(e.taskId)) return false
-              if (tIds.length === 0 && !wantWithout) return false
-            }
-          }
-          if (appliedFilters.desc) {
-            if (appliedFilters.desc === '__without__') {
-              if (e.description?.trim()) return false
-            } else {
-              if (!e.description?.toLowerCase().includes(appliedFilters.desc.toLowerCase())) return false
-            }
-          }
-          return true
-        })
+        }
 
         setFiltered(entries)
       })
@@ -561,6 +578,14 @@ export default function SummaryReportPage() {
   }, [filtered, projects, billabilityMode])
 
   const tableRows = useMemo((): SummaryRow[] => {
+    // Helper to get dominant project color for a set of entries
+    const getDominantProjectColor = (entrs: TimeEntry[]) => {
+      const pMap: Record<string, number> = {}
+      entrs.forEach(e => { if (e.projectId) pMap[e.projectId] = (pMap[e.projectId] || 0) + (e.duration ?? 0) })
+      const domPid = Object.entries(pMap).sort((a, b) => b[1] - a[1])[0]?.[0]
+      return domPid ? projects.find(p => p.id === domPid)?.color || '#9e9e9e' : '#9e9e9e'
+    }
+
     // ── sub-group children builder ──────────────────────────────────────────
     const buildChildren = (entries: typeof filtered, parentId: string): SummaryRow[] => {
       if (subGroupBy === '(None)') return []
@@ -580,17 +605,19 @@ export default function SummaryReportPage() {
       }
 
       if (subGroupBy === 'Task') {
-        const map: Record<string, { duration: number; count: number; name: string }> = {}
+        const map: Record<string, { duration: number; count: number; name: string; entries: typeof filtered }> = {}
         entries.forEach(e => {
           const key = e.taskId || '__none__'
           const taskName = e.taskId ? (tasks.find(t => t.id === e.taskId)?.name || e.taskId) : '(Without Task)'
-          if (!map[key]) map[key] = { duration: 0, count: 0, name: taskName }
+          if (!map[key]) map[key] = { duration: 0, count: 0, name: taskName, entries: [] }
           map[key].duration += e.duration ?? 0
           map[key].count++
+          map[key].entries.push(e)
         })
-        return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([tid, d]) => ({
-          id: `${parentId}-${tid}`, title: d.name, color: '#9e9e9e', entryCount: d.count, duration: d.duration, billable: false
-        }))
+        return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([tid, d]) => {
+          const domProj = getDominantProjectColor(d.entries)
+          return { id: `${parentId}-${tid}`, title: d.name, color: domProj, entryCount: d.count, duration: d.duration, billable: false }
+        })
       }
 
       if (subGroupBy === 'Project Lead') {
@@ -609,16 +636,18 @@ export default function SummaryReportPage() {
       }
 
       if (subGroupBy === 'Tag' || subGroupBy === 'Description') {
-        const map: Record<string, { duration: number; count: number }> = {}
+        const map: Record<string, { duration: number; count: number; entries: typeof filtered }> = {}
         entries.forEach(e => {
           const key = e.description?.trim() || '(no description)'
-          if (!map[key]) map[key] = { duration: 0, count: 0 }
+          if (!map[key]) map[key] = { duration: 0, count: 0, entries: [] }
           map[key].duration += e.duration ?? 0
           map[key].count++
+          map[key].entries.push(e)
         })
-        return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([title, d]) => ({
-          id: `${parentId}-desc-${title}`, title, color: '#f9a825', entryCount: d.count, duration: d.duration, billable: false
-        }))
+        return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([title, d]) => {
+          const domProj = getDominantProjectColor(d.entries)
+          return { id: `${parentId}-desc-${title}`, title, color: domProj, entryCount: d.count, duration: d.duration, billable: false }
+        })
       }
 
       if (subGroupBy === 'Month') {
@@ -668,8 +697,9 @@ export default function SummaryReportPage() {
       return userIds.map(uid => {
         const u = users.find(usr => usr.id === uid)
         const ue = filtered.filter(e => e.userId === uid)
+        const domProj = getDominantProjectColor(ue)
         return {
-          id: uid, title: u?.name || 'Unknown User', color: '#03a9f4',
+          id: uid, title: u?.name || 'Unknown User', color: domProj,
           entryCount: ue.length,
           duration: ue.reduce((a, e) => a + (e.duration ?? 0), 0),
           billable: false,
@@ -706,10 +736,13 @@ export default function SummaryReportPage() {
         leadMap[leadId].count++
         leadMap[leadId].entries.push(e)
       })
-      return Object.entries(leadMap).sort((a, b) => b[1].duration - a[1].duration).map(([id, d]) => ({
-        id: `lead-${id}`, title: d.name, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false, filterType: 'lead' as const, filterId: id,
-        children: buildChildren(d.entries, `lead-${id}`)
-      }))
+      return Object.entries(leadMap).sort((a, b) => b[1].duration - a[1].duration).map(([id, d]) => {
+        const domProj = getDominantProjectColor(d.entries)
+        return {
+          id: `lead-${id}`, title: d.name, color: domProj, entryCount: d.count, duration: d.duration, billable: false, filterType: 'lead' as const, filterId: id,
+          children: buildChildren(d.entries, `lead-${id}`)
+        }
+      })
     }
 
     if (groupBy === 'Tag') {
@@ -725,8 +758,9 @@ export default function SummaryReportPage() {
       })
       return Object.entries(tagMap).sort((a, b) => b[1].duration - a[1].duration).map(([tid, d]) => {
         const t = tags.find(tg => tg.id === tid)
+        const domProj = getDominantProjectColor(d.entries)
         return {
-          id: tid, title: t?.name || '(Without Tag)', color: '#f9a825', entryCount: d.count, duration: d.duration, billable: false,
+          id: tid, title: t?.name || '(Without Tag)', color: domProj, entryCount: d.count, duration: d.duration, billable: false,
           children: buildChildren(d.entries, tid)
         }
       })
@@ -741,10 +775,13 @@ export default function SummaryReportPage() {
         monthMap[key].count++
         monthMap[key].entries.push(e)
       })
-      return Object.entries(monthMap).map(([title, d]) => ({
-        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false,
-        children: buildChildren(d.entries, title)
-      }))
+      return Object.entries(monthMap).map(([title, d]) => {
+        const domProj = getDominantProjectColor(d.entries)
+        return {
+          id: title, title, color: domProj, entryCount: d.count, duration: d.duration, billable: false,
+          children: buildChildren(d.entries, title)
+        }
+      })
     }
 
     if (groupBy === 'Week') {
@@ -756,10 +793,13 @@ export default function SummaryReportPage() {
         weekMap[key].count++
         weekMap[key].entries.push(e)
       })
-      return Object.entries(weekMap).map(([title, d]) => ({
-        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false,
-        children: buildChildren(d.entries, title)
-      }))
+      return Object.entries(weekMap).map(([title, d]) => {
+        const domProj = getDominantProjectColor(d.entries)
+        return {
+          id: title, title, color: domProj, entryCount: d.count, duration: d.duration, billable: false,
+          children: buildChildren(d.entries, title)
+        }
+      })
     }
 
     if (groupBy === 'Date') {
@@ -771,10 +811,13 @@ export default function SummaryReportPage() {
         dateMap[key].count++
         dateMap[key].entries.push(e)
       })
-      return Object.entries(dateMap).map(([title, d]) => ({
-        id: title, title, color: '#03a9f4', entryCount: d.count, duration: d.duration, billable: false,
-        children: buildChildren(d.entries, title)
-      }))
+      return Object.entries(dateMap).map(([title, d]) => {
+        const domProj = getDominantProjectColor(d.entries)
+        return {
+          id: title, title, color: domProj, entryCount: d.count, duration: d.duration, billable: false,
+          children: buildChildren(d.entries, title)
+        }
+      })
     }
 
     // Default flat list
@@ -876,11 +919,11 @@ export default function SummaryReportPage() {
       <div className="flex-1 overflow-y-auto bg-[#f2f6f8] min-h-0">
         <div className="m-6">
           {/* Stats bar */}
-          <div className="flex items-center justify-between px-6 h-[40px] bg-[#e4eaee] border-b border-[#e4eaee]">
-            <div className="flex items-center gap-6 text-[13px]">
-              <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[13px]">{fmtSecs(totalSecs)}</strong></span>
-              <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[13px]">{fmtSecs(billableSecs)}</strong></span>
-              <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[13px]">0.00 USD</strong></span>
+          <div className="flex items-center justify-between px-6 h-[48px] bg-[#e4eaee] border-b border-[#e4eaee]">
+            <div className="flex items-center gap-6 text-[15px]">
+              <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{fmtSecs(totalSecs)}</strong></span>
+              <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[15px]">{fmtSecs(billableSecs)}</strong></span>
+              <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[15px]">0.00 USD</strong></span>
             </div>
             <div className="flex items-center gap-4 text-[13px] text-[#555]">
               <button className="hover:text-[#03a9f4] cursor-pointer">Create invoice</button>
@@ -903,7 +946,7 @@ export default function SummaryReportPage() {
               <BillabilityDropdown mode={billabilityMode} onChange={setBillabilityMode} />
             </div>
             {loading ? (
-              <div className="h-[250px] w-full flex flex-col gap-4">
+              <div className="h-[320px] w-full flex flex-col gap-4">
                 <Skeleton className="h-full w-full" />
               </div>
             ) : (

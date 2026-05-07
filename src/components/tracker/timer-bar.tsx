@@ -114,12 +114,10 @@ export function TimerBar() {
 
   const handleAdd = async () => {
     if (!user) return
-    const durationSecs = parseDuration(durationInput)
-    if (!durationSecs) return
+    const durationSecs = parseDuration(durationInput) ?? 0
 
-    // Use selected date, set endTime to end of that day's work and startTime = end - duration
     const base = new Date(selectedDate)
-    base.setHours(17, 0, 0, 0) // default end at 5pm on selected date
+    base.setHours(17, 0, 0, 0)
     const endTime = base
     const startTime = new Date(endTime.getTime() - durationSecs * 1000)
 
@@ -150,7 +148,7 @@ export function TimerBar() {
   const commitDuration = (val: string) => {
     setDurationEditing(false)
     const secs = parseDuration(val)
-    setDurationInput(secs != null ? fmtDuration(secs) : '00:00:00')
+    setDurationInput(secs != null ? fmtDuration(secs) : '00:00')
   }
 
   const dateLabel = isToday(selectedDate) ? 'Today' : format(selectedDate, 'MMM d')
@@ -165,7 +163,7 @@ export function TimerBar() {
         value={description}
         onChange={e => setDescription(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') void handleAdd() }}
-        className="flex-1 text-[13px] text-gray-700 bg-transparent outline-none placeholder-gray-400 min-w-0"
+        className="flex-1 text-[13px] text-gray-700 bg-transparent outline-none placeholder-gray-400 min-w-0 px-2 py-2 rounded border border-transparent hover:border-[#d0d8de] focus:border-[#d0d8de] transition-colors duration-150"
       />
 
       {/* Project picker */}

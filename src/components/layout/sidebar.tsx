@@ -15,28 +15,34 @@ import { User } from '@/lib/types'
 
 /* ── Reports flyout ─────────────────────────────────────────── */
 const REPORTS_FLYOUT = [
-  { section: 'Time', items: [
-    { label: 'Summary',  href: '/dashboard/reports/summary'  },
-    { label: 'Detailed', href: '/dashboard/reports/detailed' },
-    { label: 'Weekly',   href: '/dashboard/reports/weekly'   },
-    { label: 'Shared',   href: '/dashboard/reports/shared'   },
-  ]},
-  { section: 'Team', items: [
-    { label: 'Attendance',  href: '/dashboard/reports/attendance'  },
-    { label: 'Assignments', href: '/dashboard/reports/assignments' },
-  ]},
-  { section: 'Expense', items: [
-    { label: 'Detailed', href: '/dashboard/reports/expense' },
-  ]},
+  {
+    section: 'Time', items: [
+      { label: 'Summary', href: '/dashboard/reports/summary' },
+      { label: 'Detailed', href: '/dashboard/reports/detailed' },
+      { label: 'Weekly', href: '/dashboard/reports/weekly' },
+      { label: 'Shared', href: '/dashboard/reports/shared' },
+    ]
+  },
+  {
+    section: 'Team', items: [
+      { label: 'Attendance', href: '/dashboard/reports/attendance' },
+      { label: 'Assignments', href: '/dashboard/reports/assignments' },
+    ]
+  },
+  {
+    section: 'Expense', items: [
+      { label: 'Detailed', href: '/dashboard/reports/expense' },
+    ]
+  },
 ]
 
-function ReportsFlyout({ visible, top }: { visible: boolean; top: number }) {
+function ReportsFlyout({ visible, top, collapsed }: { visible: boolean; top: number; collapsed?: boolean }) {
   const pathname = usePathname()
   if (!visible) return null
   return (
     <div
       className="fixed z-[200] bg-white border border-[#ddd] shadow-md rounded py-1 w-[176px]"
-      style={{ left: 200, top }}
+      style={{ left: collapsed ? 52 : 200, top }}
     >
       {REPORTS_FLYOUT.map(g => (
         <div key={g.section}>
@@ -68,18 +74,18 @@ const getMenuItems = (role: User['role']) => {
   const dashHref = role === 'project_manager' ? '/dashboard/pm' : role === 'team_lead' ? '/dashboard/tl' : '/dashboard/member'
 
   const topItems: MenuItem[] = [
-    { label: 'Time Tracker', icon: Clock,    href: '/dashboard/tracker'  },
-    { label: 'Calendar',     icon: Calendar, href: '/dashboard/calendar' },
+    { label: 'Time Tracker', icon: Clock, href: '/dashboard/tracker' },
+    { label: 'Calendar', icon: Calendar, href: '/dashboard/calendar' },
   ]
   const analyzeItems: MenuItem[] = [
     { label: 'Dashboard', icon: LayoutGrid, href: dashHref },
-    { label: 'Reports',   icon: BarChart3,  href: '/dashboard/reports', chevron: true },
+    { label: 'Reports', icon: BarChart3, href: '/dashboard/reports', chevron: true },
   ]
   const manageItems: MenuItem[] = [
-    { label: 'Projects',     icon: Briefcase,  href: '/dashboard/projects'     },
-    { label: 'Team',         icon: Users,      href: '/dashboard/team'         },
+    { label: 'Projects', icon: Briefcase, href: '/dashboard/projects' },
+    { label: 'Team', icon: Users, href: '/dashboard/team' },
     { label: 'Project Lead', icon: UserCircle, href: '/dashboard/project-lead' },
-    { label: 'Tags',         icon: Tag,        href: '/dashboard/tags'         },
+    { label: 'Tags', icon: Tag, href: '/dashboard/tags' },
   ]
 
   const filteredManage = role === 'team_member'
@@ -138,6 +144,14 @@ const NavRow = ({
     </>
   )
 
+  /* Tooltip shown to the right of the icon when sidebar is collapsed */
+  const tooltip = col ? (
+    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] rounded shadow-lg whitespace-nowrap opacity-0 group-hover/nav:opacity-100 pointer-events-none transition-opacity duration-150 z-[300]">
+      {item.label}
+      <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-gray-900" />
+    </div>
+  ) : null
+
   const cls = cn(
     'flex items-center w-full gap-[13px] px-[16px] py-[13px] transition-colors duration-100',
     active ? 'bg-[#ebebeb]' : 'bg-white hover:bg-[#f5f5f5]',
@@ -147,6 +161,7 @@ const NavRow = ({
   if (isRep) return (
     <div
       ref={reportsRef}
+      className="relative group/nav"
       onMouseEnter={() => {
         if (reportsRef.current) setFlyoutTop(reportsRef.current.getBoundingClientRect().top)
         setReportsOpen(true)
@@ -154,14 +169,18 @@ const NavRow = ({
       onMouseLeave={() => setReportsOpen(false)}
     >
       <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>{inner}</Link>
-      <ReportsFlyout visible={reportsOpen} top={flyoutTop} />
+      {col && !reportsOpen && tooltip}
+      <ReportsFlyout visible={reportsOpen} top={flyoutTop} collapsed={col} />
     </div>
   )
 
   return (
-    <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>
-      {inner}
-    </Link>
+    <div className="relative group/nav">
+      <Link href={item.href} onClick={() => setMobileOpen(false)} className={cls}>
+        {inner}
+      </Link>
+      {tooltip}
+    </div>
   )
 }
 

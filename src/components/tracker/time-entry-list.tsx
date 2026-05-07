@@ -248,8 +248,8 @@ export function TimeEntryList({ userId }: { userId: string }) {
                               onBlur={e => canEdit && updateTimeEntry(entry.id, { description: e.target.value })}
                               readOnly={!canEdit}
                               placeholder="Add description"
-                              style={{ fontSize: 13, color: '#222', background: 'transparent', border: 'none', outline: 'none', flexShrink: 0, width: 220, minWidth: 0, cursor: canEdit ? 'text' : 'default' }}
-                              className="placeholder-[#bbb] truncate"
+                              style={{ fontSize: 13, color: '#222', background: 'transparent', outline: 'none', flexShrink: 0, width: 220, minWidth: 0, cursor: canEdit ? 'text' : 'default' }}
+                              className="placeholder-[#bbb] truncate rounded px-2 py-1 border border-transparent hover:border-[#d0d8de] focus:border-[#d0d8de] transition-colors duration-150"
                             />
                             <div className="flex items-center gap-2 min-w-0 overflow-hidden flex-shrink-0">
                               {canEdit ? (

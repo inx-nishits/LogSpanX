@@ -33,6 +33,7 @@ interface AuthPayload {
 
 interface SessionPayload {
   user: ApiUser | null
+  token?: string
 }
 
 const initialState = {
@@ -71,7 +72,7 @@ export const useAuthStore = create<AuthState>()(
       return
     }
 
-    set(authenticatedState(payload.user))
+    set(authenticatedState(payload.user, payload.token ?? undefined))
   },
 
   initialize: async () => {

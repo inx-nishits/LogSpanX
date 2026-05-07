@@ -44,6 +44,7 @@ function SimpleDropdown({ value, options, onChange }: { value: string; options: 
 
 import { getTimeEntries } from '@/lib/api/time-entries'
 import { mapApiTimeEntry } from '@/lib/api/mappers'
+import { DayEntriesModal } from '@/components/dashboard/day-entries-modal'
 
 export default function WeeklyReportPage() {
   const { timeEntries, projects, users } = useDataStore()
@@ -60,10 +61,13 @@ export default function WeeklyReportPage() {
   const [selStatus, setSelStatus] = useState<string[]>([])
   const [descSearch, setDescSearch] = useState('')
 
-  const from = startOfDay(dateRange.from)
-  const to = endOfDay(dateRange.to)
+  const fromStr = format(startOfDay(dateRange.from), 'yyyy-MM-dd')
+  const toStr = format(endOfDay(dateRange.to), 'yyyy-MM-dd')
 
-  const days = useMemo(() => eachDayOfInterval({ start: from, end: to }), [from, to])
+  const days = useMemo(() =>
+    eachDayOfInterval({ start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) }),
+    [fromStr, toStr]
+  )
 
   const [filtered, setFiltered] = useState<typeof timeEntries>([])
   const [loading, setLoading] = useState(true)
@@ -72,14 +76,9 @@ export default function WeeklyReportPage() {
     let active = true
 
     const params: any = {
-      startDate: from.toISOString(),
-      endDate: to.toISOString(),
+      startDate: fromStr,
+      endDate: toStr,
     }
-    if (selUsers.length) params.userId = selUsers[0]
-    if (selProjects.length) params.projectId = selProjects[0]
-    if (selTags.length) params.tagId = selTags[0]
-    if (selStatus.length === 1 && selStatus.includes('billable')) params.billable = 'true'
-    if (selStatus.length === 1 && selStatus.includes('non-billable')) params.billable = 'false'
 
     setLoading(true)
     getTimeEntries(params)
@@ -92,10 +91,61 @@ export default function WeeklyReportPage() {
 
         entries = entries.map(mapApiTimeEntry)
 
-        entries = entries.filter((e: any) => {
-          if (descSearch && !e.description?.toLowerCase().includes(descSearch.toLowerCase())) return false
-          return true
-        })
+        if (selLeads.length > 0) {
+          const wantWithout = selLeads.includes('__without__')
+          const leadIds = selLeads.filter(l => l !== '__without__')
+          const matchingProjectIds = new Set(
+            projects
+              .filter(p => wantWithout ? !p.leadId : leadIds.includes(p.leadId ?? ''))
+              .map(p => p.id)
+          )
+          entries = entries.filter((e: any) => {
+            if (!e.projectId) return wantWithout
+            return matchingProjectIds.has(e.projectId)
+          })
+        }
+        if (selUsers.length > 0) {
+          const selectedGroupIds = selUsers.filter(id => users.find(u => u.id === id) === undefined)
+          const selectedUserIds = selUsers.filter(id => users.find(u => u.id === id) !== undefined)
+          const allUserIds = new Set<string>([...selectedUserIds, ...selectedGroupIds])
+          entries = entries.filter((e: any) => allUserIds.has(e.userId))
+        }
+        if (selProjects.length > 0) {
+          const wantWithout = selProjects.includes('__without__')
+          const projectIds = selProjects.filter(p => p !== '__without__')
+          entries = entries.filter((e: any) => {
+            if (!e.projectId) return wantWithout
+            return projectIds.length === 0 ? wantWithout : projectIds.includes(e.projectId)
+          })
+        }
+        if (selTags.length > 0) {
+          const wantWithout = selTags.includes('__without__')
+          const tagIds = selTags.filter(t => t !== '__without__')
+          entries = entries.filter((e: any) => {
+            if (!e.tagIds?.length) return wantWithout
+            return tagIds.length === 0 ? wantWithout : e.tagIds.some((t: string) => tagIds.includes(t))
+          })
+        }
+        if (selTasks.length > 0) {
+          const wantWithout = selTasks.includes('__without__')
+          const taskIds = selTasks.filter(t => t !== '__without__')
+          entries = entries.filter((e: any) => {
+            if (!e.taskId) return wantWithout
+            return taskIds.length === 0 ? wantWithout : taskIds.includes(e.taskId)
+          })
+        }
+        const hasBillable = selStatus.includes('billable')
+        const hasNonBillable = selStatus.includes('non-billable')
+        if (hasBillable && !hasNonBillable) entries = entries.filter((e: any) => e.billable === true)
+        else if (hasNonBillable && !hasBillable) entries = entries.filter((e: any) => e.billable !== true)
+
+        if (descSearch) {
+          if (descSearch === '__without__') {
+            entries = entries.filter((e: any) => !e.description?.trim())
+          } else {
+            entries = entries.filter((e: any) => e.description?.toLowerCase().includes(descSearch.toLowerCase()))
+          }
+        }
 
         setFiltered(entries)
       })
@@ -105,7 +155,7 @@ export default function WeeklyReportPage() {
       })
 
     return () => { active = false }
-  }, [from, to, selUsers, selProjects, selTags, selStatus, descSearch])
+  }, [fromStr, toStr, selUsers, selLeads, selProjects, selTasks, selTags, selStatus, descSearch, projects])
 
   const totalSecs = useMemo(() => filtered.reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
 
@@ -120,10 +170,10 @@ export default function WeeklyReportPage() {
       const d = new Date(e.startTime)
       if (isNaN(d.getTime())) return
       const dateKey = format(d, 'yyyy-MM-dd')
-      
+
       if (!grouped[gid]) grouped[gid] = {}
       if (!groupMeta[gid]) groupMeta[gid] = { count: 0 }
-      
+
       grouped[gid][dateKey] = (grouped[gid][dateKey] || 0) + (e.duration ?? 0)
       groupMeta[gid].count++
     })
@@ -137,7 +187,7 @@ export default function WeeklyReportPage() {
 
       const dayTotals = dateKeys.map(key => grouped[gid][key] || 0)
       const total = dayTotals.reduce((a, b) => a + b, 0)
-      
+
       const proj = isUserGroup ? null : (g as typeof projects[0])
       const color = proj?.color || '#03a9f4'
       const lead = proj?.leadId ? users.find(u => u.id === proj.leadId)?.name : null
@@ -145,7 +195,14 @@ export default function WeeklyReportPage() {
 
       return { id: gid, name: (g as any).name, color, lead, billable, entryCount: groupMeta[gid].count, dayTotals, total }
     }).filter(Boolean) as any[]
-  }, [filtered, projects, users, days, groupBy])
+  }, [filtered, projects, users, days, groupBy, fromStr, toStr])
+
+  const [modalDay, setModalDay] = useState<string | null>(null)
+
+  const modalEntries = useMemo(() => {
+    if (!modalDay) return []
+    return filtered.filter(e => format(new Date(e.startTime), 'EEE, MMM d') === modalDay)
+  }, [modalDay, filtered])
 
   const handleApply = (filters: any) => {
     setSelUsers(filters.team)
@@ -166,6 +223,15 @@ export default function WeeklyReportPage() {
       initialDescription={descSearch}
       onApply={handleApply}
     >
+      {modalDay && (
+        <DayEntriesModal
+          date={modalDay}
+          entries={modalEntries}
+          projects={projects}
+          users={users}
+          onClose={() => setModalDay(null)}
+        />
+      )}
       <div className="flex-1 overflow-y-auto overflow-x-auto m-6">
 
         {/* Stats + actions bar */}
@@ -198,7 +264,11 @@ export default function WeeklyReportPage() {
               <ChevronDown className="h-3 w-3" /> {groupBy}
             </div>
             {days.map(day => (
-              <div key={day.toISOString()} className="w-[80px] text-right flex-shrink-0 text-[12px]">
+              <div
+                key={day.toISOString()}
+                className="w-[80px] text-right flex-shrink-0 text-[12px] cursor-pointer hover:text-[#03a9f4] transition-colors"
+                onClick={() => setModalDay(format(day, 'EEE, MMM d'))}
+              >
                 {format(day, 'EEE, MMM d')}
               </div>
             ))}
@@ -217,36 +287,36 @@ export default function WeeklyReportPage() {
               <div className="py-20 text-center text-[14px] text-[#aaa] bg-white">No data for selected range</div>
             ) : (
               rows.map(row => (
-              <div key={row.id} className="flex items-center h-[40px] bg-white border-b border-[#f0f0f0] px-4 hover:bg-[#fafbfc] transition-colors">
-                {/* Count */}
-                <div className="w-6 flex-shrink-0 mr-2 text-[14px] text-[#aaa] tabular-nums text-center">{row.entryCount}</div>
+                <div key={row.id} className="flex items-center h-[40px] bg-white border-b border-[#f0f0f0] px-4 hover:bg-[#fafbfc] transition-colors">
+                  {/* Count */}
+                  <div className="w-6 flex-shrink-0 mr-2 text-[14px] text-[#aaa] tabular-nums text-center">{row.entryCount}</div>
 
-                {/* Name */}
-                <div className="flex-1 min-w-0 flex items-center gap-2 pr-4">
-                  <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: row.color }} />
-                  <span className={cn('text-[14px] truncate', row.billable ? '' : 'text-[#e91e63]')} style={row.billable ? { color: row.color } : {}}>
-                    {row.name}
-                  </span>
-                  {row.lead && <span className="text-[14px] text-[#aaa] truncate">- {row.lead}</span>}
-                </div>
-
-                {/* Day columns */}
-                {(row.dayTotals as number[]).map((secs: number, i: number) => (
-                  <div key={i} className="w-[80px] text-right flex-shrink-0 text-[14px] text-[#333] tabular-nums">
-                    {fmtH(secs)}
+                  {/* Name */}
+                  <div className="flex-1 min-w-0 flex items-center gap-2 pr-4">
+                    <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: row.color }} />
+                    <span className={cn('text-[14px] truncate', row.billable ? '' : 'text-[#e91e63]')} style={row.billable ? { color: row.color } : {}}>
+                      {row.name}
+                    </span>
+                    {row.lead && <span className="text-[14px] text-[#aaa] truncate">- {row.lead}</span>}
                   </div>
-                ))}
 
-                {/* Total */}
-                <div className="w-[80px] text-right flex-shrink-0 text-[14px] font-bold text-[#333] tabular-nums">
-                  {fmtH(row.total)}
+                  {/* Day columns */}
+                  {(row.dayTotals as number[]).map((secs: number, i: number) => (
+                    <div key={i} className="w-[80px] text-right flex-shrink-0 text-[14px] text-[#333] tabular-nums">
+                      {fmtH(secs)}
+                    </div>
+                  ))}
+
+                  {/* Total */}
+                  <div className="w-[80px] text-right flex-shrink-0 text-[14px] font-bold text-[#333] tabular-nums">
+                    {fmtH(row.total)}
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  </ReportShell>
+    </ReportShell>
   )
 }

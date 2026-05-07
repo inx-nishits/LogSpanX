@@ -46,7 +46,7 @@ export async function GET() {
     return response
   }
 
-  const response = NextResponse.json({ user: profile }, { status: 200 })
+  const response = NextResponse.json({ user: profile, token }, { status: 200 })
   setAuthCookies(response, { token, user: profile as Parameters<typeof setAuthCookies>[1]['user'] })
 
   for (const cookie of nextResponse.cookies.getAll()) {

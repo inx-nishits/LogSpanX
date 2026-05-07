@@ -13,6 +13,7 @@ import { ActivityList } from './activity-list'
 import { Skeleton } from '@/components/ui/skeleton'
 import { type TimeEntry } from '@/lib/types'
 import { type DashboardStats } from '@/lib/stores/data-store'
+import { DayEntriesModal } from './day-entries-modal'
 
 export interface DonutEntry {
     name: string
@@ -39,12 +40,18 @@ export function DashboardView() {
     })
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [loading, setLoading] = useState(true)
+    const [modalDay, setModalDay] = useState<string | null>(null)
 
     useEffect(() => {
         getDashboardStats().then(setStats).catch(() => { })
     }, [getDashboardStats])
 
     const [sourceEntries, setSourceEntries] = useState<TimeEntry[]>([])
+
+    const modalEntries = useMemo(() => {
+        if (!modalDay) return []
+        return sourceEntries.filter(e => format(new Date(e.startTime), 'EEE, MMM d') === modalDay)
+    }, [modalDay, sourceEntries])
 
     // Derive sourceEntries from store's timeEntries (always in sync) filtered by date range
     useEffect(() => {
@@ -69,7 +76,7 @@ export function DashboardView() {
 
     // Derived Stats
     const totalSeconds = useMemo(() => sourceEntries.reduce((acc, e) => acc + (e.duration ?? 0), 0), [sourceEntries])
-    
+
     const totalDisplay = useMemo(() => {
         const h = Math.floor(totalSeconds / 3600)
         const m = Math.floor((totalSeconds % 3600) / 60)
@@ -81,10 +88,10 @@ export function DashboardView() {
         return totalSeconds > 0 ? Math.round((billableSec / totalSeconds) * 100) + '%' : '0%'
     }, [sourceEntries, totalSeconds])
 
-    // Tasks in range — count unique tasks whose project has entries in range
+    // Tasks in range — count tasks that have entries
     const tasksInRange = useMemo(() => {
-        const projectIdsInRange = new Set(sourceEntries.map(e => e.projectId).filter(Boolean))
-        return tasks.filter(t => projectIdsInRange.has(t.projectId))
+        const taskIds = new Set(sourceEntries.map(e => e.taskId).filter(Boolean))
+        return tasks.filter(t => taskIds.has(t.id))
     }, [sourceEntries, tasks])
 
     const donutData = useMemo((): DonutEntry[] => {
@@ -99,33 +106,81 @@ export function DashboardView() {
                 { name: 'Billable', value: Number(bH.toFixed(2)), color: '#b2d235', percentage: total > 0 ? ((bH / total) * 100).toFixed(2) : '0' },
                 { name: 'Non-Billable', value: Number(nH.toFixed(2)), color: '#e4eaee', percentage: total > 0 ? ((nH / total) * 100).toFixed(2) : '0' },
             ].filter(d => d.value > 0)
-        } 
-        
+        }
         if (isTaskView) {
             const taskMap: Record<string, number> = {}
-            tasksInRange.forEach(t => { taskMap[t.projectId] = (taskMap[t.projectId] || 0) + 1 })
-            const totalT = Object.values(taskMap).reduce((a, b) => a + b, 0)
-            return Object.entries(taskMap).map(([pid, count]) => {
-                const p = projects.find(proj => proj.id === pid)
-                return {
-                    name: p?.name || 'Unknown',
-                    leadName: leadNames[p?.leadId || ''] || '',
-                    value: count,
-                    color: p?.color || '#cbd5e1',
-                    percentage: totalT > 0 ? ((count / totalT) * 100).toFixed(2) : '0'
+            const noTaskProjMap: Record<string, number> = {}
+            let noTaskNoProjectHours = 0
+
+            sourceEntries.forEach(e => {
+                if (e.taskId) {
+                    taskMap[e.taskId] = (taskMap[e.taskId] || 0) + ((e.duration ?? 0) / 3600)
+                } else if (e.projectId) {
+                    noTaskProjMap[e.projectId] = (noTaskProjMap[e.projectId] || 0) + ((e.duration ?? 0) / 3600)
+                } else {
+                    noTaskNoProjectHours += (e.duration ?? 0) / 3600
                 }
-            }).sort((a, b) => b.value - a.value)
+            })
+
+            const entries: DonutEntry[] = []
+            let totalT = 0
+
+            Object.entries(taskMap).forEach(([tid, val]) => {
+                if (val <= 0) return
+                const t = tasks.find(x => x.id === tid)
+                const p = projects.find(x => x.id === t?.projectId)
+                entries.push({
+                    name: `${t?.name || 'Unknown Task'}`,
+                    leadName: leadNames[p?.leadId || ''] || '',
+                    value: Number(val.toFixed(2)),
+                    color: p?.color || '#cbd5e1',
+                    percentage: '0'
+                })
+                totalT += val
+            })
+
+            Object.entries(noTaskProjMap).forEach(([pid, val]) => {
+                if (val <= 0) return
+                const p = projects.find(x => x.id === pid)
+                entries.push({
+                    name: `${p?.name || 'Unknown'} (Without task)`,
+                    leadName: leadNames[p?.leadId || ''] || '',
+                    value: Number(val.toFixed(2)),
+                    color: '#9e9e9e',
+                    percentage: '0'
+                })
+                totalT += val
+            })
+
+            if (noTaskNoProjectHours > 0) {
+                entries.push({
+                    name: '(Without Project)',
+                    leadName: '',
+                    value: Number(noTaskNoProjectHours.toFixed(2)),
+                    color: '#9e9e9e',
+                    percentage: '0'
+                })
+                totalT += noTaskNoProjectHours
+            }
+
+            entries.forEach(e => {
+                e.percentage = totalT > 0 ? ((e.value / totalT) * 100).toFixed(2) : '0'
+            })
+            return entries.sort((a, b) => b.value - a.value)
         }
 
-        // Time per project (default)
+        // Time per project (default) — include entries without a project
         const pMap: Record<string, number> = {}
-        sourceEntries.forEach(e => { 
+        let noProjectHours = 0
+        sourceEntries.forEach(e => {
             if (e.projectId) {
-                pMap[e.projectId] = (pMap[e.projectId] || 0) + ((e.duration ?? 0) / 3600) 
+                pMap[e.projectId] = (pMap[e.projectId] || 0) + ((e.duration ?? 0) / 3600)
+            } else {
+                noProjectHours += (e.duration ?? 0) / 3600
             }
         })
-        const totalH = Object.values(pMap).reduce((a, b) => a + b, 0)
-        return Object.entries(pMap).map(([id, val]) => {
+        const totalH = Object.values(pMap).reduce((a, b) => a + b, 0) + noProjectHours
+        const result: DonutEntry[] = Object.entries(pMap).map(([id, val]) => {
             const p = projects.find(proj => proj.id === id)
             return {
                 name: p?.name || 'Unknown',
@@ -134,14 +189,24 @@ export function DashboardView() {
                 color: p?.color || '#cbd5e1',
                 percentage: totalH > 0 ? ((val / totalH) * 100).toFixed(2) : '0'
             }
-        }).sort((a, b) => b.value - a.value)
+        })
+        if (noProjectHours > 0) {
+            result.push({
+                name: '(Without Project)',
+                leadName: '',
+                value: Number(noProjectHours.toFixed(2)),
+                color: '#9e9e9e',
+                percentage: totalH > 0 ? ((noProjectHours / totalH) * 100).toFixed(2) : '0'
+            })
+        }
+        return result.sort((a, b) => b.value - a.value)
     }, [sourceEntries, projects, tasksInRange, leadNames, filters.groupBy, filters.viewBy])
 
     const barData = useMemo((): BarDay[] => {
         const isTaskView = filters.groupBy === 'task'
         const isBillability = filters.viewBy === 'billability'
         const daysInInterval = eachDayOfInterval({ start: dateRange.from, end: dateRange.to })
-        
+
         const entriesByDay: Record<string, TimeEntry[]> = {}
         sourceEntries.forEach(e => {
             const dk = format(new Date(e.startTime), 'yyyy-MM-dd')
@@ -166,25 +231,39 @@ export function DashboardView() {
                 dayObj['billable'] = Number((entriesForDay.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600).toFixed(2))
                 dayObj['non-billable'] = Number((entriesForDay.filter(e => !e.billable).reduce((a, e) => a + (e.duration ?? 0), 0) / 3600).toFixed(2))
             } else if (isTaskView) {
-                const dayProjectIds = new Set(entriesForDay.map(e => e.projectId).filter(Boolean))
-                let dayTaskCount = 0
-                projects.forEach(p => {
-                    if (!dayProjectIds.has(p.id)) return
-                    const count = tasks.filter(t => t.projectId === p.id).length
-                    if (count > 0) {
-                        dayObj[p.id] = count
-                        dayTaskCount += count
+                const tMap: Record<string, number> = {}
+                let noProjectTaskTime = 0
+                entriesForDay.forEach(e => {
+                    if (e.taskId) {
+                        tMap[`t_${e.taskId}`] = (tMap[`t_${e.taskId}`] || 0) + ((e.duration ?? 0) / 3600)
+                    } else if (e.projectId) {
+                        tMap[`p_${e.projectId}`] = (tMap[`p_${e.projectId}`] || 0) + ((e.duration ?? 0) / 3600)
+                    } else {
+                        noProjectTaskTime += (e.duration ?? 0) / 3600
                     }
                 })
-                dayObj.displayTotal = dayTaskCount > 0 ? `${dayTaskCount} tasks` : ''
+                Object.entries(tMap).forEach(([id, val]) => {
+                    dayObj[id] = Number(val.toFixed(2))
+                })
+                if (noProjectTaskTime > 0) {
+                    dayObj['__no_project__'] = Number(noProjectTaskTime.toFixed(2))
+                }
             } else {
                 const projTime: Record<string, number> = {}
+                let noProjectTime = 0
                 entriesForDay.forEach(e => {
-                    if (e.projectId) projTime[e.projectId] = (projTime[e.projectId] || 0) + ((e.duration ?? 0) / 3600)
+                    if (e.projectId) {
+                        projTime[e.projectId] = (projTime[e.projectId] || 0) + ((e.duration ?? 0) / 3600)
+                    } else {
+                        noProjectTime += (e.duration ?? 0) / 3600
+                    }
                 })
                 Object.entries(projTime).forEach(([pid, val]) => {
                     dayObj[pid] = Number(val.toFixed(2))
                 })
+                if (noProjectTime > 0) {
+                    dayObj['__no_project__'] = Number(noProjectTime.toFixed(2))
+                }
             }
             return dayObj
         })
@@ -198,9 +277,21 @@ export function DashboardView() {
         const topProjectObj = projects.find(p => p.name === topProjectName)
         const topLeadName = leadNames[topProjectObj?.leadId || ''] || 'N/A'
 
+        // Check if any entries lack a projectId
+        const hasNoProjectEntries = sourceEntries.some(e => !e.projectId)
+
         const barProjects = isBillability
             ? [{ id: 'billable', name: 'Billable', color: '#b2d235' }, { id: 'non-billable', name: 'Non-Billable', color: '#e4eaee' }]
-            : projects
+            : filters.groupBy === 'task'
+                ? [
+                    ...tasksInRange.map(t => ({ id: `t_${t.id}`, name: t.name, color: projects.find(p => p.id === t.projectId)?.color || '#cbd5e1' })),
+                    ...projects.map(p => ({ id: `p_${p.id}`, name: `${p.name} (Without task)`, color: '#9e9e9e' })),
+                    ...(hasNoProjectEntries ? [{ id: '__no_project__', name: '(Without Project)', color: '#9e9e9e' }] : [])
+                ]
+                : [
+                    ...projects,
+                    ...(hasNoProjectEntries ? [{ id: '__no_project__', name: '(Without Project)', color: '#9e9e9e' }] : [])
+                ]
 
         return {
             totalTime: stats?.weekHours != null
@@ -225,6 +316,15 @@ export function DashboardView() {
 
     return (
         <div className="p-4 lg:p-6 space-y-2 bg-[#f2f6f8] min-h-full">
+            {modalDay && (
+                <DayEntriesModal
+                    date={modalDay}
+                    entries={modalEntries}
+                    projects={projects}
+                    users={users}
+                    onClose={() => setModalDay(null)}
+                />
+            )}
             <DashboardHeader
                 role={user.role}
                 filters={filters}
@@ -256,7 +356,7 @@ export function DashboardView() {
                             totalTasks={dashboardData.totalTasks}
                             completedTasks={dashboardData.completedTasks}
                         />
-                        <WeeklyBarChart data={dashboardData.barData} projects={dashboardData.barProjects} isTaskView={dashboardData.isTaskView} />
+                        <WeeklyBarChart data={dashboardData.barData} projects={dashboardData.barProjects} isTaskView={dashboardData.isTaskView} onBarClick={setModalDay} />
                         <ProjectDonutChart data={dashboardData.donutData} totalTime={dashboardData.totalTime} isTaskView={dashboardData.isTaskView} />
                     </div>
                     <div className="lg:col-span-1">
@@ -275,7 +375,7 @@ export function DashboardView() {
                         totalTasks={dashboardData.totalTasks}
                         completedTasks={dashboardData.completedTasks}
                     />
-                    <WeeklyBarChart data={dashboardData.barData} projects={dashboardData.barProjects} isTaskView={dashboardData.isTaskView} />
+                    <WeeklyBarChart data={dashboardData.barData} projects={dashboardData.barProjects} isTaskView={dashboardData.isTaskView} onBarClick={setModalDay} />
                     <ProjectDonutChart data={dashboardData.donutData} totalTime={dashboardData.totalTime} isTaskView={dashboardData.isTaskView} />
                     <TeamActivities entries={sourceEntries} />
                 </div>

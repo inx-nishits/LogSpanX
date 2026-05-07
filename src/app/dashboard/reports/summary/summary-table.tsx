@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface SummaryRow {
@@ -37,44 +37,51 @@ function TableRow({
     <>
       <div
         className={cn(
-          'flex items-center h-[40px] border-b border-[#f0f0f0] transition-colors group',
+          'flex items-center h-[52px] border-b border-[#eef1f4] transition-colors group',
           depth === 0 ? 'bg-white' : 'bg-[#fafbfc]',
-          clickable ? 'hover:bg-[#f0f7fb] cursor-pointer' : 'hover:bg-[#fafbfc]'
+          'hover:bg-[#f5f9fc]'
         )}
-        style={{ paddingLeft: `${16 + depth * 32}px`, paddingRight: '16px' }}
-        onClick={clickable ? () => onRowClick!(row) : undefined}
+        style={{ paddingLeft: `${12 + depth * 28}px`, paddingRight: '16px' }}
       >
-        <div className="w-5 flex-shrink-0 flex items-center" onClick={e => e.stopPropagation()}>
-          {hasChildren ? (
-            <button onClick={() => setExpanded(e => !e)} className="text-[#aaa] hover:text-[#555] cursor-pointer p-0.5">
-              {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-            </button>
-          ) : null}
+        {/* Spacer where arrow used to be */}
+        <div className="w-5 flex-shrink-0" />
+
+        {/* Entry count badge — click to expand/collapse */}
+        <div className="w-8 flex-shrink-0 flex items-center justify-center mr-3">
+          <span
+            onClick={hasChildren ? () => setExpanded(e => !e) : undefined}
+            className={cn(
+              'min-w-[22px] h-[22px] px-1.5 bg-[#e8f4fd] text-[#5b9bd5] text-[11px] font-bold rounded flex items-center justify-center tabular-nums transition-colors',
+              hasChildren ? 'cursor-pointer hover:bg-[#cce4f7] hover:text-[#2a7ab8]' : 'cursor-default'
+            )}
+          >
+            {row.entryCount}
+          </span>
         </div>
 
-        <span className="w-7 text-center text-[12px] text-[#aaa] flex-shrink-0 mr-2 tabular-nums">
-          {row.entryCount}
-        </span>
+        {/* Color dot */}
+        <div className="w-[10px] h-[10px] rounded-full flex-shrink-0 mr-3" style={{ backgroundColor: row.color }} />
 
-        <div className="w-[9px] h-[9px] rounded-full flex-shrink-0 mr-3" style={{ backgroundColor: row.color }} />
-
-        <span className={cn(
-          'flex-1 text-[13px] truncate min-w-0',
-          clickable ? 'text-[#03a9f4] group-hover:underline' : 'text-[#333]'
-        )}>
+        {/* Title — click to navigate to detailed page */}
+        <span
+          onClick={clickable ? () => onRowClick!(row) : undefined}
+          className={cn(
+            'flex-1 text-[13px] truncate min-w-0 font-medium',
+            clickable ? 'text-[#03a9f4] cursor-pointer hover:underline' : 'text-[#333]'
+          )}
+        >
           {row.title}
         </span>
 
-        {clickable && (
-          <ExternalLink className="h-3.5 w-3.5 text-[#03a9f4] opacity-0 group-hover:opacity-100 flex-shrink-0 mr-2" />
-        )}
-
-        <span className="w-[120px] text-right text-[13px] font-bold text-[#333] tabular-nums flex-shrink-0">
+        {/* Duration */}
+        <span className="w-[110px] text-right text-[14px] font-bold text-[#333] tabular-nums flex-shrink-0">
           {fmt(row.duration)}
         </span>
 
-        <span className="w-[120px] text-right text-[13px] text-[#aaa] tabular-nums flex-shrink-0">
-          {row.billable ? '—' : '0.00 USD'}
+        {/* Amount */}
+        <span className="w-[120px] text-right flex-shrink-0">
+          <span className="text-[14px] font-medium text-[#333]">0.00 </span>
+          <span className="text-[12px] text-[#aaa]">USD</span>
         </span>
       </div>
 
@@ -88,18 +95,19 @@ function TableRow({
 export function SummaryTable({ rows, onRowClick }: { rows: SummaryRow[]; onRowClick?: (row: SummaryRow) => void }) {
   return (
     <div className="bg-white overflow-hidden">
-      <div className="flex items-center h-[40px] border-b border-[#e4eaee] bg-[#f5f7f9] px-4 pr-4">
+      {/* Header */}
+      <div className="flex items-center h-[38px] border-b border-[#e4eaee] bg-[#f5f7f9] px-4 pr-4">
         <div className="w-5 flex-shrink-0" />
-        <div className="w-7 flex-shrink-0 mr-2" />
-        <div className="w-[9px] mr-3 flex-shrink-0" />
-        <div className="flex-1 flex items-center gap-1 text-[10px] font-bold text-[#aaa] uppercase tracking-wider">
+        <div className="w-8 flex-shrink-0 mr-3" />
+        <div className="w-[10px] mr-3 flex-shrink-0" />
+        <div className="flex-1 flex items-center gap-1 text-[11px] font-bold text-[#aaa] uppercase tracking-wider cursor-pointer hover:text-[#555] transition-colors">
           <ChevronDown className="h-3 w-3" />
           <span>Title</span>
         </div>
-        <div className="w-[120px] text-right text-[10px] font-bold text-[#aaa] uppercase tracking-wider flex-shrink-0">
+        <div className="w-[110px] text-right text-[11px] font-bold text-[#aaa] uppercase tracking-wider flex-shrink-0">
           Duration
         </div>
-        <div className="w-[120px] text-right text-[10px] font-bold text-[#aaa] uppercase tracking-wider flex-shrink-0">
+        <div className="w-[120px] text-right text-[11px] font-bold text-[#aaa] uppercase tracking-wider flex-shrink-0">
           Amount
         </div>
       </div>

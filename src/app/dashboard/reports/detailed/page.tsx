@@ -68,16 +68,21 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
   }
 
   if (editing) return (
-    <input autoFocus type="text" value={val} maxLength={6} placeholder="H:MM"
+    <input
+      autoFocus
+      type="text"
+      value={val}
+      placeholder="H:MM"
       onChange={e => setVal(e.target.value)}
+      onFocus={e => e.target.select()}
       onBlur={e => commit(e.target.value)}
       onKeyDown={e => e.key === 'Enter' && commit(val)}
-      className="w-[52px] text-[15px] font-bold text-[#333] bg-transparent border-none outline-none tabular-nums text-center p-0 m-0"
+      className="w-[70px] text-[15px] font-bold text-[#333] bg-transparent border-none outline-none tabular-nums text-center p-0 m-0"
     />
   )
   return (
     <span onClick={() => setEditing(true)}
-      className="text-[15px] font-bold text-[#333] tabular-nums cursor-pointer w-[52px] inline-block text-center hover:text-[#03a9f4] p-0 m-0 leading-none">
+      className="text-[15px] font-bold text-[#333] tabular-nums cursor-pointer w-[70px] inline-block text-center hover:text-[#03a9f4] p-0 m-0 leading-none">
       {fmtDur(dur)}
     </span>
   )
@@ -141,7 +146,6 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
   const canManageUsers = currentUser?.role === 'project_manager' || currentUser?.role === 'team_lead'
   return (
     <div className="flex items-center h-[46px] bg-[#f9fbfc] border-b border-[#e4eaee]">
-      <div className="w-[44px] flex-shrink-0" />
 
       <div className="flex-1 min-w-0 pr-4">
         <input type="text" placeholder="Add description" value={desc} onChange={e => setDesc(e.target.value)}
@@ -226,11 +230,11 @@ export default function DetailedReportPage() {
 
   const canEditEntry = (entry: TimeEntry) => {
     if (!currentUser) return false
-    if (currentUser.role === 'project_manager') return true
-    if (currentUser.role === 'team_lead') {
+    if (currentUser.role === 'project_manager') return true   // Project Manager: edit anyone
+    if (currentUser.role === 'team_lead') {                   // Team Lead: edit own + team members
       return entry.userId === currentUser.id || teamMemberIds.has(entry.userId)
     }
-    return entry.userId === currentUser.id
+    return entry.userId === currentUser.id                    // Team Member: own entries only
   }
 
   const paramFrom = searchParams.get('from')
@@ -274,13 +278,6 @@ export default function DetailedReportPage() {
       startDate: format(dateRange.from, 'yyyy-MM-dd'),
       endDate: format(dateRange.to, 'yyyy-MM-dd'),
     }
-    // Send filters to API where supported (single values only; multi-select handled client-side)
-    const selectedGroupIds = selUsers.filter(id => groups.find(g => g.id === id))
-    const selectedUserIds = selUsers.filter(id => !groups.find(g => g.id === id))
-
-    if (selectedUserIds.length === 1 && selectedGroupIds.length === 0) params.userId = selectedUserIds[0]
-    if (selProjects.length === 1 && !selProjects.includes('__without__')) params.projectId = selProjects[0]
-    if (selTags.length === 1 && !selTags.includes('__without__')) params.tagId = selTags[0]
 
     const timer = setTimeout(() => setLoading(true), 0)
     getTimeEntries(params)
@@ -306,6 +303,8 @@ export default function DetailedReportPage() {
         }
         if (selUsers.length > 0) {
           // Expand all group IDs into member user IDs
+          const selectedGroupIds = selUsers.filter(id => groups.find(g => g.id === id))
+          const selectedUserIds = selUsers.filter(id => !groups.find(g => g.id === id))
           const groupMemberIds = selectedGroupIds.flatMap(gid => {
             const group = groups.find(g => g.id === gid)
             return (group?.memberIds ?? []).map(m =>
@@ -596,11 +595,11 @@ export default function DetailedReportPage() {
                   <div className="bg-[#fcfdfe] border-b border-[#e4eaee] px-4 py-2 text-[13px] font-bold text-[#777] flex items-center">
                     <span>{dateLabel}</span>
                     <div className="flex-1 min-w-0" />
-                      {/* <div className="w-[80px] text-right flex-shrink-0 px-2 flex items-center justify-end text-[16px] font-bold text-[#333] tabular-nums">
+                    {/* <div className="w-[80px] text-right flex-shrink-0 px-2 flex items-center justify-end text-[16px] font-bold text-[#333] tabular-nums">
                         {dispDur(entries.reduce((a, e) => a + (e.duration ?? 0), 0))}
                       </div> */}
-                      <div className="w-[480px] flex-shrink-0" />
-                    </div>
+                    <div className="w-[480px] flex-shrink-0" />
+                  </div>
                   {entries.map(entry => {
                     const proj = projects.find(p => p.id === entry.projectId)
                     const entryTask = tasks.find(t => t.id === entry.taskId)
@@ -620,7 +619,8 @@ export default function DetailedReportPage() {
                             <input type="text" defaultValue={entry.description}
                               onBlur={e => updateEntry(entry.id, { description: e.target.value })}
                               placeholder="Add description"
-                              className="text-[13px] text-[#333] outline-none bg-transparent placeholder-[#bbb] truncate flex-initial w-auto min-w-[120px]"
+                              readOnly={!canEdit}
+                              className="text-[13px] text-[#333] outline-none bg-transparent placeholder-[#bbb] truncate flex-initial w-auto min-w-[120px] px-1.5 py-0.5 rounded border border-transparent hover:border-[#d0d8de] focus:border-[#d0d8de] transition-colors"
                             />
                             <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0">
                               <span className="text-gray-300 flex-shrink-0">•</span>
@@ -653,7 +653,7 @@ export default function DetailedReportPage() {
                             </div>
                           </div>
                           <div className="flex-shrink-0 ml-auto">
-                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={canEdit ? tagIds => updateEntry(entry.id, { tagIds }) : () => {}} />
+                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={canEdit ? tagIds => updateEntry(entry.id, { tagIds }) : () => { }} />
                           </div>
                         </div>
 

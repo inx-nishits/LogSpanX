@@ -22,15 +22,14 @@ interface DashboardHeaderProps {
 
 function FilterDropdown({
     options,
-    defaultValue,
+    value,
     onChange
 }: {
     options: { value: string; label: string }[]
-    defaultValue: string
+    value: string
     onChange: (v: string) => void
 }) {
     const [isOpen, setIsOpen] = useState(false)
-    const [selected, setSelected] = useState(defaultValue)
     const ref = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -41,7 +40,7 @@ function FilterDropdown({
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
-    const selectedLabel = options.find(o => o.value === selected)?.label || ''
+    const selectedLabel = options.find(o => o.value === value)?.label || ''
 
     return (
         <div className="relative" ref={ref}>
@@ -64,10 +63,10 @@ function FilterDropdown({
                     {options.map((opt) => (
                         <button
                             key={opt.value}
-                            onClick={() => { setSelected(opt.value); onChange(opt.value); setIsOpen(false) }}
+                            onClick={() => { onChange(opt.value); setIsOpen(false) }}
                             className={`
                 w-full text-left px-4 py-2 text-[13px] transition-colors cursor-pointer
-                ${selected === opt.value
+                ${value === opt.value
                                     ? 'bg-[#03a9f4] text-white font-medium'
                                     : 'text-[#555] hover:bg-[#f0f4f8]'
                                 }
@@ -93,7 +92,7 @@ export function DashboardHeader({ role, filters, onFilterChange, currentRange, o
                         { value: 'project', label: 'Project' },
                         { value: 'billability', label: 'Billability' },
                     ]}
-                    defaultValue={filters.viewBy}
+                    value={filters.viewBy}
                     onChange={(v) => onFilterChange({ viewBy: v })}
                 />
 
@@ -102,7 +101,7 @@ export function DashboardHeader({ role, filters, onFilterChange, currentRange, o
                         { value: 'time', label: 'By Time' },
                         { value: 'task', label: 'By Tasks' },
                     ]}
-                    defaultValue={filters.groupBy}
+                    value={filters.groupBy}
                     onChange={(v) => onFilterChange({ groupBy: v })}
                 />
 
@@ -111,7 +110,7 @@ export function DashboardHeader({ role, filters, onFilterChange, currentRange, o
                         { value: 'team', label: 'Team' },
                         { value: 'only-me', label: 'Only me' },
                     ]}
-                    defaultValue={filters.teamScope}
+                    value={filters.teamScope}
                     onChange={(v) => onFilterChange({ teamScope: v })}
                 />
 
