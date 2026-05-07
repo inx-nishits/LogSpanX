@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, format, parseISO } from 'date-fns'
-import { ChevronDown, DollarSign, MoreVertical, Printer, Share2, Play, Check, ArrowUp, ArrowDown, Plus } from 'lucide-react'
+import { ChevronDown, DollarSign, MoreVertical, Play, Check, ArrowUp, ArrowDown, Plus } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { cn } from '@/lib/utils'
 import { ReportShell, DateRange } from '../_components/report-shell'
@@ -207,6 +207,42 @@ const SortIcon = ({ field, sortField, sortOrder }: { field: string; sortField: s
   return sortOrder === 'desc' ? <ArrowDown className="h-3.5 w-3.5 ml-1" /> : <ArrowUp className="h-3.5 w-3.5 ml-1" />
 }
 
+// ─── Export Dropdown ────────────────────────────────────────────────────────
+
+function ExportDropdown() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-0.5 hover:text-[#03a9f4] cursor-pointer"
+      >
+        Export <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 mt-1 bg-white border border-[#d0d8de] shadow-lg z-[200] min-w-[150px] py-1">
+          {(['Export as PDF', 'Export as Excel', 'Export as CSV'] as const).map(label => (
+            <button key={label} onClick={() => setOpen(false)}
+              className="w-full text-left px-3 py-2 text-[13px] text-[#555] hover:bg-[#f5f7f9] hover:text-[#03a9f4] cursor-pointer">
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Page ──────────────────────────────────────────────────────────────
 export default function DetailedReportPage() {
   const { projects, users, groups, tasks, timeEntries, updateTimeEntry, addTimeEntry, deleteTimeEntry, updateTimeEntries, deleteTimeEntries } = useDataStore()
@@ -256,7 +292,6 @@ export default function DetailedReportPage() {
   const [selIds, setSelIds] = useState<Set<string>>(new Set())
   const [sortField, setSortField] = useState<string>('startTime')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [rounding, setRounding] = useState(false)
   const [showEntryBar, setShowEntryBar] = useState(false)
 
   const [filtered, setFiltered] = useState<TimeEntry[]>([])
@@ -425,7 +460,7 @@ export default function DetailedReportPage() {
   const totalSecs = useMemo(() => sorted.reduce((a, e) => a + (e.duration ?? 0), 0), [sorted])
   const billableSecs = useMemo(() => sorted.filter(e => e.billable).reduce((a, e) => a + (e.duration ?? 0), 0), [sorted])
 
-  const dispDur = (s: number) => fmtDur(s, rounding)
+  const dispDur = (s: number) => fmtDur(s)
 
   const toggleAll = () => {
     if (selIds.size === filtered.length) setSelIds(new Set())
@@ -445,11 +480,14 @@ export default function DetailedReportPage() {
   }
 
   const updateEntry = (id: string, updates: Partial<typeof filtered[0]>) => {
-    const existing = filtered.find(e => e.id === id)
-    const fullUpdates = existing ? { ...existing, ...updates } : updates
     // Optimistic local update
     setFiltered(prev => prev.map(e => e.id !== id ? e : { ...e, ...updates }))
-    updateTimeEntry(id, fullUpdates)
+    updateTimeEntry(id, updates).then(synced => {
+      if (synced) {
+        // Merge API response but keep our explicit updates (e.g. projectId: undefined means cleared)
+        setFiltered(prev => prev.map(e => e.id !== id ? e : { ...e, ...synced, ...updates }))
+      }
+    })
   }
 
   const onDup = (e: typeof filtered[0]) => {
@@ -510,26 +548,14 @@ export default function DetailedReportPage() {
           }} defaultDate={dateRange.from} />}
 
           {/* Stats bar */}
-          <div className="flex items-center justify-between bg-[#f2f6f8] border-b border-[#e4eaee] px-4 h-[42px] flex-shrink-0">
+          <div className="flex items-center justify-between bg-[#dde2e7] border-b border-[#e4eaee] px-4 h-[42px] flex-shrink-0">
             <div className="flex items-center gap-6 text-[13px]">
-              <span className="text-[#777]">Total: <strong className="text-[#333] font-bold tabular-nums text-[13px]">{dispDur(totalSecs)}</strong></span>
-              <span className="text-[#777]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[13px]">{dispDur(billableSecs)}</strong></span>
-              <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[13px]">0.00 USD</strong></span>
+              <span className="text-[#777] text-[14px]">Total: <strong className="text-[#333] font-bold tabular-nums text-[14px]">{dispDur(totalSecs)}</strong></span>
+              <span className="text-[#777] text-[14px]">Billable: <strong className="text-[#333] font-bold tabular-nums text-[14px]">{dispDur(billableSecs)}</strong></span>
+              <span className="text-[#777] text-[14px]">Amount: <strong className="text-[#333] font-bold text-[14px]">0.00 USD</strong></span>
             </div>
             <div className="flex items-center gap-4 text-[13px] text-[#555]">
-              <div className="flex items-center gap-2">
-                <button className="hover:text-[#03a9f4] cursor-pointer flex items-center gap-1 border border-[#d0d8de] px-2.5 py-1 rounded bg-white h-[26px]">Export <ChevronDown className="h-3 w-3" /></button>
-                <button className="hover:text-[#03a9f4] cursor-pointer"><Printer className="h-4 w-4" /></button>
-                <button className="hover:text-[#03a9f4] cursor-pointer"><Share2 className="h-4 w-4" /></button>
-              </div>
-              <div className="w-px h-4 bg-[#d0d8de]" />
-              <div className="flex items-center gap-2">
-                <div onClick={() => setRounding(!rounding)} className={cn("relative inline-flex h-3.5 w-8 items-center rounded-full cursor-pointer transition-colors", rounding ? "bg-[#03a9f4]" : "bg-gray-200")}>
-                  <span className={cn("inline-block h-2.5 w-2.5 rounded-full bg-white transition-transform", rounding ? "translate-x-4.5" : "translate-x-1")} />
-                </div>
-                <span className="text-[13px]">Rounding</span>
-              </div>
-              <button className="hover:text-[#03a9f4] cursor-pointer flex items-center gap-1 text-[13px]">Show amount <ChevronDown className="h-3.5 w-3.5" /></button>
+              <ExportDropdown />
             </div>
           </div>
 
@@ -728,6 +754,8 @@ export default function DetailedReportPage() {
               ))
             )}
           </div>
+          {/* Bottom gray line matching summary page */}
+          <div className="h-4 bg-[#e4e8ec]" />
         </div>
       </div>
     </ReportShell>

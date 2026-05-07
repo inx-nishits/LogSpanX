@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, Printer, Share2, Search, X, Check } from 'lucide-react'
+import { ChevronDown, Search, X, Check } from 'lucide-react'
 import { startOfWeek, endOfWeek, startOfDay, endOfDay, eachDayOfInterval, format, isSameDay } from 'date-fns'
 import { useDataStore } from '@/lib/stores/data-store'
 import { cn } from '@/lib/utils'
@@ -706,7 +706,7 @@ export default function SummaryReportPage() {
           filterType: 'user' as const, filterId: uid,
           children: buildChildren(ue, uid),
         }
-      }).sort((a, b) => b.duration - a.duration)
+      }).sort((a, b) => a.title.localeCompare(b.title))
     }
 
     if (groupBy === 'Project') {
@@ -926,22 +926,12 @@ export default function SummaryReportPage() {
               <span className="text-[#777]">Amount: <strong className="text-[#333] font-bold text-[15px]">0.00 USD</strong></span>
             </div>
             <div className="flex items-center gap-4 text-[13px] text-[#555]">
-              <button className="hover:text-[#03a9f4] cursor-pointer">Create invoice</button>
               <ExportDropdown onExport={handleExport} />
-              <button className="hover:text-[#03a9f4] cursor-pointer"><Printer className="h-4 w-4" /></button>
-              <button className="hover:text-[#03a9f4] cursor-pointer"><Share2 className="h-4 w-4" /></button>
-              <div className="flex items-center gap-1.5">
-                <div className="w-8 h-[18px] bg-[#ccc] rounded-full relative cursor-pointer flex-shrink-0">
-                  <div className="w-[14px] h-[14px] bg-white rounded-full absolute top-[2px] left-[2px] shadow-sm" />
-                </div>
-                <span className="text-[#aaa]">Rounding</span>
-              </div>
-              <button className="flex items-center gap-0.5 hover:text-[#03a9f4] cursor-pointer">Show amount <ChevronDown className="h-3 w-3" /></button>
             </div>
           </div>
 
           {/* Billability + Bar chart */}
-          <div className="px-6 pt-5 pb-6 bg-white border-b border-[#e4eaee]">
+          <div className="px-6 pt-5 pb-6 bg-white">
             <div className="mb-4">
               <BillabilityDropdown mode={billabilityMode} onChange={setBillabilityMode} />
             </div>
@@ -954,54 +944,60 @@ export default function SummaryReportPage() {
             )}
           </div>
 
-          {/* Group by row */}
-          <div className="flex items-center gap-2 px-4 py-2.5 my-4 text-[15px] bg-[#f5f7f9] border-b border-[#e4eaee]">
-            <span className="text-[15px] text-[#555]">Group by :</span>
-            <SimpleDropdown value={groupBy} options={GROUP_OPTIONS} onChange={setGroupBy} />
-            <SimpleDropdown value={subGroupBy} options={SUB_GROUP_OPTIONS} onChange={setSubGroupBy} />
-          </div>
+          {/* Gap between sections */}
+          <div className="h-4 bg-[#e4e8ec]" />
 
-          {/* Table + Donut side by side */}
-          <div className="flex items-start h-[450px]">
-            <div className="w-[60%] flex-shrink-0 border-r border-[#e4eaee] overflow-y-auto">
-              {loading ? (
-                <div className="p-4 flex flex-col gap-3">
-                  {[...Array(6)].map((_, i) => (
-                    <Skeleton key={i} className="h-10 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <SummaryTable rows={tableRows} onRowClick={(row) => {
-                  const params = new URLSearchParams()
-                  params.set('from', dateRange.from.toISOString())
-                  params.set('to', dateRange.to.toISOString())
-
-                  if (appliedFilters.team.length) params.set('users', appliedFilters.team.join(','))
-                  if (appliedFilters.project.length) params.set('projects', appliedFilters.project.join(','))
-                  if (appliedFilters.tag.length) params.set('tags', appliedFilters.tag.join(','))
-                  if (appliedFilters.desc) params.set('description', appliedFilters.desc)
-
-                  if (row.filterType === 'project' && row.filterId && row.filterId !== '__none__') {
-                    params.set('projects', row.filterId)
-                  } else if (row.filterType === 'user' && row.filterId) {
-                    params.set('users', row.filterId)
-                  } else if (row.filterType === 'tag' && row.filterId && row.filterId !== '__none__') {
-                    params.set('tags', row.filterId)
-                  }
-
-                  router.push(`/dashboard/reports/detailed?${params.toString()}`)
-                }} />
-              )}
+          {/* Group by row + Table + Donut — all in one attached block */}
+          <div className="mt-6 flex flex-col border-t border-[#e4eaee]">
+            {/* Group by row */}
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-[#dde2e7] border-b border-[#e4eaee] flex-shrink-0">
+              <span className="text-[13px] text-[#555]">Group by :</span>
+              <SimpleDropdown value={groupBy} options={GROUP_OPTIONS} onChange={setGroupBy} />
+              <SimpleDropdown value={subGroupBy} options={SUB_GROUP_OPTIONS} onChange={setSubGroupBy} />
             </div>
-            <div className="flex-1 flex items-center justify-center py-10 overflow-hidden">
-              {loading ? (
-                <Skeleton className="h-[200px] w-[200px] rounded-full" />
-              ) : (
-                <SummaryDonut data={donutData} totalLabel={fmtSecs(totalSecs)} />
-              )}
-            </div>
-          </div>
+            {/* Table + Donut side by side */}
+            <div className="flex items-start min-h-[300px]">
+              <div className="w-[60%] flex-shrink-0 border-r border-[#e4eaee] flex flex-col">
+                {loading ? (
+                  <div className="p-4 flex flex-col gap-3">
+                    {[...Array(6)].map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <SummaryTable rows={tableRows} onRowClick={(row) => {
+                    const params = new URLSearchParams()
+                    params.set('from', dateRange.from.toISOString())
+                    params.set('to', dateRange.to.toISOString())
 
+                    if (appliedFilters.team.length) params.set('users', appliedFilters.team.join(','))
+                    if (appliedFilters.project.length) params.set('projects', appliedFilters.project.join(','))
+                    if (appliedFilters.tag.length) params.set('tags', appliedFilters.tag.join(','))
+                    if (appliedFilters.desc) params.set('description', appliedFilters.desc)
+
+                    if (row.filterType === 'project' && row.filterId && row.filterId !== '__none__') {
+                      params.set('projects', row.filterId)
+                    } else if (row.filterType === 'user' && row.filterId) {
+                      params.set('users', row.filterId)
+                    } else if (row.filterType === 'tag' && row.filterId && row.filterId !== '__none__') {
+                      params.set('tags', row.filterId)
+                    }
+
+                    router.push(`/dashboard/reports/detailed?${params.toString()}`)
+                  }} />
+                )}
+              </div>
+              <div className="flex-1 flex items-center justify-center py-10 overflow-hidden">
+                {loading ? (
+                  <Skeleton className="h-[200px] w-[200px] rounded-full" />
+                ) : (
+                  <SummaryDonut data={donutData} totalLabel={fmtSecs(totalSecs)} />
+                )}
+              </div>
+            </div>
+            {/* Bottom gray line matching bar graph */}
+            <div className="h-4 bg-[#e4e8ec]" />
+          </div>
         </div>
       </div>
     </ReportShell>

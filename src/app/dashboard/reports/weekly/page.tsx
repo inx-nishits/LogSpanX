@@ -47,7 +47,7 @@ import { mapApiTimeEntry } from '@/lib/api/mappers'
 import { DayEntriesModal } from '@/components/dashboard/day-entries-modal'
 
 export default function WeeklyReportPage() {
-  const { timeEntries, projects, users } = useDataStore()
+  const { timeEntries, projects, users, groups } = useDataStore()
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfDay(startOfWeek(new Date(), { weekStartsOn: 1 })),
     to: endOfDay(endOfWeek(new Date(), { weekStartsOn: 1 })),
@@ -105,9 +105,16 @@ export default function WeeklyReportPage() {
           })
         }
         if (selUsers.length > 0) {
-          const selectedGroupIds = selUsers.filter(id => users.find(u => u.id === id) === undefined)
-          const selectedUserIds = selUsers.filter(id => users.find(u => u.id === id) !== undefined)
-          const allUserIds = new Set<string>([...selectedUserIds, ...selectedGroupIds])
+          // Expand group IDs into member user IDs
+          const selectedGroupIds = selUsers.filter(id => groups.find(g => g.id === id))
+          const selectedUserIds = selUsers.filter(id => !groups.find(g => g.id === id))
+          const groupMemberIds = selectedGroupIds.flatMap(gid => {
+            const group = groups.find(g => g.id === gid)
+            return (group?.memberIds ?? []).map(m =>
+              typeof m === 'string' ? m : (m as { _id?: string; id?: string })._id ?? (m as { _id?: string; id?: string }).id ?? ''
+            ).filter(Boolean)
+          })
+          const allUserIds = new Set<string>([...selectedUserIds, ...groupMemberIds])
           entries = entries.filter((e: any) => allUserIds.has(e.userId))
         }
         if (selProjects.length > 0) {
@@ -155,7 +162,7 @@ export default function WeeklyReportPage() {
       })
 
     return () => { active = false }
-  }, [fromStr, toStr, selUsers, selLeads, selProjects, selTasks, selTags, selStatus, descSearch, projects])
+  }, [fromStr, toStr, selUsers, selLeads, selProjects, selTasks, selTags, selStatus, descSearch, projects, groups])
 
   const totalSecs = useMemo(() => filtered.reduce((a, e) => a + (e.duration ?? 0), 0), [filtered])
 

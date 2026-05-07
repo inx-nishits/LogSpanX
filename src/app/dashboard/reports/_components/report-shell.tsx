@@ -163,19 +163,19 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
           ))}
         </div>
         <div className="flex items-center gap-0">
-          <button 
-            onClick={() => onRangeChange({ from: addDays(dateRange.from, -7), to: addDays(dateRange.to, -7) })} 
+          <button
+            onClick={() => onRangeChange({ from: addDays(dateRange.from, -7), to: addDays(dateRange.to, -7) })}
             className="w-[32px] h-[32px] flex items-center justify-center border border-[#d0d8de] rounded-l hover:bg-[#f5f7f9] text-[#999] cursor-pointer transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <DateRangePicker 
-            initialRange={dateRange} 
-            onRangeChange={onRangeChange} 
-            className="border-l-0 rounded-none min-w-[200px]" 
+          <DateRangePicker
+            initialRange={dateRange}
+            onRangeChange={onRangeChange}
+            className="border-l-0 rounded-none min-w-[200px]"
           />
-          <button 
-            onClick={() => onRangeChange({ from: addDays(dateRange.from, 7), to: addDays(dateRange.to, 7) })} 
+          <button
+            onClick={() => onRangeChange({ from: addDays(dateRange.from, 7), to: addDays(dateRange.to, 7) })}
             className="w-[32px] h-[32px] flex items-center justify-center border border-[#d0d8de] border-l-0 rounded-r hover:bg-[#f5f7f9] text-[#999] cursor-pointer transition-colors"
           >
             <ChevronRight className="h-4 w-4" />

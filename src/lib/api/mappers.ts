@@ -132,10 +132,16 @@ export function mapApiUser(user: ApiUser): User {
 
 export function mapApiGroup(group: ApiGroup): Group {
   const now = new Date()
+  // Normalize memberIds: API may return populated user objects instead of plain strings
+  const memberIds = (group.memberIds ?? []).map(m => {
+    if (typeof m === 'string') return m
+    const obj = m as { id?: string; _id?: string }
+    return obj.id ?? obj._id ?? ''
+  }).filter(Boolean)
   return {
     id: resolveId(group as { id?: string; _id?: string }),
     name: group.name,
-    memberIds: group.memberIds ?? [],
+    memberIds,
     createdAt: now,
     updatedAt: now,
   }
@@ -209,7 +215,7 @@ export function mapApiTimeEntry(entry: ApiTimeEntry): TimeEntry {
   const isUserObj = typeof entry.userId === 'object' && entry.userId !== null
   const userIdObj = isUserObj ? (entry.userId as { id?: string; _id?: string; name?: string }) : null
   const userId = userIdObj
-    ? (userIdObj._id ?? userIdObj.id ?? '')
+    ? (userIdObj.id ?? userIdObj._id ?? '')
     : entry.userId as string
   const userName = userIdObj ? userIdObj.name : undefined
 

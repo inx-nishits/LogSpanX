@@ -190,24 +190,6 @@ export function TimerBar() {
 
       <Sep />
 
-      {/* Tag */}
-      <div className="px-4 flex-shrink-0">
-        <TagPicker iconSize={18} selectedTagIds={tagIds} onChange={setTagIds} />
-      </div>
-
-      <Sep />
-
-      {/* Billable */}
-      <div className="px-4 flex-shrink-0">
-        <button onClick={() => setBillable(b => !b)}
-          className={cn('cursor-pointer transition-colors', billable ? 'text-[#03a9f4]' : 'text-gray-300 hover:text-gray-500')}
-          title={billable ? 'Billable' : 'Non-billable'}>
-          <DollarSign style={{ width: 20, height: 20 }} strokeWidth={1.4} />
-        </button>
-      </div>
-
-      <Sep />
-
       {/* Date picker */}
       <div className="px-4 flex-shrink-0 relative" ref={calRef}>
         <button onClick={() => setCalOpen(o => !o)}
@@ -248,10 +230,7 @@ export function TimerBar() {
         ADD
       </button>
 
-      {/* List icon */}
-      <button className="ml-3 text-gray-300 hover:text-gray-500 cursor-pointer flex-shrink-0">
-        <List style={{ width: 18, height: 18 }} strokeWidth={1.4} />
-      </button>
+
     </div>
   )
 }

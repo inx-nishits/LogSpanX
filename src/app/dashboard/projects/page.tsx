@@ -281,7 +281,15 @@ export default function ProjectsPage() {
 
   // Compute functional project list
   const fullProjects = useMemo(() => {
-    return storeProjects.map(p => {
+    // Team members only see projects they are assigned to
+    const visibleProjects = user?.role === 'team_member'
+      ? storeProjects.filter(p =>
+        p.leadId === user.id ||
+        p.members.some(m => m.userId === user.id)
+      )
+      : storeProjects
+
+    return visibleProjects.map(p => {
       const lead = users.find(u => u.id === p.leadId)?.name || '-'
       const duration = timeEntries.filter(e => e.projectId === p.id).reduce((acc, e) => acc + (e.duration || 0), 0)
       return {
@@ -292,7 +300,7 @@ export default function ProjectsPage() {
         access: 'Private'
       }
     })
-  }, [storeProjects, users, timeEntries])
+  }, [storeProjects, users, timeEntries, user])
 
   // Filter Logic — uses applied state only
   const filteredProjects = useMemo(() => {

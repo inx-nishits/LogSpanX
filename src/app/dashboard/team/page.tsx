@@ -422,6 +422,7 @@ export default function TeamPage() {
       const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
       const finalIds = updated?.memberIds ?? newMemberIds
       setGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
+      storeUpdateGroup(group._id, { memberIds: finalIds })
     } catch (err) { console.error(err) }
   }
 
@@ -436,6 +437,7 @@ export default function TeamPage() {
       const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
       const finalIds = updated?.memberIds ?? newMemberIds
       setGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
+      storeUpdateGroup(group._id, { memberIds: finalIds })
     } catch (err) { console.error(err) }
   }
 
@@ -471,7 +473,9 @@ export default function TeamPage() {
     try {
       const res = await updateGroup(group._id, { memberIds: newMemberIds })
       const updated = res as ApiGroup
-      setAllGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: updated?.memberIds ?? newMemberIds } : g))
+      const finalIds = updated?.memberIds ?? newMemberIds
+      setAllGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
+      storeUpdateGroup(group._id, { memberIds: finalIds })
     } catch (err) { console.error(err) }
   }
 

@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useDataStore } from '@/lib/stores/data-store'
+import { useAuthStore } from '@/lib/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { ProjectLeadModal } from './project-lead-modal'
 
@@ -21,6 +22,7 @@ interface ProjectPickerProps {
 
 export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onClear, customTrigger }: ProjectPickerProps) {
   const { projects, users, tasks } = useDataStore()
+  const { user: currentUser } = useAuthStore()
   const [search, setSearch] = useState('')
   const [expandedLeads, setExpandedLeads] = useState<string[]>(['user_2', 'no_lead'])
   const [expandedProjects, setExpandedProjects] = useState<string[]>(['project_2'])
@@ -32,13 +34,24 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
   const selectedProject = projects.find(p => p.id === selectedProjectId)
   const selectedTask = tasks.find(t => t.id === selectedTaskId)
 
-  const filteredProjects = useMemo(() => {
+  // Team members only see projects they are assigned to (as member or lead)
+  const isTeamMember = currentUser?.role === 'team_member'
+
+  const visibleProjects = useMemo(() => {
+    if (!isTeamMember || !currentUser) return projects
     return projects.filter(p =>
+      p.leadId === currentUser.id ||
+      p.members.some(m => m.userId === currentUser.id)
+    )
+  }, [projects, isTeamMember, currentUser])
+
+  const filteredProjects = useMemo(() => {
+    return visibleProjects.filter(p =>
       !p.archived &&
       (p.name.toLowerCase().includes(search.toLowerCase()) ||
         (p.leadId && users.find(u => u.id === p.leadId)?.name.toLowerCase().includes(search.toLowerCase())))
     )
-  }, [projects, search, users])
+  }, [visibleProjects, search, users])
 
   const groupedByLead = useMemo(() => {
     const groups: Record<string, typeof projects> = {}
@@ -148,7 +161,14 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
                 {isLeadExpanded && (
                   <div className="py-0.5">
                     {leadProjects.map((project) => {
-                      const projectTasks = tasks.filter(t => t.projectId === project.id)
+                      // Team members only see tasks assigned to them
+                      const projectTasks = tasks.filter(t => {
+                        if (t.projectId !== project.id) return false
+                        if (isTeamMember && currentUser && t.assignees?.length) {
+                          return t.assignees.some(a => a.id === currentUser.id)
+                        }
+                        return true
+                      })
                       const isProjectExpanded = expandedProjects.includes(project.id) || search.length > 0
                       const isSelected = selectedProjectId === project.id && !selectedTaskId
 

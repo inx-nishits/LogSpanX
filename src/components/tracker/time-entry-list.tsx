@@ -278,20 +278,8 @@ export function TimeEntryList({ userId }: { userId: string }) {
                                 </div>
                               ) : null}
                             </div>
-                            <div className="flex-shrink-0 ml-auto">
-                              <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []}
-                                onChange={tagIds => canEdit && updateTimeEntry(entry.id, { tagIds })} />
-                            </div>
+                            <div className="flex-shrink-0 ml-auto" />
                           </div>
-
-                          <D>
-                            <Tip label={entry.billable ? 'Billable' : 'Non-billable'}>
-                              <button onClick={() => canEdit && updateTimeEntry(entry.id, { billable: !entry.billable })}
-                                className={cn('transition-colors', canEdit ? 'cursor-pointer' : 'cursor-default', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc] hover:text-[#999]')}>
-                                <DollarSign style={{ width: 20, height: 20 }} strokeWidth={1.5} />
-                              </button>
-                            </Tip>
-                          </D>
 
                           <D>
                             {canEdit ? (

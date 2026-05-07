@@ -79,7 +79,7 @@ interface DataStore {
   reset: () => void
 
   addTimeEntry: (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
-  updateTimeEntry: (id: string, updates: Partial<TimeEntry>) => Promise<void>
+  updateTimeEntry: (id: string, updates: Partial<TimeEntry>) => Promise<TimeEntry | undefined>
   deleteTimeEntry: (id: string) => Promise<void>
   deleteTimeEntries: (ids: string[]) => Promise<void>
   updateTimeEntries: (ids: string[], updates: Partial<TimeEntry>) => Promise<void>
@@ -325,7 +325,9 @@ export const useDataStore = create<DataStore>((set, get) => ({
       const merged = existing ? { ...existing, ...updates } : updates
 
       if ('description' in updates) body.description = merged.description ?? ''
-      if ('projectId' in updates) body.projectId = merged.projectId ?? null
+      if ('projectId' in updates) {
+        body.projectId = merged.projectId ?? null
+      }
       if ('taskId' in updates) body.taskId = merged.taskId ?? null
       if ('tagIds' in updates) body.tagIds = (merged.tagIds ?? []).filter(Boolean) // only when tags changed
       if ('billable' in updates) body.billable = merged.billable ?? false
@@ -342,7 +344,6 @@ export const useDataStore = create<DataStore>((set, get) => ({
         body: JSON.stringify(body),
       })
 
-      // Update store with returned data, preserving startTime from response
       const synced = mapApiTimeEntry(res)
       if (synced.startTime && !isNaN(synced.startTime.getTime())) {
         set((state) => ({
@@ -351,6 +352,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
           ),
         }))
       }
+      return synced
     } catch (err) {
       // Rollback on failure
       const existing = get().timeEntries.find(e => e.id === id)

@@ -139,11 +139,11 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
                     const filledPct = (member.totalHours / maxHours) * 100
 
                     return (
-                        <div key={member.id || `m-${idx}`} className="grid grid-cols-12 px-6 py-3 items-center hover:bg-[#fafbfc] transition-colors">
+                        <div key={member.id || `m-${idx}`} className="flex items-center px-6 py-3 transition-all relative hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)] hover:z-10">
                             {/* Avatar + Name */}
-                            <div className="col-span-2 flex items-center gap-3">
+                            <div className="w-[22%] flex-shrink-0 flex items-center gap-3">
                                 <div
-                                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 select-none"
+                                    className="w-9 h-9 rounded-sm flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 select-none"
                                     style={{ backgroundColor: AVATAR_COLORS[member.colorIndex % AVATAR_COLORS.length] }}
                                 >
                                     {initials}
@@ -154,26 +154,31 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
                                 </div>
                             </div>
 
-                            {/* Latest Activity — description + project + duration + time ago */}
-                            <div className="col-span-6 flex items-center gap-4 min-w-0 pr-6">
+                            {/* Dotted divider */}
+                            <div className="w-px self-stretch border-l border-dotted border-[#d0d8de] mx-4 flex-shrink-0" />
+
+                            {/* Latest Activity — all in one line */}
+                            <div className="flex-1 flex items-center gap-2 min-w-0 pr-4">
                                 {member.hasActivity ? (
                                     <>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[13px] text-[#333] truncate leading-tight">
-                                                {member.description || '(no description)'}
-                                            </p>
-                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                <div className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: member.latestProjectColor }} />
-                                                <p className="text-[11px] text-[#aaa] truncate">{member.latestProject}</p>
-                                            </div>
+                                        <p className="text-[13px] text-[#333] truncate min-w-0">
+                                            {member.description || '(no description)'}
+                                        </p>
+                                        <span className="text-[#ddd] flex-shrink-0">•</span>
+                                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                                            <div className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: member.latestProjectColor }} />
+                                            <p className="text-[12px] text-[#aaa] whitespace-nowrap">{member.latestProject}</p>
                                         </div>
                                         {member.latestDurDisplay && (
-                                            <span className="text-[13px] text-[#555] tabular-nums flex-shrink-0 font-medium">
-                                                {member.latestDurDisplay}
-                                            </span>
+                                            <>
+                                                <span className="text-[#ddd] flex-shrink-0">•</span>
+                                                <span className="text-[13px] text-[#555] tabular-nums flex-shrink-0 font-medium">
+                                                    {member.latestDurDisplay}
+                                                </span>
+                                            </>
                                         )}
                                         {member.latestTimeAgo && (
-                                            <span className="text-[12px] text-[#aaa] flex-shrink-0 whitespace-nowrap">
+                                            <span className="text-[12px] text-[#aaa] flex-shrink-0 whitespace-nowrap ml-auto">
                                                 {member.latestTimeAgo}
                                             </span>
                                         )}
@@ -183,8 +188,11 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
                                 )}
                             </div>
 
+                            {/* Dotted divider */}
+                            <div className="w-px self-stretch border-l border-dotted border-[#d0d8de] mx-4 flex-shrink-0" />
+
                             {/* Total + bar */}
-                            <div className="col-span-4 flex items-center gap-3 justify-end">
+                            <div className="w-[30%] flex-shrink-0 flex items-center gap-3">
                                 <span className="text-[13px] font-bold text-[#333] tabular-nums w-[48px] text-right flex-shrink-0">
                                     {member.totalDisplay}
                                 </span>
