@@ -7,6 +7,7 @@ import { Topbar } from '@/components/layout/topbar'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { useDataStore } from '@/lib/stores/data-store'
 import { getDashboardRoute, isPathAllowedForRole } from '@/lib/rbac'
+import { PermissionDeniedModal } from '@/components/ui/permission-denied-modal'
 
 export default function DashboardLayout({
   children,
@@ -49,7 +50,9 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[#f2f6f8] overflow-hidden relative">
+    <>
+      <PermissionDeniedModal />
+      <div className="flex h-screen bg-[#f2f6f8] overflow-hidden relative">
       <div className="z-50 h-full relative">
         <Sidebar />
       </div>
@@ -60,5 +63,6 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+    </>
   )
 }

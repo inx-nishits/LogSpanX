@@ -21,6 +21,15 @@ export function updateUser(id: string, updates: Partial<ApiUser>) {
   })
 }
 
+export function updateUserRole(userId: string, role: string) {
+  const token = useAuthStore.getState().token
+  return apiRequest<{ id: string; role: string }>(`/users/${userId}/role`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ role }),
+  })
+}
+
 export function toggleUserActive(id: string, isActive: boolean) {
   const token = useAuthStore.getState().token
   return apiRequest<ApiUser>(`/users/${id}/status`, {
@@ -35,11 +44,11 @@ export function deleteUser(id: string) {
   return apiRequest(`/users/${id}`, { method: 'DELETE', token })
 }
 
-export function inviteUser(email: string, role: string, billableRate?: number) {
+export function inviteUsers(emails: string[], role: string) {
   const token = useAuthStore.getState().token
-  return apiRequest('/users/invite', {
+  return apiRequest<{ invited: string[]; skipped: string[] }>('/users/invite', {
     method: 'POST',
     token,
-    body: JSON.stringify({ email, role, billableRate }),
+    body: JSON.stringify({ emails, role }),
   })
 }

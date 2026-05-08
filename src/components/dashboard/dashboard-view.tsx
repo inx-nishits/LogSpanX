@@ -32,7 +32,7 @@ export interface BarDay {
 
 export function DashboardView() {
     const { user } = useAuthStore()
-    const { timeEntries, projects, tasks, users, getDashboardStats } = useDataStore()
+    const { projects, tasks, users, getDashboardStats } = useDataStore()
     const [filters, setFilters] = useState({ viewBy: 'project', teamScope: 'team', groupBy: 'time' })
     const [dateRange, setDateRange] = useState({
         from: startOfWeek(new Date(), { weekStartsOn: 1 }),
@@ -48,25 +48,35 @@ export function DashboardView() {
 
     const [sourceEntries, setSourceEntries] = useState<TimeEntry[]>([])
 
+    // Fetch entries directly from API for the selected date range
+    useEffect(() => {
+        if (!user) return
+        setLoading(true)
+        const from = startOfDay(dateRange.from)
+        const to = endOfDay(dateRange.to)
+        import('@/lib/api/time-entries').then(({ getTimeEntries }) => {
+            getTimeEntries({
+                startDate: format(from, 'yyyy-MM-dd'),
+                endDate: format(to, 'yyyy-MM-dd'),
+            }).then((res) => {
+                import('@/lib/api/utils').then(({ extractArray }) => {
+                    import('@/lib/api/mappers').then(({ mapApiTimeEntry }) => {
+                        let entries = extractArray(res).map((e: Parameters<typeof mapApiTimeEntry>[0]) => mapApiTimeEntry(e))
+                        if (filters.teamScope === 'only-me') {
+                            entries = entries.filter((e: TimeEntry) => e.userId === user.id)
+                        }
+                        setSourceEntries(entries)
+                        setLoading(false)
+                    })
+                })
+            }).catch(() => setLoading(false))
+        })
+    }, [dateRange, filters.teamScope, user])
+
     const modalEntries = useMemo(() => {
         if (!modalDay) return []
         return sourceEntries.filter(e => format(new Date(e.startTime), 'EEE, MMM d') === modalDay)
     }, [modalDay, sourceEntries])
-
-    // Derive sourceEntries from store's timeEntries (always in sync) filtered by date range
-    useEffect(() => {
-        if (!user) return
-        const from = startOfDay(dateRange.from)
-        const to = endOfDay(dateRange.to)
-        const filtered = timeEntries.filter(e => {
-            const t = new Date(e.startTime)
-            if (t < from || t > to) return false
-            if (filters.teamScope === 'only-me' && e.userId !== user.id) return false
-            return true
-        })
-        setSourceEntries(filtered)
-        setLoading(false)
-    }, [timeEntries, dateRange, filters.teamScope, user])
 
     // Build lead name map from store instead of hardcoding
     const leadNames = useMemo(() =>
@@ -294,10 +304,8 @@ export function DashboardView() {
                 ]
 
         return {
-            totalTime: stats?.weekHours != null
-                ? `${Math.floor(stats.weekHours / 3600)}:${String(Math.floor((stats.weekHours % 3600) / 60)).padStart(2, '0')}`
-                : totalDisplay,
-            topProject: stats?.topProject || topProjectName,
+            totalTime: totalDisplay,
+            topProject: topProjectName,
             topLead: topLeadName,
             billablePercent,
             totalTasks: tasksInRange.length,
@@ -325,9 +333,9 @@ export function DashboardView() {
                     onClose={() => setModalDay(null)}
                 />
             )}
-            <div className="bg-[#dde2e7] px-6 py-3 border-b border-[#e4eaee] -mx-6 -mt-6 mb-6">
+            <div className="px-6 py-3 border-b border-[#e4eaee] -mx-6 -mt-6 mb-6">
                 <DashboardHeader
-                    role={user?.role || 'team_member'}
+                    role={user?.role || 'member'}
                     filters={filters}
                     onFilterChange={(f) => setFilters(prev => ({ ...prev, ...f }))}
                     currentRange={dateRange}

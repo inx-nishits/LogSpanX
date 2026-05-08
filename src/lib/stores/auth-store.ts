@@ -16,13 +16,14 @@ interface AuthState {
   refreshSession: () => Promise<void>
   login: (email: string, password: string) => Promise<boolean>
   signup: (name: string, email: string, password: string) => Promise<boolean>
+  acceptInvite: (token: string, name: string, password: string) => Promise<boolean>
   forgotPassword: (email: string) => Promise<void>
   resetPassword: (token: string, newPassword: string) => Promise<void>
   logout: () => Promise<void>
   updateUser: (user: Partial<User>) => Promise<void>
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>
   setRole: (role: User['role']) => Promise<void>
-  inviteUser: (email: string, role: User['role'], billableRate?: number) => Promise<void>
+  inviteUser: (emails: string[], role: User['role']) => Promise<{ invited: string[]; skipped: string[] }>
 }
 
 interface AuthPayload {
@@ -68,7 +69,8 @@ export const useAuthStore = create<AuthState>()(
     const payload = await apiRequest<SessionPayload>('/api/auth/session', { method: 'GET' })
 
     if (!payload.user) {
-      set({ token: null, refreshToken: null, user: null, authStatus: 'unauthenticated' })
+      // Don't set unauthenticated here — let initialize() handle the final state
+      // so we don't trigger a premature resetData() in AppBootstrap
       return
     }
 
@@ -79,7 +81,14 @@ export const useAuthStore = create<AuthState>()(
     set({ authStatus: 'initializing', error: null })
 
     try {
-      await get().refreshSession()
+      const payload = await apiRequest<SessionPayload>('/api/auth/session', { method: 'GET' })
+
+      if (!payload.user) {
+        set({ token: null, refreshToken: null, user: null, authStatus: 'unauthenticated', error: null })
+        return
+      }
+
+      set(authenticatedState(payload.user, payload.token ?? undefined))
     } catch (error) {
       const status = error instanceof Error && 'status' in error ? (error as { status: number }).status : 0
       if (status === 401 || status === 403) {
@@ -137,6 +146,28 @@ export const useAuthStore = create<AuthState>()(
         user: null,
         authStatus: 'unauthenticated',
         error: error instanceof Error ? error.message : 'Signup failed',
+      })
+      return false
+    }
+  },
+
+  acceptInvite: async (inviteToken: string, name: string, password: string) => {
+    set({ error: null })
+    try {
+      const payload = await apiRequest<AuthPayload>('/api/auth/accept-invite', {
+        method: 'POST',
+        body: JSON.stringify({ token: inviteToken, name, password }),
+        token: null,
+      })
+      set(authenticatedState(payload.user, payload.token, payload.refreshToken))
+      return true
+    } catch (error) {
+      set({
+        token: null,
+        refreshToken: null,
+        user: null,
+        authStatus: 'unauthenticated',
+        error: error instanceof Error ? error.message : 'Failed to accept invite',
       })
       return false
     }
@@ -214,11 +245,11 @@ export const useAuthStore = create<AuthState>()(
     })
   },
 
-  inviteUser: async (email, role, billableRate = 0) => {
-    await apiRequest('/users/invite', {
+  inviteUser: async (emails, role) => {
+    return await apiRequest<{ invited: string[]; skipped: string[] }>('/users/invite', {
       method: 'POST',
       token: get().token,
-      body: JSON.stringify({ email, role, billableRate }),
+      body: JSON.stringify({ emails, role }),
     })
   },
     }),

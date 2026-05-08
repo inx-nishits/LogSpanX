@@ -31,6 +31,7 @@ export interface ApiTeamsResponse {
 export interface ApiGroup {
   _id: string
   name: string
+  leadId?: string | null
   memberIds: string[]
   createdAt: string
   updatedAt: string
@@ -74,11 +75,11 @@ export function getGroups() {
   return apiRequest<ApiGroup[]>('/groups', { method: 'GET', token: token() })
 }
 
-export function createGroup(name: string, memberIds: string[] = []) {
-  return apiRequest<ApiGroup>('/groups', { method: 'POST', token: token(), body: JSON.stringify({ name, memberIds }) })
+export function createGroup(name: string, memberIds: string[] = [], leadId?: string) {
+  return apiRequest<ApiGroup>('/groups', { method: 'POST', token: token(), body: JSON.stringify({ name, memberIds, ...(leadId ? { leadId } : {}) }) })
 }
 
-export function updateGroup(id: string, data: { name?: string; memberIds?: string[] }) {
+export function updateGroup(id: string, data: { name?: string; memberIds?: string[]; leadId?: string | null }) {
   return apiRequest<ApiGroup>(`/groups/${id}`, { method: 'PUT', token: token(), body: JSON.stringify(data) })
 }
 
@@ -88,6 +89,7 @@ export function deleteGroup(id: string) {
 
 // ─── Users ────────────────────────────────────────────────────────────────
 
+/** @deprecated Use updateUserRole from api/users.ts instead */
 export function updateUserRole(userId: string, role: string) {
   return apiRequest<{ _id: string; role: string }>(`/users/${userId}/role`, {
     method: 'PATCH',

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Search, Star, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Search, Star, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,6 @@ import {
 import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { cn } from '@/lib/utils'
-import { ProjectLeadModal } from './project-lead-modal'
 
 interface ProjectPickerProps {
   selectedProjectId?: string
@@ -27,15 +26,12 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
   const [expandedLeads, setExpandedLeads] = useState<string[]>(['user_2', 'no_lead'])
   const [expandedProjects, setExpandedProjects] = useState<string[]>(['project_2'])
 
-  const [modalOpen, setModalOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [activeLead, setActiveLead] = useState({ id: '', name: '' })
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
   const selectedTask = tasks.find(t => t.id === selectedTaskId)
 
-  // Team members only see projects they are assigned to (as member or lead)
-  const isTeamMember = currentUser?.role === 'team_member'
+  const isTeamMember = currentUser?.role === 'member'
 
   const visibleProjects = useMemo(() => {
     if (!isTeamMember || !currentUser) return projects
@@ -144,17 +140,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
                   <div className="flex items-center space-x-3 text-gray-400">
                     <span className="text-[11px] font-medium">{leadProjects.length} Projects</span>
                     {isLeadExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setActiveLead({ id: leadId, name: leadName })
-                        setModalOpen(true)
-                        setDropdownOpen(false)
-                      }}
-                      className="p-1 hover:bg-gray-100 rounded-sm transition-colors text-gray-400 hover:text-[#03a9f4]"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </button>
+
                   </div>
                 </div>
 
@@ -179,7 +165,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
                               "w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer group/project",
                               isSelected && "bg-blue-50/40"
                             )}
-                            onClick={() => onSelect(project.id)}
+                            onClick={() => { onSelect(project.id); setDropdownOpen(false) }}
                           >
                             <div className="flex items-center space-x-3 min-w-0 flex-1">
                               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: project.color }} />
@@ -221,6 +207,7 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       onSelect(project.id, task.id)
+                                      setDropdownOpen(false)
                                     }}
                                   >
                                     <span className={cn(
@@ -249,15 +236,6 @@ export function ProjectPicker({ selectedProjectId, selectedTaskId, onSelect, onC
         </div>
       </DropdownMenuContent>
 
-      <ProjectLeadModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        leadId={activeLead.id}
-        leadName={activeLead.name}
-        onSelect={onSelect}
-        selectedProjectId={selectedProjectId}
-        selectedTaskId={selectedTaskId}
-      />
     </DropdownMenu>
   )
 }

@@ -10,6 +10,7 @@ import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import Link from 'next/link'
 import { updateTaskAssignees } from '@/lib/api/tasks'
+import { canDeleteProject, canManageProjectMembers, canManageTasks } from '@/lib/rbac'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmtHours = (s: number) => {
@@ -41,6 +42,10 @@ export default function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>('TASKS')
   const [isFavorite, setIsFavorite] = useState(false)
   const [taskAssignees, setTaskAssignees] = useState<Record<string, { id: string; name: string }[]>>({})
+  const { user: currentUser } = useAuthStore()
+  const canManageProjectTasks = currentUser ? canManageTasks(currentUser.role) : false
+  const canManageMembers = currentUser ? canManageProjectMembers(currentUser.role) : false
+  const canRemoveProject = currentUser ? canDeleteProject(currentUser.role) : false
 
   // Seed taskAssignees only for tasks not yet tracked locally
   useEffect(() => {
@@ -169,13 +174,15 @@ export default function ProjectDetailPage() {
                     }`}
                 />
               </button>
-              <button
-                onClick={handleDeleteProject}
-                className="p-1 hover:bg-red-50 rounded transition-colors"
-                title="Delete project"
-              >
-                <Trash2 className="h-4 w-4 text-[#ccc] hover:text-red-500" />
-              </button>
+              {canRemoveProject && (
+                <button
+                  onClick={handleDeleteProject}
+                  className="p-1 hover:bg-red-50 rounded transition-colors"
+                  title="Delete project"
+                >
+                  <Trash2 className="h-4 w-4 text-[#ccc] hover:text-red-500" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -207,6 +214,7 @@ export default function ProjectDetailPage() {
             projectId={id as string}
             taskAssignees={taskAssignees}
             setTaskAssignees={setTaskAssignees}
+            canManage={canManageProjectTasks}
             onCreateTask={createTask}
             onUpdateTask={updateTask}
             onDeleteTask={deleteTask}
@@ -220,6 +228,7 @@ export default function ProjectDetailPage() {
             onAssignMember={assignMember}
             onUnassignMember={unassignMember}
             onMemberRemoved={removeUserFromTaskAssignees}
+            canManage={canManageMembers}
           />
         )}
         {activeTab === 'STATUS' && (
@@ -371,6 +380,7 @@ function TasksTab({
   projectId,
   taskAssignees,
   setTaskAssignees,
+  canManage,
   onCreateTask,
   onUpdateTask,
   onDeleteTask,
@@ -381,13 +391,11 @@ function TasksTab({
   projectId: string
   taskAssignees: Record<string, { id: string; name: string }[]>
   setTaskAssignees: React.Dispatch<React.SetStateAction<Record<string, { id: string; name: string }[]>>>
+  canManage: boolean
   onCreateTask: (projectId: string, name: string) => Promise<void>
   onUpdateTask: (taskId: string, updates: { name?: string; completed?: boolean }) => Promise<void>
   onDeleteTask: (taskId: string) => Promise<void>
 }) {
-  const { user: currentUser } = useAuthStore()
-  const canManageAssignees = currentUser?.role === 'project_manager' || currentUser?.role === 'team_lead'
-
   // Seed is handled at page level
 
   const handleUpdateAssignees = async (taskId: string, assigneeIds: string[]) => {
@@ -422,7 +430,7 @@ function TasksTab({
   }, [tasks, filter, search])
 
   const handleAddTask = async () => {
-    if (!newTaskName.trim() || adding) return
+    if (!canManage || !newTaskName.trim() || adding) return
     setAdding(true)
     try {
       await onCreateTask(projectId, newTaskName.trim())
@@ -435,7 +443,7 @@ function TasksTab({
   }
 
   const handleToggleComplete = async (task: { id: string; completed: boolean; name: string }) => {
-    // Optimistic update via store — toggle locally first
+    if (!canManage) return
     const { tasks: storeTasks } = useDataStore.getState()
     useDataStore.setState({
       tasks: storeTasks.map(t =>
@@ -456,6 +464,7 @@ function TasksTab({
   }
 
   const handleRename = async (taskId: string) => {
+    if (!canManage) return
     if (!editName.trim()) { setEditingId(null); return }
     try {
       await onUpdateTask(taskId, { name: editName.trim() })
@@ -511,21 +520,25 @@ function TasksTab({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Add new Task"
-            value={newTaskName}
-            onChange={(e) => setNewTaskName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-            className="px-2.5 py-[5px] text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] w-[180px]"
-          />
-          <button
-            onClick={handleAddTask}
-            disabled={adding || !newTaskName.trim()}
-            className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[13px] font-bold uppercase tracking-widest px-4 py-[5px] rounded-sm transition-colors disabled:opacity-50"
-          >
-            {adding ? '…' : 'ADD'}
-          </button>
+          {canManage && (
+            <>
+              <input
+                type="text"
+                placeholder="Add new Task"
+                value={newTaskName}
+                onChange={(e) => setNewTaskName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                className="px-2.5 py-[5px] text-[13px] border border-[#c6d2d9] rounded-sm outline-none focus:border-[#03a9f4] w-[180px]"
+              />
+              <button
+                onClick={handleAddTask}
+                disabled={adding || !newTaskName.trim()}
+                className="bg-[#03a9f4] hover:bg-[#0288d1] text-white text-[13px] font-bold uppercase tracking-widest px-4 py-[5px] rounded-sm transition-colors disabled:opacity-50"
+              >
+                {adding ? '…' : 'ADD'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -601,14 +614,14 @@ function TasksTab({
                   taskId={task.id}
                   assignees={taskAssignees[task.id] ?? task.assignees ?? []}
                   projectMembers={projectMembers}
-                  canManage={canManageAssignees}
+                  canManage={canManage}
                   onUpdate={handleUpdateAssignees}
                 />
               </div>
 
               {/* Kebab menu — owner/admin only */}
               <div className="w-[40px] flex justify-end">
-                {canManageAssignees && (
+                {canManage && (
                   <button
                     onClick={(e) => {
                       if (actionMenuId === task.id) {
@@ -624,7 +637,7 @@ function TasksTab({
                     <MoreVertical className="h-4 w-4" />
                   </button>
                 )}
-                {canManageAssignees && actionMenuId === task.id && (
+                {canManage && actionMenuId === task.id && (
                   <TaskActionMenu
                     pos={menuPos}
                     onRename={() => {
@@ -747,6 +760,7 @@ function AccessTab({
   onAssignMember,
   onUnassignMember,
   onMemberRemoved,
+  canManage,
 }: {
   members: { id: string; name: string; email: string; memberRole: string; billableRate?: number }[]
   users: { id: string; name: string }[]
@@ -754,6 +768,7 @@ function AccessTab({
   onAssignMember: (projectId: string, userId: string, role?: string, hourlyRate?: number) => Promise<void>
   onUnassignMember: (projectId: string, userId: string) => Promise<void>
   onMemberRemoved: (userId: string) => void
+  canManage: boolean
 }) {
   const [visibility, setVisibility] = useState<'private' | 'public'>('private')
   const [showAddPanel, setShowAddPanel] = useState(false)
@@ -860,7 +875,7 @@ function AccessTab({
       </div>
 
       {/* Add members */}
-      <div className="px-5 py-3 border-b border-[#e4eaee]">
+      {canManage && <div className="px-5 py-3 border-b border-[#e4eaee]">
         <button
           ref={addBtnRef}
           onClick={() => {
@@ -951,7 +966,7 @@ function AccessTab({
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Members table */}
       <div>
@@ -1003,18 +1018,20 @@ function AccessTab({
                 </span>
               </div>
               <div className="w-[40px] flex justify-end">
-                <button
-                  onClick={() => handleUnassign(member.id, member.name)}
-                  disabled={removing === member.id}
-                  className="p-1 text-[#ccc] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
-                  title="Remove member"
-                >
-                  {removing === member.id ? (
-                    <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <X className="h-4 w-4" />
-                  )}
-                </button>
+                {canManage && (
+                  <button
+                    onClick={() => handleUnassign(member.id, member.name)}
+                    disabled={removing === member.id}
+                    className="p-1 text-[#ccc] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                    title="Remove member"
+                  >
+                    {removing === member.id ? (
+                      <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           ))

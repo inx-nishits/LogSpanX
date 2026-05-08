@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, format, parseISO } from 'date-fns'
-import { ChevronDown, DollarSign, MoreVertical, Play, Check, ArrowUp, ArrowDown, Plus } from 'lucide-react'
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, addMonths, subMonths } from 'date-fns'
+import { ChevronDown, DollarSign, MoreVertical, Check, ArrowUp, ArrowDown, Plus, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { cn } from '@/lib/utils'
 import { ReportShell, DateRange } from '../_components/report-shell'
@@ -16,6 +16,9 @@ import { TimeEntry, Project, User, Tag } from '@/lib/types'
 import { getTimeEntries, TimeEntryParams } from '@/lib/api/time-entries'
 import { ApiTimeEntry, mapApiTimeEntry } from '@/lib/api/mappers'
 import { extractArray } from '@/lib/api/utils'
+import { canViewAllTimeEntries } from '@/lib/rbac'
+
+import { createPortal } from 'react-dom'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,6 +119,95 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
 
 // ─── Inline Entry Bar ────────────────────────────────────────────────────────
 
+function MiniDatePicker({ selected, onChange }: { selected: Date; onChange: (d: Date) => void }) {
+  const [month, setMonth] = useState(startOfMonth(selected))
+  const days = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }),
+  })
+  return (
+    <div className="bg-white border border-[#e4eaee] shadow-xl rounded-sm p-3 w-[260px]">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={e => { e.stopPropagation(); setMonth(m => subMonths(m, 1)) }} className="p-1 hover:bg-gray-100 rounded">
+          <ChevronLeft className="h-4 w-4 text-[#666]" />
+        </button>
+        <span className="text-[13px] font-semibold text-[#333]">{format(month, 'MMMM yyyy')}</span>
+        <button onClick={e => { e.stopPropagation(); setMonth(m => addMonths(m, 1)) }} className="p-1 hover:bg-gray-100 rounded">
+          <ChevronRight className="h-4 w-4 text-[#666]" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
+          <div key={d} className="text-center text-[11px] text-[#aaa] font-medium py-1">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {days.map(day => (
+          <button key={day.toISOString()} onClick={e => { e.stopPropagation(); onChange(day) }}
+            className={cn('h-8 w-full text-[12px] rounded transition-colors',
+              isSameDay(day, selected) ? 'bg-[#03a9f4] text-white font-bold' :
+              isToday(day) ? 'text-[#03a9f4] font-bold hover:bg-[#eaf4fb]' :
+              isSameMonth(day, month) ? 'text-[#333] hover:bg-[#f0f4f8]' : 'text-[#ccc] hover:bg-[#f0f4f8]'
+            )}>
+            {format(day, 'd')}
+          </button>
+        ))}
+      </div>
+      <button onClick={e => { e.stopPropagation(); onChange(new Date()); setMonth(startOfMonth(new Date())) }}
+        className="mt-2 w-full text-[12px] text-[#03a9f4] hover:underline text-center">Today</button>
+    </div>
+  )
+}
+
+function DateCell({ date, onSave }: { date: Date | string; onSave: (d: Date) => void }) {
+  const d = new Date(date)
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const portalRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const h = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (triggerRef.current && !triggerRef.current.contains(target) &&
+        portalRef.current && !portalRef.current.contains(target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  const handleOpen = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX })
+    }
+    setOpen(o => !o)
+  }
+
+  return (
+    <div ref={triggerRef}>
+      <div onClick={handleOpen}
+        className={cn('flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded hover:bg-[#f5f7f9] transition-colors whitespace-nowrap',
+          open ? 'text-[#03a9f4]' : 'text-[#999] hover:text-[#333]')}>
+        <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+        <span className="text-[12px]">{format(d, 'MMM d, yyyy')}</span>
+      </div>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div ref={portalRef} style={{ position: 'absolute', top: pos.top, left: pos.left, zIndex: 9999 }}>
+          <MiniDatePicker selected={d} onChange={newDate => {
+            const old = new Date(date)
+            newDate.setHours(old.getHours(), old.getMinutes(), old.getSeconds())
+            onSave(newDate)
+            setOpen(false)
+          }} />
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
+
 function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => void, defaultDate: Date }) {
   const { users } = useDataStore()
   const [desc, setDesc] = useState('')
@@ -169,7 +261,8 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
   }
 
   const { user: currentUser } = useAuthStore()
-  const canManageUsers = currentUser?.role === 'project_manager' || currentUser?.role === 'team_lead'
+  const canManageUsers = currentUser ? canViewAllTimeEntries(currentUser.role) : false
+  const selectableUsers = currentUser?.role === 'admin' ? users.filter(u => u.role !== 'owner') : users
   return (
     <div className="flex items-center h-[46px] bg-[#f9fbfc] border-b border-[#e4eaee]">
 
@@ -188,7 +281,7 @@ function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdA
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[180px] bg-white border border-gray-100 shadow-xl">
-                {users.map(u => (
+                {selectableUsers.map(u => (
                   <DropdownMenuItem key={u.id} onClick={() => setUid(u.id)} className="py-2.5 px-3 cursor-pointer text-[16px]">
                     {u.name} {u.id === uid && <Check className="h-3.5 w-3.5 ml-auto text-[#03a9f4]" />}
                   </DropdownMenuItem>
@@ -282,27 +375,36 @@ export default function DetailedReportPage() {
   const router = useRouter()
   const pathname = usePathname()
   const { user: currentUser } = useAuthStore()
-  const canManageUsers = currentUser?.role === 'project_manager' || currentUser?.role === 'team_lead'
+  const canManageUsers = currentUser ? canViewAllTimeEntries(currentUser.role) : false
 
-  // Team member IDs for team_lead RBAC
-  const teamMemberIds = useMemo(() => {
-    if (currentUser?.role !== 'team_lead') return new Set<string>()
-    const ids = new Set<string>()
-    projects.forEach(p => {
-      if (p.leadId === currentUser.id) {
-        p.members.forEach(m => ids.add(typeof m === 'string' ? m : m.userId))
-      }
-    })
-    return ids
+  // RBAC: matches backend canManageTimeEntryForUser
+  const ledProjectIds = useMemo(() => {
+    if (currentUser?.role !== 'group_lead') return new Set<string>()
+    return new Set(projects.filter(p => p.leadId === currentUser.id).map(p => p.id))
+  }, [projects, currentUser])
+
+  const ledMemberIds = useMemo(() => {
+    if (currentUser?.role !== 'group_lead') return new Set<string>()
+    return new Set(
+      projects
+        .filter(p => p.leadId === currentUser.id)
+        .flatMap(p => p.members.map(m => typeof m === 'string' ? m : m.userId))
+    )
   }, [projects, currentUser])
 
   const canEditEntry = (entry: TimeEntry) => {
     if (!currentUser) return false
-    if (currentUser.role === 'project_manager') return true   // Project Manager: edit anyone
-    if (currentUser.role === 'team_lead') {                   // Team Lead: edit own + team members
-      return entry.userId === currentUser.id || teamMemberIds.has(entry.userId)
+    if (currentUser.role === 'owner') return true
+    if (currentUser.role === 'admin') {
+      const entryUser = users.find(u => u.id === entry.userId)
+      return entryUser?.role !== 'owner'
     }
-    return entry.userId === currentUser.id                    // Team Member: own entries only
+    if (currentUser.role === 'group_lead') {
+      if (entry.userId === currentUser.id) return true
+      if (entry.projectId && ledProjectIds.has(entry.projectId)) return true
+      return ledMemberIds.has(entry.userId)
+    }
+    return entry.userId === currentUser.id
   }
 
   const paramFrom = searchParams.get('from')
@@ -512,11 +614,11 @@ export default function DetailedReportPage() {
   }
 
   const updateEntry = (id: string, updates: Partial<typeof filtered[0]>) => {
+    const existing = filtered.find(e => e.id === id)
     // Optimistic local update
     setFiltered(prev => prev.map(e => e.id !== id ? e : { ...e, ...updates }))
-    updateTimeEntry(id, updates).then(synced => {
+    updateTimeEntry(id, updates, existing).then(synced => {
       if (synced) {
-        // Merge API response but keep our explicit updates (e.g. projectId: undefined means cleared)
         setFiltered(prev => prev.map(e => e.id !== id ? e : { ...e, ...synced, ...updates }))
       }
     })
@@ -712,6 +814,9 @@ export default function DetailedReportPage() {
                 <div className="w-[90px] text-center flex-shrink-0 px-2 flex items-center justify-center cursor-pointer hover:text-[#555]" onClick={() => handleSort('duration')}>
                   Duration <SortIcon field="duration" sortField={sortField} sortOrder={sortOrder} />
                 </div>
+                <div className="w-[140px] text-center flex-shrink-0 px-2 flex items-center justify-center cursor-pointer hover:text-[#555]" onClick={() => handleSort('startTime')}>
+                  Date <SortIcon field="startTime" sortField={sortField} sortOrder={sortOrder} />
+                </div>
                 <div className="w-[100px] flex-shrink-0" />
               </>
             )}
@@ -765,7 +870,7 @@ export default function DetailedReportPage() {
                               onBlur={e => updateEntry(entry.id, { description: e.target.value })}
                               placeholder="Add description"
                               readOnly={!canEdit}
-                              className="text-[13px] text-[#333] outline-none bg-transparent placeholder-[#bbb] truncate flex-initial w-auto min-w-[120px] px-1.5 py-0.5 rounded border border-transparent hover:border-[#d0d8de] focus:border-[#d0d8de] transition-colors"
+                              className="text-[13px] text-[#333] outline-none bg-transparent placeholder-[#bbb] truncate flex-initial w-auto min-w-[280px] px-1.5 py-0.5 rounded border border-transparent hover:border-[#d0d8de] focus:border-[#d0d8de] transition-colors"
                             />
                             <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0">
                               <span className="text-gray-300 flex-shrink-0">•</span>
@@ -846,12 +951,22 @@ export default function DetailedReportPage() {
                           )}
                         </div>
 
+                        <div className="w-[140px] flex-shrink-0 flex items-center justify-center">
+                          {canEdit ? (
+                            <DateCell date={entry.startTime} onSave={newDate => {
+                              const newEndTime = entry.endTime
+                                ? new Date(newDate.getTime() + (entry.duration ?? 0) * 1000)
+                                : undefined
+                              updateEntry(entry.id, { startTime: newDate, endTime: newEndTime })
+                            }} />
+                          ) : (
+                            <span className="text-[12px] text-[#999]">
+                              {format(new Date(entry.startTime), 'MMM d, yyyy')}
+                            </span>
+                          )}
+                        </div>
+
                         <div className="w-[100px] flex-shrink-0 flex items-center justify-end pr-4 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Tip label="Duplicate">
-                            <button className="text-[#ccc] hover:text-[#03a9f4] cursor-pointer transition-colors p-1" onClick={() => onDup(entry)}>
-                              <Play style={{ width: 16, height: 16 }} />
-                            </button>
-                          </Tip>
                           {canEdit && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>

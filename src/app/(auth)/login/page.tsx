@@ -20,7 +20,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (hasHydrated && authStatus === 'authenticated') {
-      const currentRole = useAuthStore.getState().user?.role ?? 'team_member'
+      const currentRole = useAuthStore.getState().user?.role ?? 'member'
       router.replace(getDashboardRoute(currentRole))
     }
   }, [hasHydrated, authStatus, router])
@@ -33,7 +33,7 @@ export default function LoginPage() {
     try {
       const success = await login(email, password)
       if (success) {
-        const currentRole = useAuthStore.getState().user?.role ?? 'team_member'
+        const currentRole = useAuthStore.getState().user?.role ?? 'member'
         router.replace(getDashboardRoute(currentRole))
       } else {
         setError(authError || 'Invalid email or password')

@@ -52,7 +52,7 @@ export function setAuthCookies(response: NextResponse, payload: BackendAuthPaylo
   if (payload.token) {
     response.cookies.set(ACCESS_COOKIE, payload.token, {
       ...baseCookieOptions,
-      maxAge: 60 * 60,
+      maxAge: 60 * 60 * 24,
       priority: 'high',
     })
   }

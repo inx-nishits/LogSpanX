@@ -8,12 +8,6 @@ import { TimeEntry } from '@/lib/types'
 
 const AVATAR_COLORS = ['#e91e63', '#9c27b0', '#03a9f4', '#4caf50', '#ff9800', '#795548', '#607d8b', '#f44336', '#00bcd4', '#8bc34a']
 
-function roleLabel(role: string) {
-    if (role === 'project_manager' || role === 'owner') return 'Project Manager'
-    if (role === 'team_lead' || role === 'admin') return 'Team Lead'
-    return 'Team Member'
-}
-
 interface TeamActivitiesProps {
     entries: TimeEntry[]
 }
@@ -45,7 +39,7 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
             const userEntries = entries.filter(e => e.userId === uid)
 
             const name = userObj?.name || userEntries.find(e => e.userName)?.userName || `User (${uid?.substring(0, 4) ?? '?'})`
-            const role = userObj?.role || 'team_member'
+            const role = userObj?.role || 'member'
 
             const totalSec = userEntries.reduce((a, c) => a + (c.duration ?? 0), 0)
             const h = Math.floor(totalSec / 3600)

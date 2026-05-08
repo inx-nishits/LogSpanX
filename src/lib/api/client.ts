@@ -195,10 +195,10 @@ export async function apiRequest<T>(
 
     if (!response.ok) {
       const message = getMessage(payload, `Request failed with status ${response.status}`)
-      // Show toast for permission errors
+      // Show permission denied modal for 403 errors
       if (response.status === 403) {
-        const { useToastStore } = await import('@/lib/stores/toast-store')
-        useToastStore.getState().show('You do not have permission to perform this action', 'error')
+        const { usePermissionStore } = await import('@/lib/stores/permission-store')
+        usePermissionStore.getState().show()
       }
       throw new ApiError(message, response.status, payload)
     }

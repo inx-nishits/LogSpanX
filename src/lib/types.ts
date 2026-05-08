@@ -1,19 +1,23 @@
+export type Role = 'owner' | 'admin' | 'group_lead' | 'member'
+
 export interface User {
   id: string
   email: string
   name: string
   avatar?: string
-  role: 'project_manager' | 'team_lead' | 'team_member'
+  role: Role
   isActive?: boolean
   archived?: boolean
   billableRate?: number
   group?: string
   workspaceId?: string
+  inviteAccepted?: boolean
 }
 
 export interface Group {
   id: string
   name: string
+  leadId?: string
   memberIds: string[]
   createdAt: Date
   updatedAt: Date

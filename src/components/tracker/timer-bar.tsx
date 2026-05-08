@@ -91,7 +91,7 @@ function DatePicker({ selected, onChange }: { selected: Date; onChange: (d: Date
 }
 
 // ─── Timer Bar ────────────────────────────────────────────────────────────────
-export function TimerBar() {
+export function TimerBar({ onEntryAdded }: { onEntryAdded?: () => void }) {
   const { user } = useAuthStore()
   const { addTimeEntry } = useDataStore()
 
@@ -140,6 +140,7 @@ export function TimerBar() {
       setBillable(false)
       setDurationInput('00:00')
       setSelectedDate(new Date())
+      onEntryAdded?.()
     } catch (err) {
       console.error('Failed to add time entry', err)
     }

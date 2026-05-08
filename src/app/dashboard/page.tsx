@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { getDashboardRoute } from '@/lib/rbac'
 
 export default function DashboardPage() {
   const { user, authStatus, hasHydrated } = useAuthStore()
@@ -12,14 +13,7 @@ export default function DashboardPage() {
     if (!hasHydrated || authStatus === 'idle' || authStatus === 'initializing') return
     if (authStatus !== 'authenticated' || !user) return
 
-    const role = user.role
-    if (role === 'project_manager') {
-      router.replace('/dashboard/pm')
-    } else if (role === 'team_lead') {
-      router.replace('/dashboard/tl')
-    } else {
-      router.replace('/dashboard/member')
-    }
+    router.replace(getDashboardRoute(user.role))
   }, [hasHydrated, authStatus, user, router])
 
   return (

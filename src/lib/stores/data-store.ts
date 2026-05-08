@@ -79,7 +79,7 @@ interface DataStore {
   reset: () => void
 
   addTimeEntry: (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
-  updateTimeEntry: (id: string, updates: Partial<TimeEntry>) => Promise<TimeEntry | undefined>
+  updateTimeEntry: (id: string, updates: Partial<TimeEntry>, existingEntry?: TimeEntry) => Promise<TimeEntry | undefined>
   deleteTimeEntry: (id: string) => Promise<void>
   deleteTimeEntries: (ids: string[]) => Promise<void>
   updateTimeEntries: (ids: string[], updates: Partial<TimeEntry>) => Promise<void>
@@ -108,11 +108,11 @@ interface DataStore {
   updateTag: (id: string, updates: Partial<Tag>) => Promise<void>
   deleteTag: (id: string) => Promise<void>
 
-  createGroup: (name: string, memberIds: string[]) => Promise<void>
-  updateGroup: (id: string, updates: { name?: string; memberIds?: string[] }) => Promise<void>
+  createGroup: (name: string, memberIds: string[], leadId?: string) => Promise<void>
+  updateGroup: (id: string, updates: { name?: string; memberIds?: string[]; leadId?: string | null }) => Promise<void>
   deleteGroup: (id: string) => Promise<void>
 
-  inviteUser: (email: string, role: User['role'], billableRate?: number) => Promise<void>
+  inviteUser: (emails: string[], role: User['role']) => Promise<{ invited: string[]; skipped: string[] }>
   updateUserRecord: (id: string, updates: Partial<User>) => Promise<void>
   deleteUserRecord: (id: string) => Promise<void>
 
@@ -228,9 +228,21 @@ export const useDataStore = create<DataStore>((set, get) => ({
       const normalizedProjects = projects.map(mapApiProject)
 
       // Fetch tasks and time entries (less critical, handle failures gracefully)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const today = new Date()
+
       const [tasks, timeEntriesResult] = await Promise.allSettled([
         fetchProjectTasks(normalizedProjects),
-        apiRequest<unknown>('/time-entries', { method: 'GET', token }),
+        apiRequest<unknown>('/time-entries', {
+          method: 'GET',
+          token,
+          query: {
+            startDate: thirtyDaysAgo.toISOString().split('T')[0],
+            endDate: today.toISOString().split('T')[0],
+            limit: 500,
+          },
+        }),
       ])
 
       const finalTasks = tasks.status === 'fulfilled' ? tasks.value : []
@@ -306,37 +318,32 @@ export const useDataStore = create<DataStore>((set, get) => ({
     }))
   },
 
-  updateTimeEntry: async (id, updates) => {
+  updateTimeEntry: async (id, updates, existingEntry) => {
     try {
       const token = useAuthStore.getState().token
-      const existing = get().timeEntries.find(e => e.id === id)
-
-      // Optimistic update
-      if (existing) {
-        set((state) => ({
-          timeEntries: state.timeEntries.map((entry) =>
-            entry.id !== id ? entry : { ...entry, ...updates }
-          ),
-        }))
-      }
-
-      // Only send changed fields — per API spec
-      const body: Record<string, unknown> = {}
+      const existing = get().timeEntries.find(e => e.id === id) ?? existingEntry
       const merged = existing ? { ...existing, ...updates } : updates
 
-      if ('description' in updates) body.description = merged.description ?? ''
-      if ('projectId' in updates) {
-        body.projectId = merged.projectId ?? null
-      }
-      if ('taskId' in updates) body.taskId = merged.taskId ?? null
-      if ('tagIds' in updates) body.tagIds = (merged.tagIds ?? []).filter(Boolean) // only when tags changed
-      if ('billable' in updates) body.billable = merged.billable ?? false
-      if ('startTime' in updates) body.startTime = merged.startTime instanceof Date ? merged.startTime.toISOString() : merged.startTime ? new Date(merged.startTime as string).toISOString() : undefined
-      if ('endTime' in updates) body.endTime = merged.endTime instanceof Date ? merged.endTime.toISOString() : merged.endTime ? new Date(merged.endTime as string).toISOString() : undefined
-      if ('userId' in updates) body.userId = merged.userId
-      // Never send duration — backend calculates from startTime/endTime
+      // Optimistic update in store
+      set((state) => ({
+        timeEntries: state.timeEntries.map((e) => e.id !== id ? e : { ...e, ...updates }),
+      }))
 
-      if (Object.keys(body).length === 0) return
+      // Build PATCH body — always send all relevant fields from merged
+      const body: Record<string, unknown> = {
+        description: merged.description ?? '',
+        projectId: merged.projectId ?? null,
+        taskId: merged.taskId ?? null,
+        tagIds: (merged.tagIds ?? []).filter(Boolean),
+        billable: merged.billable ?? false,
+        startTime: merged.startTime instanceof Date
+          ? merged.startTime.toISOString()
+          : merged.startTime ? new Date(merged.startTime as string).toISOString() : undefined,
+        endTime: merged.endTime instanceof Date
+          ? merged.endTime.toISOString()
+          : merged.endTime ? new Date(merged.endTime as string).toISOString() : undefined,
+      }
+      if ('userId' in updates) body.userId = merged.userId
 
       const res = await apiRequest<ApiTimeEntry>(`/time-entries/${id}`, {
         method: 'PATCH',
@@ -345,19 +352,15 @@ export const useDataStore = create<DataStore>((set, get) => ({
       })
 
       const synced = mapApiTimeEntry(res)
-      if (synced.startTime && !isNaN(synced.startTime.getTime())) {
-        set((state) => ({
-          timeEntries: state.timeEntries.map((entry) =>
-            entry.id !== id ? entry : { ...entry, ...synced }
-          ),
-        }))
-      }
+      set((state) => ({
+        timeEntries: state.timeEntries.map((e) => e.id !== id ? e : { ...e, ...synced }),
+      }))
       return synced
     } catch (err) {
-      // Rollback on failure
-      const existing = get().timeEntries.find(e => e.id === id)
+      // Rollback
+      const existing = get().timeEntries.find(e => e.id === id) ?? existingEntry
       if (existing) set((state) => ({ timeEntries: state.timeEntries.map(e => e.id !== id ? e : existing) }))
-      console.error('Update failed:', err instanceof Error ? err.message : String(err))
+      throw err
     }
   },
 
@@ -632,29 +635,45 @@ export const useDataStore = create<DataStore>((set, get) => ({
     }))
   },
 
-  inviteUser: async (email, role, billableRate = 0) => {
+  inviteUser: async (emails, role) => {
     const token = useAuthStore.getState().token
-    await apiRequest('/users/invite', {
+    return await apiRequest<{ invited: string[]; skipped: string[] }>('/users/invite', {
       method: 'POST',
       token,
-      body: JSON.stringify({ email, role, billableRate }),
+      body: JSON.stringify({ emails, role }),
     })
   },
 
   updateUserRecord: async (id, updates) => {
     const token = useAuthStore.getState().token
-    const payload = await apiRequest<ApiUser>(`/users/${id}`, {
-      method: 'PUT',
-      token,
-      body: JSON.stringify({
-        role: updates.role,
-        billableRate: updates.billableRate,
-        group: updates.group,
-        archived: updates.archived,
-      }),
-    })
 
-    const updatedUser = mapApiUser(payload)
+    // Role changes use a dedicated PATCH endpoint
+    if (updates.role !== undefined) {
+      await apiRequest(`/users/${id}/role`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({ role: updates.role }),
+      })
+    }
+
+    const adminFields: Record<string, unknown> = {}
+    if (updates.billableRate !== undefined) adminFields.billableRate = updates.billableRate
+    if (updates.group !== undefined) adminFields.group = updates.group
+    if (updates.archived !== undefined) adminFields.archived = updates.archived
+    if (updates.name !== undefined) adminFields.name = updates.name
+
+    let updatedUser: User
+    if (Object.keys(adminFields).length > 0) {
+      const payload = await apiRequest<ApiUser>(`/users/${id}`, {
+        method: 'PUT',
+        token,
+        body: JSON.stringify(adminFields),
+      })
+      updatedUser = mapApiUser(payload)
+    } else {
+      updatedUser = { ...get().users.find(u => u.id === id)!, ...updates }
+    }
+
     set((state) => ({
       users: state.users.map((user) => (user.id === id ? updatedUser : user)),
     }))
@@ -719,12 +738,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
   },
 
   // ─── Groups ──────────────────────────────────────────────────────────────────
-  createGroup: async (name, memberIds) => {
+  createGroup: async (name, memberIds, leadId) => {
     const token = useAuthStore.getState().token
     const payload = await apiRequest<ApiGroup>('/groups', {
       method: 'POST',
       token,
-      body: JSON.stringify({ name, memberIds }),
+      body: JSON.stringify({ name, memberIds, ...(leadId ? { leadId } : {}) }),
     })
 
     set((state) => ({
@@ -740,6 +759,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
       body: JSON.stringify({
         name: updates.name,
         memberIds: updates.memberIds,
+        leadId: updates.leadId,
       }),
     })
 
@@ -844,10 +864,26 @@ export const useDataStore = create<DataStore>((set, get) => ({
   },
 
   getDashboardStats: async () => {
-    const token = useAuthStore.getState().token
-    return await apiRequest<DashboardStats>('/dashboard/stats', {
-      method: 'GET',
-      token,
+    const { timeEntries, projects } = useDataStore.getState()
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const startOfWeekDate = new Date(startOfToday)
+    startOfWeekDate.setDate(startOfToday.getDate() - ((startOfToday.getDay() + 6) % 7))
+
+    const todayEntries = timeEntries.filter(e => new Date(e.startTime) >= startOfToday)
+    const weekEntries = timeEntries.filter(e => new Date(e.startTime) >= startOfWeekDate)
+
+    const todayHours = todayEntries.reduce((a, e) => a + (e.duration ?? 0), 0)
+    const weekHours = weekEntries.reduce((a, e) => a + (e.duration ?? 0), 0)
+
+    const projectDurations: Record<string, number> = {}
+    weekEntries.forEach(e => {
+      if (e.projectId) projectDurations[e.projectId] = (projectDurations[e.projectId] ?? 0) + (e.duration ?? 0)
     })
+    const topProjectId = Object.entries(projectDurations).sort((a, b) => b[1] - a[1])[0]?.[0]
+    const topProject = projects.find(p => p.id === topProjectId)?.name ?? 'N/A'
+    const activeProjects = new Set(weekEntries.map(e => e.projectId).filter(Boolean)).size
+
+    return { todayHours, weekHours, activeProjects, topProject, teamActivity: [] }
   },
 }))

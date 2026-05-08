@@ -6,12 +6,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart3, LayoutGrid, Clock, Calendar, Users, Briefcase,
-  UserCircle, Tag, ChevronRight, Menu, X,
+  Tag, ChevronRight, Menu, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/lib/stores/sidebar-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { User } from '@/lib/types'
+import { canManageTags } from '@/lib/rbac'
 
 /* ── Reports flyout ─────────────────────────────────────────── */
 const REPORTS_FLYOUT = [
@@ -71,7 +72,7 @@ function ReportsFlyout({ visible, top, collapsed }: { visible: boolean; top: num
 interface MenuItem { label: string; icon: React.ElementType; href: string; chevron?: boolean }
 
 const getMenuItems = (role: User['role']) => {
-  const dashHref = role === 'project_manager' ? '/dashboard/pm' : role === 'team_lead' ? '/dashboard/tl' : '/dashboard/member'
+  const dashHref = role === 'owner' || role === 'admin' ? '/dashboard/pm' : role === 'group_lead' ? '/dashboard/tl' : '/dashboard/member'
 
   const topItems: MenuItem[] = [
     { label: 'Time Tracker', icon: Clock, href: '/dashboard/tracker' },
@@ -84,12 +85,11 @@ const getMenuItems = (role: User['role']) => {
   const manageItems: MenuItem[] = [
     { label: 'Projects', icon: Briefcase, href: '/dashboard/projects' },
     { label: 'Team', icon: Users, href: '/dashboard/team' },
-    { label: 'Project Lead', icon: UserCircle, href: '/dashboard/project-lead' },
     { label: 'Tags', icon: Tag, href: '/dashboard/tags' },
   ]
 
-  const filteredManage = role === 'team_member'
-    ? manageItems.filter(i => !['Tags', 'Project Lead'].includes(i.label))
+  const filteredManage = !canManageTags(role)
+    ? manageItems.filter(i => i.label !== 'Tags')
     : manageItems
 
   return { topItems, analyzeItems, manageItems: filteredManage }
@@ -195,7 +195,7 @@ export function Sidebar() {
   const [flyoutTop, setFlyoutTop] = useState(0)
   const reportsRef = useRef<HTMLDivElement>(null)
 
-  const { topItems, analyzeItems, manageItems } = getMenuItems(user?.role || 'team_member')
+  const { topItems, analyzeItems, manageItems } = getMenuItems(user?.role || 'member')
   const col = isCollapsed && !isMobileOpen // true when desktop-collapsed
 
   return (

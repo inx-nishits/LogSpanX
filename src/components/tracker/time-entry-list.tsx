@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { TimeEntry } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { TagPicker } from './tag-picker'
 import { DollarSign, MoreVertical, Check, Copy, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -11,6 +13,7 @@ import { ProjectPicker } from './project-picker'
 import { DeleteConfirmation } from './delete-confirmation'
 import { UndoToast } from './undo-toast'
 import { BulkEditModal } from './bulk-edit-modal'
+import { canViewAllTimeEntries } from '@/lib/rbac'
 import { startOfWeek, endOfWeek, subWeeks, isWithinInterval, startOfDay, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, addMonths, subMonths } from 'date-fns'
 
 const fmtDur = (s: number) =>
@@ -129,33 +132,56 @@ function DatePicker({ selected, onChange }: { selected: Date; onChange: (d: Date
 function DateCell({ date, onSave }: { date: Date | string; onSave: (d: Date) => void }) {
   const d = new Date(date)
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const portalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    if (!open) return
+    const h = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (
+        triggerRef.current && !triggerRef.current.contains(target) &&
+        portalRef.current && !portalRef.current.contains(target)
+      ) {
+        setOpen(false)
+      }
+    }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
-  }, [])
+  }, [open])
+
+  const handleOpen = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX })
+    }
+    setOpen(o => !o)
+  }
 
   return (
-    <div className="relative" ref={ref}>
-      <div 
-        className="flex items-center justify-center gap-2 group/date cursor-pointer hover:bg-[#f5f7f9] rounded px-2 py-1 transition-colors" 
+    <div className="relative" ref={triggerRef}>
+      <div
+        className="flex items-center justify-center gap-2 group/date cursor-pointer hover:bg-[#f5f7f9] rounded px-2 py-1 transition-colors"
         style={{ width: 130 }}
-        onClick={() => setOpen(o => !o)}
+        onClick={handleOpen}
       >
         <Calendar className={cn("h-3.5 w-3.5 transition-colors", open ? "text-[#03a9f4]" : "text-[#aaa] group-hover/date:text-[#03a9f4]")} />
         <span className={cn("text-[12px] whitespace-nowrap transition-colors", open ? "text-[#333]" : "text-[#999] group-hover/date:text-[#333]")}>
           {format(d, 'MMM d, yyyy')}
         </span>
       </div>
-      {open && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[500]" onClick={e => e.stopPropagation()}>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={portalRef}
+          style={{ position: 'absolute', top: pos.top, left: pos.left, zIndex: 9999 }}
+        >
           <DatePicker selected={d} onChange={newDate => {
             onSave(newDate)
             setOpen(false)
           }} />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -195,37 +221,140 @@ function DurCell({ dur, onSave }: { dur: number; onSave: (s: number) => void }) 
   )
 }
 
-export function TimeEntryList({ userId }: { userId: string }) {
-  const { timeEntries, projects, users, tasks, updateTimeEntry, deleteTimeEntry, deleteTimeEntries, addTimeEntry } = useDataStore()
+export function TimeEntryList({ userId, refreshKey }: { userId: string; refreshKey?: number }) {
+  const { projects, users, tasks, updateTimeEntry, deleteTimeEntry, deleteTimeEntries, addTimeEntry, isInitialized } = useDataStore()
   const { user } = useAuthStore()
+  const [entries, setEntries] = useState<TimeEntry[]>([])
+  const [fetchLoading, setFetchLoading] = useState(true)
 
-  // RBAC: can this user edit a given entry?
-  const canEditEntry = (entry: typeof timeEntries[0]) => {
+  // Fetch entries directly from API — single source of truth
+  useEffect(() => {
+    if (!isInitialized) return
+    setFetchLoading(true)
+    import('@/lib/api/time-entries').then(({ getTimeEntries }) =>
+      getTimeEntries({ userId }).then(res =>
+        import('@/lib/api/utils').then(({ extractArray }) =>
+          import('@/lib/api/mappers').then(({ mapApiTimeEntry }) => {
+            const raw = extractArray<Parameters<typeof mapApiTimeEntry>[0]>(res)
+            setEntries(raw.map(mapApiTimeEntry))
+            setFetchLoading(false)
+          })
+        )
+      ).catch(() => setFetchLoading(false))
+    )
+  }, [isInitialized, userId, refreshKey])
+
+  // RBAC: matches backend canManageTimeEntryForUser
+  const canEditEntry = (entry: TimeEntry) => {
     if (!user) return false
-    if (user.role === 'project_manager') return true
-    if (user.role === 'team_lead') {
-      const entryProject = projects.find(p => p.id === entry.projectId)
-      if (!entryProject) return entry.userId === user.id
-      return entryProject.leadId === user.id || entry.userId === user.id
+    if (user.role === 'owner') return true
+    if (user.role === 'admin') {
+      const entryUser = users.find(u => u.id === entry.userId)
+      // admin can edit any entry except those belonging to an owner
+      return entryUser?.role !== 'owner'
+    }
+    if (user.role === 'group_lead') {
+      // own entries always editable
+      if (entry.userId === user.id) return true
+      // entries of members on projects this group_lead leads
+      const ledProjectIds = new Set(projects.filter(p => p.leadId === user.id).map(p => p.id))
+      if (entry.projectId && ledProjectIds.has(entry.projectId)) return true
+      // entries of members who are on any project this group_lead leads
+      const ledMemberIds = new Set(
+        projects
+          .filter(p => p.leadId === user.id)
+          .flatMap(p => p.members.map(m => typeof m === 'string' ? m : m.userId))
+      )
+      return ledMemberIds.has(entry.userId)
     }
     return entry.userId === user.id
   }
+
+  // Local update handlers that immediately patch state
+  const handleUpdateEntry = async (id: string, updates: Partial<TimeEntry>, existing: TimeEntry) => {
+    // Optimistic update
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e))
+    try {
+      const synced = await updateTimeEntry(id, updates, existing)
+      if (synced) {
+        setEntries(prev => prev.map(e => e.id === id ? { ...e, ...synced } : e))
+      }
+    } catch (err) {
+      // Rollback on failure
+      setEntries(prev => prev.map(e => e.id === id ? existing : e))
+      console.error('Update failed:', err)
+    }
+  }
+
+  const handleDeleteEntry = async (id: string) => {
+    const entry = entries.find(e => e.id === id)
+    if (!entry) return
+    // Optimistic delete
+    setEntries(prev => prev.filter(e => e.id !== id))
+    try {
+      await deleteTimeEntry(id)
+    } catch (err) {
+      // Rollback on failure
+      setEntries(prev => [...prev, entry].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()))
+      console.error('Delete failed:', err)
+    }
+  }
+
+  const handleBulkDelete = async (ids: string[]) => {
+    const entriesToDelete = entries.filter(e => ids.includes(e.id))
+    // Optimistic delete
+    setEntries(prev => prev.filter(e => !ids.includes(e.id)))
+    try {
+      await deleteTimeEntries(ids)
+    } catch (err) {
+      // Rollback on failure
+      setEntries(prev => [...prev, ...entriesToDelete].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()))
+      console.error('Bulk delete failed:', err)
+    }
+  }
+
+  const handleDuplicate = async (entry: TimeEntry) => {
+    const newEntry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'> = {
+      description: entry.description,
+      projectId: entry.projectId,
+      taskId: entry.taskId,
+      tagIds: entry.tagIds,
+      billable: entry.billable,
+      userId: entry.userId,
+      startTime: new Date(),
+      duration: entry.duration,
+    }
+    try {
+      await addTimeEntry(newEntry)
+      // Re-fetch to get the new entry with server-assigned ID
+      const { getTimeEntries } = await import('@/lib/api/time-entries')
+      const { extractArray } = await import('@/lib/api/utils')
+      const { mapApiTimeEntry } = await import('@/lib/api/mappers')
+      const res = await getTimeEntries({ userId })
+      const raw = extractArray<Parameters<typeof mapApiTimeEntry>[0]>(res)
+      const mapped = raw.map(mapApiTimeEntry)
+      setEntries(mapped)
+    } catch (err) {
+      console.error('Duplicate failed:', err)
+    }
+  }
+
   const [bulkMode, setBulkMode] = useState(false)
   const [selIds, setSelIds] = useState<string[]>([])
   const [delId, setDelId] = useState<string | null>(null)
   const [bulkDel, setBulkDel] = useState(false)
   const [bulkEdit, setBulkEdit] = useState(false)
 
-  const entries = useMemo(() => {
+  const sortedEntries = useMemo(() => {
     const seen = new Set<string>()
-    return timeEntries
-      .filter(e => { if (e.userId !== userId || seen.has(e.id)) return false; seen.add(e.id); return true })
+    return entries
+      .filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true })
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-  }, [timeEntries, userId])
+  }, [entries])
 
   const weekGroups = useMemo(() => {
-    const w: Record<string, Record<string, typeof entries>> = {}
-    entries.forEach(e => {
+    const w: Record<string, Record<string, TimeEntry[]>> = {}
+    sortedEntries.forEach(e => {
       const d = new Date(e.startTime)
       const wk = startOfWeek(d, { weekStartsOn: 1 }).toISOString()
       const dk = startOfDay(d).toISOString()
@@ -234,24 +363,30 @@ export function TimeEntryList({ userId }: { userId: string }) {
       w[wk][dk].push(e)
     })
     return w
-  }, [entries])
+  }, [sortedEntries])
 
   const wKeys = Object.keys(weekGroups).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
-
-  const onDup = (e: typeof entries[0]) => addTimeEntry({
-    description: e.description, projectId: e.projectId, taskId: e.taskId,
-    tagIds: e.tagIds, billable: e.billable, userId: e.userId,
-    startTime: new Date(), duration: e.duration,
-  })
 
   return (
     <div className="w-full pb-20">
       <UndoToast />
       <DeleteConfirmation isOpen={!!delId} onClose={() => setDelId(null)}
-        onConfirm={() => { if (delId) { deleteTimeEntry(delId); setDelId(null) } }} count={1} />
+        onConfirm={() => { if (delId) { handleDeleteEntry(delId); setDelId(null) } }} count={1} />
       <DeleteConfirmation isOpen={bulkDel} onClose={() => setBulkDel(false)}
-        onConfirm={() => { deleteTimeEntries(selIds); setSelIds([]); setBulkDel(false); setBulkMode(false) }}
+        onConfirm={() => { handleBulkDelete(selIds); setSelIds([]); setBulkDel(false); setBulkMode(false) }}
         count={selIds.length} />
+
+      {fetchLoading && entries.length === 0 && (
+        <div className="space-y-3 mt-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-[54px] bg-white border border-[#e4e8ec] rounded animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {!fetchLoading && wKeys.length === 0 && (
+        <div className="text-center py-16 text-[#aaa] text-[14px]">No time entries yet</div>
+      )}
 
       {wKeys.map(wKey => {
         const dayMap = weekGroups[wKey]
@@ -270,13 +405,14 @@ export function TimeEntryList({ userId }: { userId: string }) {
 
             {dKeys.map(dKey => {
               const dayEntries = dayMap[dKey]
+              const canEditDayEntries = dayEntries.every(canEditEntry)
               const dayTotal = dayEntries.reduce((a, e) => a + (e.duration ?? 0), 0)
               const allSel = dayEntries.every(e => selIds.includes(e.id))
               const someSel = dayEntries.some(e => selIds.includes(e.id))
 
               return (
-                <div key={dKey} className="mb-3">
-                  <div className="flex items-center justify-between px-4 py-[7px] border border-[#e4e8ec]" style={{ background: '#f5f7f9' }}>
+                <div key={dKey} className="mb-6">
+                  <div className="flex items-center justify-between px-4 py-[7px] border border-[#e4e8ec]" style={{ background: '#e8eaed' }}>
                     <div className="flex items-center gap-3">
                       {bulkMode && (
                         <div onClick={() => {
@@ -289,7 +425,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                         </div>
                       )}
                       <span style={{ fontSize: 13, color: '#666' }}>{dayLabel(dKey)}</span>
-                      {bulkMode && someSel && (
+                      {bulkMode && someSel && canEditDayEntries && (
                         <div className="flex items-center gap-3 ml-2">
                           <button onClick={() => setBulkEdit(true)} className="text-[#03a9f4] text-[11px] font-bold uppercase tracking-widest hover:underline cursor-pointer">Bulk Edit</button>
                           <button onClick={() => setBulkDel(true)} className="text-red-500 text-[11px] font-bold uppercase tracking-widest hover:underline cursor-pointer">Delete</button>
@@ -299,22 +435,24 @@ export function TimeEntryList({ userId }: { userId: string }) {
                     <div className="flex items-center gap-2">
                       <span style={{ fontSize: 12, color: '#999' }}>Total:</span>
                       <span style={{ fontSize: 14, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums' }}>{fmtDur(dayTotal)}</span>
-                      <Tip label="Bulk edit">
-                        <button onClick={() => setBulkMode(b => !b)}
-                          className={cn('p-1 rounded cursor-pointer', bulkMode ? 'text-[#03a9f4]' : 'text-[#aaa] hover:text-[#666]')}>
-                          <Copy style={{ width: 16, height: 16 }} strokeWidth={1.5} />
-                        </button>
-                      </Tip>
+                      {user && canViewAllTimeEntries(user.role) && canEditDayEntries && (
+                        <Tip label="Bulk edit">
+                          <button onClick={() => setBulkMode(b => !b)}
+                            className={cn('p-1 rounded cursor-pointer', bulkMode ? 'text-[#03a9f4]' : 'text-[#aaa] hover:text-[#666]')}>
+                            <Copy style={{ width: 16, height: 16 }} strokeWidth={1.5} />
+                          </button>
+                        </Tip>
+                      )}
                     </div>
                   </div>
 
-                  <div className="bg-white border-x border-b border-[#e4e8ec]">
+                  <div className="bg-white border-x border-b-4 border-[#e4e8ec] mb-[3px] border-b-[#d0d5da]">
                     {dayEntries.map((entry, idx) => {
-                      const proj = projects.find(p => p.id === entry.projectId)
-                      const lead = users.find(u => u.id === proj?.leadId)
-                      const task = tasks.find(t => t.id === entry.taskId)
+                      const proj = projects.find((p: { id: string }) => p.id === entry.projectId)
+                      const lead = users.find((u: { id: string }) => u.id === (proj as { leadId?: string } | undefined)?.leadId)
+                      const task = tasks.find((t: { id: string }) => t.id === entry.taskId)
                       const isSel = selIds.includes(entry.id)
-                      const liveDur = timeEntries.find(e => e.id === entry.id)?.duration ?? entry.duration ?? 0
+                      const liveDur = entry.duration ?? 0
                       const canEdit = canEditEntry(entry)
 
                       return (
@@ -334,10 +472,11 @@ export function TimeEntryList({ userId }: { userId: string }) {
 
                           <div className="flex flex-1 items-center min-w-0 overflow-hidden pl-8 pr-3 gap-3">
                             <input type="text" defaultValue={entry.description}
-                              onBlur={e => canEdit && updateTimeEntry(entry.id, { description: e.target.value })}
+                              key={entry.id + entry.description}
+                              onBlur={e => canEdit && handleUpdateEntry(entry.id, { description: e.target.value }, entry)}
                               readOnly={!canEdit}
                               placeholder="Add description"
-                              style={{ fontSize: 13, color: '#222', background: 'transparent', outline: 'none', flexShrink: 0, width: 220, minWidth: 0, cursor: canEdit ? 'text' : 'default' }}
+                              style={{ fontSize: 13, color: '#222', background: 'transparent', outline: 'none', flexShrink: 0, width: 340, minWidth: 0, cursor: canEdit ? 'text' : 'default' }}
                               className="placeholder-[#bbb] truncate rounded px-2 py-1 border border-transparent hover:border-[#d0d8de] focus:border-[#d0d8de] transition-colors duration-150"
                             />
                             <div className="flex items-center gap-2 min-w-0 overflow-hidden flex-shrink-0">
@@ -345,8 +484,8 @@ export function TimeEntryList({ userId }: { userId: string }) {
                                 <ProjectPicker
                                   selectedProjectId={entry.projectId}
                                   selectedTaskId={entry.taskId}
-                                  onSelect={(pid, tid) => updateTimeEntry(entry.id, { projectId: pid, taskId: tid || undefined })}
-                                  onClear={() => updateTimeEntry(entry.id, { projectId: undefined, taskId: undefined })}
+                                  onSelect={(pid, tid) => handleUpdateEntry(entry.id, { projectId: pid, taskId: tid || undefined }, entry)}
+                                  onClear={() => handleUpdateEntry(entry.id, { projectId: undefined, taskId: undefined }, entry)}
                                   customTrigger={
                                     proj ? (
                                       <div className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-75 transition-opacity" onClick={e => e.stopPropagation()}>
@@ -377,7 +516,10 @@ export function TimeEntryList({ userId }: { userId: string }) {
                                 newDate.setHours(old.getHours())
                                 newDate.setMinutes(old.getMinutes())
                                 newDate.setSeconds(old.getSeconds())
-                                updateTimeEntry(entry.id, { startTime: newDate })
+                                const newEndTime = entry.endTime
+                                  ? new Date(newDate.getTime() + (entry.duration ?? 0) * 1000)
+                                  : undefined
+                                handleUpdateEntry(entry.id, { startTime: newDate, endTime: newEndTime }, entry)
                               }} />
                             ) : (
                               <span style={{ fontSize: 12, color: '#999', width: 110, textAlign: 'center' }}>
@@ -391,7 +533,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                               <DurCell dur={liveDur} onSave={s => {
                                 const start = new Date(entry.startTime)
                                 const endTime = new Date(start.getTime() + s * 1000)
-                                updateTimeEntry(entry.id, { startTime: start, endTime, duration: s })
+                                handleUpdateEntry(entry.id, { startTime: start, endTime, duration: s }, entry)
                               }} />
                             ) : (
                               <span style={{ fontSize: 14, fontWeight: 700, color: '#222', fontVariantNumeric: 'tabular-nums', width: 52, display: 'inline-block', textAlign: 'center' }}>
@@ -400,7 +542,7 @@ export function TimeEntryList({ userId }: { userId: string }) {
                             )}
                           </D>
 
-                          <div className="flex items-center justify-center px-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {canEdit && <div className="flex items-center justify-center px-3 opacity-0 group-hover:opacity-100 transition-opacity">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="text-[#ccc] hover:text-[#666] cursor-pointer">
@@ -408,11 +550,11 @@ export function TimeEntryList({ userId }: { userId: string }) {
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-[130px] shadow-xl bg-white border border-gray-100 rounded-sm">
-                                <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDuplicate(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setDelId(entry.id)} className="py-2.5 text-[14px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </div>
+                          </div>}
                         </div>
                       )
                     })}

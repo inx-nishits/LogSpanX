@@ -413,8 +413,8 @@ export default function SummaryReportPage() {
     let active = true
 
     const params: TimeEntryParams = {
-      startDate: from.toISOString(),
-      endDate: to.toISOString(),
+      startDate: format(from, 'yyyy-MM-dd'),
+      endDate: format(to, 'yyyy-MM-dd'),
     }
 
     setLoading(true)
@@ -1038,8 +1038,8 @@ export default function SummaryReportPage() {
               <SimpleDropdown value={subGroupBy} options={SUB_GROUP_OPTIONS} onChange={setSubGroupBy} />
             </div>
             {/* Table + Donut side by side */}
-            <div className="flex items-start min-h-[300px]">
-              <div className="w-[75%] flex-shrink-0 border-r border-[#e4eaee] flex flex-col">
+            <div className="flex">
+              <div className="w-[75%] flex-shrink-0 border-r border-[#e4eaee]">
                 {loading ? (
                   <div className="p-4 flex flex-col gap-3">
                     {[...Array(6)].map((_, i) => (

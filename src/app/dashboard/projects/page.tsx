@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { canCreateProject, canManageProjects } from '@/lib/rbac'
 
 // Helpers
 const fmtDur = (s: number) => {
@@ -215,7 +216,8 @@ function NewProjectModal({ clients, users, onClose, onSubmit }: NewProjectModalP
 export default function ProjectsPage() {
   const { projects: storeProjects, users, clients, timeEntries, addProject, updateProject, updateProjects, deleteProject, toggleProjectArchive } = useDataStore()
   const { user } = useAuthStore()
-  const isReadOnly = user?.role !== 'project_manager'
+  const canCreate = user ? canCreateProject(user.role) : false
+  const canManage = user ? canManageProjects(user.role) : false
 
   const [showNewModal, setShowNewModal] = useState(false)
 
@@ -281,8 +283,7 @@ export default function ProjectsPage() {
 
   // Compute functional project list
   const fullProjects = useMemo(() => {
-    // Team members only see projects they are assigned to
-    const visibleProjects = user?.role === 'team_member'
+    const visibleProjects = user?.role === 'member'
       ? storeProjects.filter(p =>
         p.leadId === user.id ||
         p.members.some(m => m.userId === user.id)
@@ -449,7 +450,7 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="w-full px-5 pt-4 pb-2 relative z-50 flex items-center justify-between">
         <h1 className="text-lg text-[#333333] font-normal">Projects</h1>
-        {!isReadOnly && (
+        {canCreate && (
           <Button
             onClick={() => setShowNewModal(true)}
             className="bg-[#03a9f4] hover:bg-[#0288d1] text-white flex items-center gap-1.5 text-[14px] font-bold tracking-widest uppercase h-9 px-4 rounded-sm shadow"
@@ -676,14 +677,14 @@ export default function ProjectsPage() {
                           onClick={() => handleSort(col.label)}
                         >
                           <div className="flex items-center gap-2">
-                            {!isReadOnly && col.label === 'NAME' && (
+                            {canManage && col.label === 'NAME' && (
                               <div className={`w-[14px] h-[14px] border ${allVisibleProjectsSelected ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center shrink-0`}
                                 onClick={e => { e.stopPropagation(); toggleSelectAllProjects() }}>
                                 {allVisibleProjectsSelected && <Check className="w-3 h-3 text-white stroke-[3px]" />}
                               </div>
                             )}
                             {col.label}
-                            {!isReadOnly && col.label === 'NAME' && selectedProjectIds.length > 0 && (
+                            {canManage && col.label === 'NAME' && selectedProjectIds.length > 0 && (
                               <div className="flex items-center ml-2 gap-3">
                                 <button className="text-[#03a9f4] text-[14px] font-bold normal-case hover:underline">Bulk Edit</button>
                                 <button onClick={handleArchiveProjects} className="text-[#03a9f4] text-[14px] font-bold normal-case hover:underline">Archive</button>
@@ -707,7 +708,7 @@ export default function ProjectsPage() {
                         {/* Name */}
                         <td className="pl-4 pr-3 py-4 whitespace-nowrap overflow-hidden">
                           <div className="flex items-center gap-4">
-                            {!isReadOnly && (
+                            {canManage && (
                               <div
                                 className={`w-[14px] h-[14px] border ${selectedProjectIds.includes(project.id) ? 'bg-[#03a9f4] border-[#03a9f4]' : 'border-gray-300'} rounded-[2px] cursor-pointer flex items-center justify-center shrink-0`}
                                 onClick={() => toggleProjectSelection(project.id)}
@@ -716,7 +717,7 @@ export default function ProjectsPage() {
                               </div>
                             )}
                             <div className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: project.color, opacity: project.archived ? 0.5 : 1 }} />
-                            {isReadOnly ? (
+                            {!canManage ? (
                               <span className={`text-[14px] font-normal truncate ${project.archived ? 'line-through text-[#999]' : 'text-[#333]'}`}>
                                 {project.name}
                               </span>
@@ -748,7 +749,7 @@ export default function ProjectsPage() {
                                 onClick={() => toggleFavorite(project.name)}
                                 className={`h-[18px] w-[18px] cursor-pointer transition-all ${favorites.includes(project.name) ? 'text-[#f5a623] fill-[#f5a623]' : 'text-[#d6e5ef] hover:text-[#f5a623]'}`}
                               />
-                              {!isReadOnly && (
+                              {canManage && (
                                 <DropdownMenu modal={false}>
                                   <DropdownMenuTrigger asChild>
                                     <button

@@ -45,7 +45,7 @@ function TableRow({
     <>
       <div
         className={cn(
-          'flex items-center h-[60px] border-b border-[#eef1f4] transition-all group relative bg-white',
+          'flex items-center h-[60px] border-b border-[#eef1f4] transition-all group relative bg-white last:border-b-0',
           'hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)] hover:z-10'
         )}
         style={{ paddingLeft: `${16 + depth * 28}px`, paddingRight: '16px' }}

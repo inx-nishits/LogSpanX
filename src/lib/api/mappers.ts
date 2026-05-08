@@ -1,3 +1,4 @@
+import { normalizeRole } from '@/lib/rbac'
 import { Client, Group, Project, ProjectMember, Tag, Task, TimeEntry, User } from '@/lib/types'
 
 type Nullable<T> = T | null | undefined
@@ -17,8 +18,10 @@ export interface ApiUser {
 }
 
 export interface ApiGroup {
-  id: string
+  id?: string
+  _id?: string
   name: string
+  leadId?: string | null
   memberIds?: string[]
 }
 
@@ -108,20 +111,13 @@ function normalizeProjectLead(lead: ApiProject['leadId']) {
   }
 }
 
-const normalizeApiRole = (role: string | undefined | null): User['role'] => {
-  const normalized = String(role ?? '').toLowerCase().trim()
-  if (normalized === 'project_manager') return 'project_manager'
-  if (normalized === 'team_lead' || normalized === 'team lead') return 'team_lead'
-  return 'team_member'
-}
-
 export function mapApiUser(user: ApiUser): User {
   return {
     id: resolveId(user),
     email: user.email,
     name: user.name,
     avatar: user.avatar ?? undefined,
-    role: normalizeApiRole(user.role),
+    role: normalizeRole(user.role),
     isActive: user.isActive ?? true,
     archived: user.archived ?? false,
     billableRate: user.billableRate ?? undefined,
@@ -141,6 +137,7 @@ export function mapApiGroup(group: ApiGroup): Group {
   return {
     id: resolveId(group as { id?: string; _id?: string }),
     name: group.name,
+    leadId: group.leadId ?? undefined,
     memberIds,
     createdAt: now,
     updatedAt: now,

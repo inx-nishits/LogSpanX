@@ -5,6 +5,7 @@ import { Search, Pencil, MoreVertical, Check, X, ChevronDown, Archive, Trash2, A
 import { cn } from '@/lib/utils'
 import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { canManageTags } from '@/lib/rbac'
 
 type ShowFilter = 'active' | 'archived' | 'all'
 
@@ -111,7 +112,7 @@ function MoreMenu({ archived, onEdit, onArchive, onDelete }: {
 export default function TagsPage() {
   const { tags, createTag, updateTag, deleteTag } = useDataStore()
   const { user } = useAuthStore()
-  const isReadOnly = user?.role === 'team_member'
+  const isReadOnly = !user || !canManageTags(user.role)
   const [showFilter, setShowFilter] = useState<ShowFilter>('active')
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
