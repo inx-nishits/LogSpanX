@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ACCESS_COOKIE, REFRESH_COOKIE, ROLE_COOKIE } from '@/lib/auth-constants'
 import type { User } from '@/lib/types'
 
-const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/check-email', '/verify-email', '/accept-invite']
+const authRoutes = ['/login', '/forgot-password', '/reset-password', '/check-email', '/verify-email', '/accept-invite']
 
 const restrictedRoutes: Array<{ prefix: string; allowedRoles: User['role'][] }> = [
   { prefix: '/dashboard/pm',           allowedRoles: ['owner', 'admin'] },
@@ -57,5 +57,5 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/signup', '/forgot-password', '/reset-password', '/accept-invite'],
+  matcher: ['/dashboard/:path*', '/login', '/forgot-password', '/reset-password', '/accept-invite'],
 }

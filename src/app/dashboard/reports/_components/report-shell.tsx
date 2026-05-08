@@ -66,7 +66,7 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
     const seen = new Set<string>()
     return projects
       .filter(p => p.leadId && p.leadName)
-      .reduce<{ id: string; label: string }[]>((acc, p) => {
+      .reduce((acc: { id: string; label: string }[], p) => {
         if (!seen.has(p.leadId!)) {
           seen.add(p.leadId!)
           acc.push({ id: p.leadId!, label: p.leadName! })

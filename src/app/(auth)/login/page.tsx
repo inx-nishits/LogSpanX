@@ -54,15 +54,9 @@ export default function LoginPage() {
           <img src="/Trackify.svg" alt="Trackify" className="h-10 w-auto object-contain" />
         </div>
 
-        <h1 className="text-[20px] font-normal text-gray-800 text-center mb-1">
+        <h1 className="text-[20px] font-normal text-gray-800 text-center mb-8">
           Log in
         </h1>
-        <div className="flex justify-center items-center text-[13px] text-gray-600 mb-8">
-          <span>Don&apos;t have an account?</span>
-          <Link href="/signup" className="text-[#03a9f4] hover:underline hover:text-[#0288d1] ml-1">
-            Sign up
-          </Link>
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative my-6">

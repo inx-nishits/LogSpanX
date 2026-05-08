@@ -61,7 +61,7 @@ export function DashboardView() {
             }).then((res) => {
                 import('@/lib/api/utils').then(({ extractArray }) => {
                     import('@/lib/api/mappers').then(({ mapApiTimeEntry }) => {
-                        let entries = extractArray(res).map((e: Parameters<typeof mapApiTimeEntry>[0]) => mapApiTimeEntry(e))
+                        let entries = extractArray<Parameters<typeof mapApiTimeEntry>[0]>(res).map(mapApiTimeEntry)
                         if (filters.teamScope === 'only-me') {
                             entries = entries.filter((e: TimeEntry) => e.userId === user.id)
                         }

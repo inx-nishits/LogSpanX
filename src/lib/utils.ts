@@ -90,7 +90,7 @@ export function getWeekEnd(date: Date): Date {
 
 export function getWeekDates(date: Date): Date[] {
   const weekStart = getWeekStart(date)
-  const dates = []
+  const dates: Date[] = []
   for (let i = 0; i < 7; i++) {
     const d = new Date(weekStart)
     d.setDate(weekStart.getDate() + i)
