@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useDataStore } from '@/lib/stores/data-store'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { TagPicker } from './tag-picker'
-import { DollarSign, MoreVertical, Check, Copy } from 'lucide-react'
+import { DollarSign, MoreVertical, Check, Copy, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ProjectPicker } from './project-picker'
 import { DeleteConfirmation } from './delete-confirmation'
 import { UndoToast } from './undo-toast'
 import { BulkEditModal } from './bulk-edit-modal'
-import { startOfWeek, endOfWeek, subWeeks, isWithinInterval, startOfDay } from 'date-fns'
+import { startOfWeek, endOfWeek, subWeeks, isWithinInterval, startOfDay, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday, addMonths, subMonths } from 'date-fns'
 
 const fmtDur = (s: number) =>
   `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}`
@@ -68,6 +68,95 @@ function D({ children, extra = '' }: { children: React.ReactNode; extra?: string
   return (
     <div className={`flex items-center justify-center border-l border-dotted border-[#e0e0e0] px-4 my-[10px] ${extra}`}>
       {children}
+    </div>
+  )
+}
+
+// ─── Mini Calendar ────────────────────────────────────────────────────────────
+function DatePicker({ selected, onChange }: { selected: Date; onChange: (d: Date) => void }) {
+  const [month, setMonth] = useState(startOfMonth(selected))
+  const days = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }),
+  })
+
+  return (
+    <div className="bg-white border border-[#e4eaee] shadow-xl rounded-sm p-3 w-[260px]">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={e => { e.stopPropagation(); setMonth(m => subMonths(m, 1)) }} className="p-1 hover:bg-gray-100 rounded transition-colors">
+          <ChevronLeft className="h-4 w-4 text-[#666]" />
+        </button>
+        <span className="text-[13px] font-semibold text-[#333]">{format(month, 'MMMM yyyy')}</span>
+        <button onClick={e => { e.stopPropagation(); setMonth(m => addMonths(m, 1)) }} className="p-1 hover:bg-gray-100 rounded transition-colors">
+          <ChevronRight className="h-4 w-4 text-[#666]" />
+        </button>
+      </div>
+      {/* Day labels */}
+      <div className="grid grid-cols-7 mb-1">
+        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
+          <div key={d} className="text-center text-[11px] text-[#aaa] font-medium py-1">{d}</div>
+        ))}
+      </div>
+      {/* Days */}
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {days.map(day => {
+          const isSelected = isSameDay(day, selected)
+          const inMonth = isSameMonth(day, month)
+          const todayDay = isToday(day)
+          return (
+            <button key={day.toISOString()} onClick={e => { e.stopPropagation(); onChange(day) }}
+              className={cn(
+                'h-8 w-full text-[12px] rounded transition-colors',
+                isSelected ? 'bg-[#03a9f4] text-white font-bold' :
+                todayDay ? 'text-[#03a9f4] font-bold hover:bg-[#eaf4fb]' :
+                inMonth ? 'text-[#333] hover:bg-[#f0f4f8]' : 'text-[#ccc] hover:bg-[#f0f4f8]'
+              )}>
+              {format(day, 'd')}
+            </button>
+          )
+        })}
+      </div>
+      {/* Today shortcut */}
+      <button onClick={e => { e.stopPropagation(); onChange(new Date()); setMonth(startOfMonth(new Date())) }}
+        className="mt-2 w-full text-[12px] text-[#03a9f4] hover:underline text-center">
+        Today
+      </button>
+    </div>
+  )
+}
+
+function DateCell({ date, onSave }: { date: Date | string; onSave: (d: Date) => void }) {
+  const d = new Date(date)
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <div 
+        className="flex items-center justify-center gap-2 group/date cursor-pointer hover:bg-[#f5f7f9] rounded px-2 py-1 transition-colors" 
+        style={{ width: 130 }}
+        onClick={() => setOpen(o => !o)}
+      >
+        <Calendar className={cn("h-3.5 w-3.5 transition-colors", open ? "text-[#03a9f4]" : "text-[#aaa] group-hover/date:text-[#03a9f4]")} />
+        <span className={cn("text-[12px] whitespace-nowrap transition-colors", open ? "text-[#333]" : "text-[#999] group-hover/date:text-[#333]")}>
+          {format(d, 'MMM d, yyyy')}
+        </span>
+      </div>
+      {open && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[500]" onClick={e => e.stopPropagation()}>
+          <DatePicker selected={d} onChange={newDate => {
+            onSave(newDate)
+            setOpen(false)
+          }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -280,6 +369,22 @@ export function TimeEntryList({ userId }: { userId: string }) {
                             </div>
                             <div className="flex-shrink-0 ml-auto" />
                           </div>
+
+                          <D extra="w-[120px]">
+                            {canEdit ? (
+                              <DateCell date={entry.startTime} onSave={newDate => {
+                                const old = new Date(entry.startTime)
+                                newDate.setHours(old.getHours())
+                                newDate.setMinutes(old.getMinutes())
+                                newDate.setSeconds(old.getSeconds())
+                                updateTimeEntry(entry.id, { startTime: newDate })
+                              }} />
+                            ) : (
+                              <span style={{ fontSize: 12, color: '#999', width: 110, textAlign: 'center' }}>
+                                {new Date(entry.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
+                            )}
+                          </D>
 
                           <D>
                             {canEdit ? (

@@ -26,6 +26,32 @@ const fmtDur = (s: number, round?: boolean) => {
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
+function htmlEscape(value: string | number) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function fmtH(s: number) {
+  const totalMinutes = Math.round(s / 60)
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  return `${h}:${String(m).padStart(2, '0')}`
+}
+
 // ─── Shared Components ────────────────────────────────────────────────────────
 
 function Tip({ label, children }: { label: string; children: React.ReactNode }) {
@@ -209,7 +235,7 @@ const SortIcon = ({ field, sortField, sortOrder }: { field: string; sortField: s
 
 // ─── Export Dropdown ────────────────────────────────────────────────────────
 
-function ExportDropdown() {
+function ExportDropdown({ onExport }: { onExport: (format: 'pdf' | 'excel' | 'csv') => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -221,6 +247,12 @@ function ExportDropdown() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  const options: Array<{ label: string; format: 'pdf' | 'excel' | 'csv' }> = [
+    { label: 'Export as PDF', format: 'pdf' },
+    { label: 'Export as Excel', format: 'excel' },
+    { label: 'Export as CSV', format: 'csv' },
+  ]
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -231,10 +263,10 @@ function ExportDropdown() {
       </button>
       {open && (
         <div className="absolute top-full right-0 mt-1 bg-white border border-[#d0d8de] shadow-lg z-[200] min-w-[150px] py-1">
-          {(['Export as PDF', 'Export as Excel', 'Export as CSV'] as const).map(label => (
-            <button key={label} onClick={() => setOpen(false)}
+          {options.map(option => (
+            <button key={option.format} onClick={() => { onExport(option.format); setOpen(false) }}
               className="w-full text-left px-3 py-2 text-[13px] text-[#555] hover:bg-[#f5f7f9] hover:text-[#03a9f4] cursor-pointer">
-              {label}
+              {option.label}
             </button>
           ))}
         </div>
@@ -354,7 +386,7 @@ export default function DetailedReportPage() {
           const projectIds = selProjects.filter(p => p !== '__without__')
           mapped = mapped.filter(e => {
             if (!e.projectId) return wantWithout
-            return projectIds.length === 0 ? wantWithout : projectIds.includes(e.projectId)
+            return projectIds.includes(e.projectId)
           })
         }
         if (selTags.length > 0) {
@@ -362,7 +394,7 @@ export default function DetailedReportPage() {
           const tagIds = selTags.filter(t => t !== '__without__')
           mapped = mapped.filter(e => {
             if (!e.tagIds?.length) return wantWithout
-            return tagIds.length === 0 ? wantWithout : e.tagIds.some(t => tagIds.includes(t))
+            return e.tagIds.some(t => tagIds.includes(t))
           })
         }
         const hasBillable = selStatus.includes('billable')
@@ -381,7 +413,7 @@ export default function DetailedReportPage() {
           const taskIds = selTasks.filter(t => t !== '__without__')
           mapped = mapped.filter(e => {
             if (!e.taskId) return wantWithout
-            return taskIds.length === 0 ? wantWithout : taskIds.includes(e.taskId)
+            return taskIds.includes(e.taskId)
           })
         }
 
@@ -514,6 +546,93 @@ export default function DetailedReportPage() {
     setSelIds(new Set())
   }
 
+  const handleExport = (formatType: 'pdf' | 'excel' | 'csv') => {
+    const fromLabel = format(dateRange.from, 'dd_MM_yyyy')
+    const toLabel = format(dateRange.to, 'dd_MM_yyyy')
+    const fileBase = `Trackify_Time_Report_Detailed_${fromLabel}-${toLabel}`
+
+    if (formatType === 'excel') {
+      const userGroups: Record<string, TimeEntry[]> = {}
+      sorted.forEach(e => {
+        const u = users.find(usr => usr.id === e.userId)
+        const name = u?.name || 'Unknown User'
+        if (!userGroups[name]) userGroups[name] = []
+        userGroups[name].push(e)
+      })
+
+      const htmlRows: string[] = []
+      htmlRows.push(`
+        <tr style="background-color: #f2f2f2; font-weight: bold;">
+          <th align="left" style="border: 1px solid #e4eaee; padding: 4px;">User</th>
+          <th align="left" style="border: 1px solid #e4eaee; padding: 4px;">Description</th>
+          <th align="right" style="border: 1px solid #e4eaee; padding: 4px;">Time (h)</th>
+          <th align="right" style="border: 1px solid #e4eaee; padding: 4px;">Time (decimal)</th>
+          <th align="right" style="border: 1px solid #e4eaee; padding: 4px;">Amount (USD)</th>
+        </tr>
+      `)
+
+      const sortedUsers = Object.keys(userGroups).sort()
+      let grandTotalSecs = 0
+
+      sortedUsers.forEach(userName => {
+        const entries = userGroups[userName]
+        const userTotalSecs = entries.reduce((acc, e) => acc + (e.duration ?? 0), 0)
+        const userTotalMinutes = Math.round(userTotalSecs / 60)
+        grandTotalSecs += userTotalSecs
+        
+        htmlRows.push(`
+          <tr style="font-weight: bold;">
+            <td style="border: 1px solid #e4eaee; padding: 4px;">${htmlEscape(userName)}</td>
+            <td style="border: 1px solid #e4eaee; padding: 4px;"></td>
+            <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'\\@';">${htmlEscape(fmtH(userTotalSecs))}</td>
+            <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">${(userTotalMinutes / 60).toFixed(2)}</td>
+            <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">0.00</td>
+          </tr>
+        `)
+
+        entries.forEach(e => {
+          const dur = e.duration ?? 0
+          const entryMinutes = Math.round(dur / 60)
+          htmlRows.push(`
+            <tr>
+              <td style="border: 1px solid #e4eaee; padding: 4px;"></td>
+              <td style="border: 1px solid #e4eaee; padding: 4px;">${htmlEscape(e.description || '(no description)')}</td>
+              <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'\\@';">${htmlEscape(fmtH(dur))}</td>
+              <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">${(entryMinutes / 60).toFixed(2)}</td>
+              <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">0.00</td>
+            </tr>
+          `)
+        })
+      })
+
+      const grandTotalMinutes = Math.round(grandTotalSecs / 60)
+      const grandTotalH = fmtH(grandTotalSecs)
+      const grandTotalDecimal = (grandTotalMinutes / 60).toFixed(2)
+      const rangeLabel = `Total (${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')})`
+
+      htmlRows.push(`
+        <tr style="font-weight: bold;">
+          <td style="border: 1px solid #e4eaee; padding: 4px;">${htmlEscape(rangeLabel)}</td>
+          <td style="border: 1px solid #e4eaee; padding: 4px;"></td>
+          <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'\\@';">${htmlEscape(grandTotalH)}</td>
+          <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">${grandTotalDecimal}</td>
+          <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">0.00</td>
+        </tr>
+      `)
+
+      const html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="utf-8" />
+            <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Detailed report</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+          </head>
+          <body><table style="border-collapse: collapse;">${htmlRows.join('')}</table></body>
+        </html>
+      `
+      downloadBlob(new Blob([html], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8' }), `${fileBase}.xls`)
+    }
+  }
+
   return (
     <ReportShell
       dateRange={dateRange}
@@ -555,7 +674,7 @@ export default function DetailedReportPage() {
               <span className="text-[#777] text-[14px]">Amount: <strong className="text-[#333] font-bold text-[14px]">0.00 USD</strong></span>
             </div>
             <div className="flex items-center gap-4 text-[13px] text-[#555]">
-              <ExportDropdown />
+              <ExportDropdown onExport={handleExport} />
             </div>
           </div>
 

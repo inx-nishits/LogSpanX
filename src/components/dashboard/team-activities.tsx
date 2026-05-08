@@ -115,19 +115,30 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
     return (
         <div className="bg-white rounded-sm border border-[#e4eaee] shadow-sm">
             {/* Header */}
-            <div className="px-6 py-2.5 border-b border-[#e4eaee] bg-[#fcfcfc]">
-                <h3 className="text-[11px] font-bold text-[#999] uppercase tracking-wider">Team Activities</h3>
+            <div className="px-6 py-2.5 border-b border-[#e4eaee] bg-[#dde2e7]">
+                <h3 className="text-[11px] font-bold text-[#555] uppercase tracking-wider">Team Activities</h3>
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-12 px-6 py-2 border-b border-[#e4eaee] text-[11px] font-bold text-[#aaa] uppercase tracking-wider">
-                <button onClick={cycleMemSort} className="col-span-2 flex items-center gap-1 hover:text-[#555] transition-colors cursor-pointer text-left">
+            <div className="flex items-center px-6 py-2 border-b border-[#e4eaee] text-[11px] font-bold text-[#aaa] uppercase tracking-wider bg-[#f5f7f9]">
+                <button onClick={cycleMemSort} className="w-[20%] flex items-center gap-1 hover:text-[#555] transition-colors cursor-pointer text-left">
                     Team Member {memberSort === 'asc' ? <ChevronUp className="h-3 w-3 text-[#03a9f4]" /> : memberSort === 'desc' ? <ChevronDown className="h-3 w-3 text-[#03a9f4]" /> : <ChevronsUpDown className="h-3 w-3 text-[#ccc]" />}
                 </button>
-                <button onClick={cycleActSort} className="col-span-6 flex items-center gap-1 hover:text-[#555] transition-colors cursor-pointer text-left">
+                <div className="w-px mx-2" />
+                
+                <button onClick={cycleActSort} className="flex-1 flex items-center gap-1 hover:text-[#555] transition-colors cursor-pointer text-left">
                     Latest Activity {activitySort === 'no-desc-first' ? <ChevronUp className="h-3 w-3 text-[#03a9f4]" /> : activitySort === 'no-activity-first' ? <ChevronDown className="h-3 w-3 text-[#03a9f4]" /> : <ChevronsUpDown className="h-3 w-3 text-[#ccc]" />}
                 </button>
-                <div className="col-span-4 text-right">Total Tracked (This Week)</div>
+                <div className="w-px mx-2" />
+
+                <button className="w-[10%] flex items-center justify-center gap-1 hover:text-[#555] transition-colors cursor-default text-center">
+                    Time
+                </button>
+                <div className="w-px mx-2" />
+
+                <button className="w-[35%] flex items-center justify-end gap-1 hover:text-[#555] transition-colors cursor-default text-right">
+                    Total Tracked
+                </button>
             </div>
 
             {/* Rows */}
@@ -139,9 +150,9 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
                     const filledPct = (member.totalHours / maxHours) * 100
 
                     return (
-                        <div key={member.id || `m-${idx}`} className="flex items-center px-6 py-3 transition-all relative hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)] hover:z-10">
-                            {/* Avatar + Name */}
-                            <div className="w-[22%] flex-shrink-0 flex items-center gap-3">
+                        <div key={member.id || `m-${idx}`} className="flex items-center px-6 py-3 transition-all relative hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)] hover:z-10 bg-white">
+                            {/* 1. Team Member (20%) */}
+                            <div className="w-[20%] flex-shrink-0 flex items-center gap-3">
                                 <div
                                     className="w-9 h-9 rounded-sm flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 select-none"
                                     style={{ backgroundColor: AVATAR_COLORS[member.colorIndex % AVATAR_COLORS.length] }}
@@ -150,35 +161,29 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-[13px] font-medium text-[#333] truncate leading-tight">{member.name}</p>
-                                    <p className="text-[11px] text-[#aaa] leading-tight mt-0.5">{roleLabel(member.role)}</p>
                                 </div>
                             </div>
 
-                            {/* Dotted divider */}
-                            <div className="w-px self-stretch border-l border-dotted border-[#d0d8de] mx-4 flex-shrink-0" />
+                            {/* Divider 1 */}
+                            <div className="w-px self-stretch border-l border-dotted border-[#d0d8de] mx-2 flex-shrink-0" />
 
-                            {/* Latest Activity — all in one line */}
-                            <div className="flex-1 flex items-center gap-2 min-w-0 pr-4">
+                            {/* 2. Latest Activity Column (flex-1) — Stacked Description & Project */}
+                            <div className="flex-1 flex items-start gap-2 min-w-0">
                                 {member.hasActivity ? (
                                     <>
-                                        <p className="text-[13px] text-[#333] truncate min-w-0">
-                                            {member.description || '(no description)'}
-                                        </p>
-                                        <span className="text-[#ddd] flex-shrink-0">•</span>
-                                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                                            <div className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: member.latestProjectColor }} />
-                                            <p className="text-[12px] text-[#aaa] whitespace-nowrap">{member.latestProject}</p>
+                                        <div className="flex-1 flex flex-col min-w-0">
+                                            <p className="text-[13px] text-[#333] truncate leading-normal">
+                                                {member.description || '(no description)'}
+                                            </p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <div className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: member.latestProjectColor }} />
+                                                <p className="text-[13px] text-[#333] truncate leading-normal">
+                                                    {member.latestProject}
+                                                </p>
+                                            </div>
                                         </div>
-                                        {member.latestDurDisplay && (
-                                            <>
-                                                <span className="text-[#ddd] flex-shrink-0">•</span>
-                                                <span className="text-[13px] text-[#555] tabular-nums flex-shrink-0 font-medium">
-                                                    {member.latestDurDisplay}
-                                                </span>
-                                            </>
-                                        )}
                                         {member.latestTimeAgo && (
-                                            <span className="text-[12px] text-[#aaa] flex-shrink-0 whitespace-nowrap ml-auto">
+                                            <span className="text-[12px] text-[#aaa] flex-shrink-0 whitespace-nowrap pt-0.5">
                                                 {member.latestTimeAgo}
                                             </span>
                                         )}
@@ -188,15 +193,27 @@ export function TeamActivities({ entries }: TeamActivitiesProps) {
                                 )}
                             </div>
 
-                            {/* Dotted divider */}
-                            <div className="w-px self-stretch border-l border-dotted border-[#d0d8de] mx-4 flex-shrink-0" />
+                            {/* Divider 2 */}
+                            <div className="w-px self-stretch border-l border-dotted border-[#d0d8de] mx-2 flex-shrink-0" />
 
-                            {/* Total + bar */}
-                            <div className="w-[30%] flex-shrink-0 flex items-center gap-3">
+                            {/* 3. Latest Duration (10%) */}
+                            <div className="w-[10%] flex-shrink-0 text-center">
+                                {member.latestDurDisplay && (
+                                    <span className="text-[13px] text-[#555] tabular-nums font-medium">
+                                        {member.latestDurDisplay}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Divider 3 */}
+                            <div className="w-px self-stretch border-l border-dotted border-[#d0d8de] mx-2 flex-shrink-0" />
+
+                            {/* 4. Total + bar (35%) */}
+                            <div className="w-[35%] flex-shrink-0 flex items-center gap-3">
                                 <span className="text-[13px] font-bold text-[#333] tabular-nums w-[48px] text-right flex-shrink-0">
                                     {member.totalDisplay}
                                 </span>
-                                <div className="flex-1 h-[14px] bg-[#eef1f4] overflow-hidden flex rounded-sm">
+                                <div className="flex-1 h-[20px] bg-[#eef1f4] overflow-hidden flex">
                                     {member.barSegments.map((seg, si) => (
                                         <div
                                             key={si}

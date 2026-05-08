@@ -325,13 +325,15 @@ export function DashboardView() {
                     onClose={() => setModalDay(null)}
                 />
             )}
-            <DashboardHeader
-                role={user.role}
-                filters={filters}
-                onFilterChange={(f) => setFilters(prev => ({ ...prev, ...f }))}
-                currentRange={dateRange}
-                onRangeChange={setDateRange}
-            />
+            <div className="bg-[#dde2e7] px-6 py-3 border-b border-[#e4eaee] -mx-6 -mt-6 mb-6">
+                <DashboardHeader
+                    role={user?.role || 'team_member'}
+                    filters={filters}
+                    onFilterChange={(f) => setFilters(prev => ({ ...prev, ...f }))}
+                    currentRange={dateRange}
+                    onRangeChange={setDateRange}
+                />
+            </div>
             {loading ? (
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

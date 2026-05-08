@@ -27,8 +27,9 @@ function fmtSecs(s: number) {
 }
 
 function fmtH(s: number) {
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
+  const totalMinutes = Math.round(s / 60)
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
   return `${h}:${String(m).padStart(2, '0')}`
 }
 
@@ -270,9 +271,10 @@ function SimpleDropdown({ value, options, onChange }: { value: string; options: 
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1 px-2.5 h-[28px] text-[13px] text-[#555] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] transition-colors cursor-pointer"
+        className="flex items-center gap-2 px-2 h-[26px] min-w-[80px] text-[13px] text-[#333] bg-white border border-[#d0d8de] rounded hover:border-[#aaa] transition-colors cursor-pointer"
       >
-        {value} <ChevronDown className="h-3 w-3 text-[#aaa]" />
+        <span className="flex-1 text-left truncate">{value}</span>
+        <ChevronDown className="h-3 w-3 text-[#aaa]" />
       </button>
       {open && (
         <div className="absolute top-full left-0 mt-0.5 bg-white border border-[#ddd] shadow-lg z-50 min-w-[140px] py-0.5">
@@ -442,7 +444,7 @@ export default function SummaryReportPage() {
           const projectIds = appliedFilters.project.filter(p => p !== '__without__')
           entries = entries.filter(e => {
             if (!e.projectId) return wantWithout
-            return projectIds.length === 0 ? wantWithout : projectIds.includes(e.projectId)
+            return projectIds.includes(e.projectId)
           })
         }
         if (appliedFilters.tag.length > 0) {
@@ -450,7 +452,7 @@ export default function SummaryReportPage() {
           const tagIds = appliedFilters.tag.filter(t => t !== '__without__')
           entries = entries.filter(e => {
             if (!e.tagIds?.length) return wantWithout
-            return tagIds.length === 0 ? wantWithout : e.tagIds.some(t => tagIds.includes(t))
+            return e.tagIds.some(t => tagIds.includes(t))
           })
         }
         if (appliedFilters.task.length > 0) {
@@ -458,7 +460,7 @@ export default function SummaryReportPage() {
           const taskIds = appliedFilters.task.filter(t => t !== '__without__')
           entries = entries.filter(e => {
             if (!e.taskId) return wantWithout
-            return taskIds.length === 0 ? wantWithout : taskIds.includes(e.taskId)
+            return taskIds.includes(e.taskId)
           })
         }
         const hasBillable = appliedFilters.status.includes('billable')
@@ -600,7 +602,9 @@ export default function SummaryReportPage() {
         })
         return Object.entries(map).sort((a, b) => b[1].duration - a[1].duration).map(([pid, d]) => {
           const p = projects.find(pr => pr.id === pid)
-          return { id: `${parentId}-${pid}`, title: p?.name || '(Without Project)', color: p?.color || '#ccc', entryCount: d.count, duration: d.duration, billable: p?.billable ?? false }
+          const lead = p?.leadId ? users.find(u => u.id === p.leadId) : null
+          const title = p ? `${p.name}${lead ? ` - ${lead.name}` : ''}` : '(Without Project)'
+          return { id: `${parentId}-${pid}`, title, color: p?.color || '#ccc', entryCount: d.count, duration: d.duration, billable: p?.billable ?? false }
         })
       }
 
@@ -714,8 +718,10 @@ export default function SummaryReportPage() {
       return pIds.map(pid => {
         const p = projects.find(proj => proj.id === pid)
         const pe = filtered.filter(e => (e.projectId || '__none__') === pid)
+        const lead = p?.leadId ? users.find(u => u.id === p.leadId) : null
+        const title = p ? `${p.name}${lead ? ` - ${lead.name}` : ''}` : '(Without Project)'
         return {
-          id: pid, title: p?.name || '(Without Project)', color: p?.color || '#ccc',
+          id: pid, title, color: p?.color || '#ccc',
           entryCount: pe.length,
           duration: pe.reduce((a, e) => a + (e.duration ?? 0), 0),
           billable: p?.billable ?? false,
@@ -829,9 +835,9 @@ export default function SummaryReportPage() {
 
   const handleExport = (exportFormat: ExportFormat) => {
     const rows = flattenRows(tableRows)
-    const fromLabel = format(dateRange.from, 'yyyy-MM-dd')
-    const toLabel = format(dateRange.to, 'yyyy-MM-dd')
-    const fileBase = `summary-report-${fromLabel}-to-${toLabel}`
+    const fromLabel = format(dateRange.from, 'dd_MM_yyyy')
+    const toLabel = format(dateRange.to, 'dd_MM_yyyy')
+    const fileBase = `Trackify_Time_Report_Summary_${fromLabel}-${toLabel}`
     const metadata = [
       ['Report', 'Summary'],
       ['Date range', `${fromLabel} to ${toLabel}`],
@@ -853,26 +859,102 @@ export default function SummaryReportPage() {
     }
 
     if (exportFormat === 'excel') {
-      const metadataRows = metadata
-        .map(([key, value]) => `<tr><th align="left">${htmlEscape(key)}</th><td>${htmlEscape(value)}</td></tr>`)
-        .join('')
-      const dataRows = rows
-        .map(row => `<tr><td style="padding-left:${row.level * 18}px">${htmlEscape(row.title)}</td><td>${row.entryCount}</td><td>${htmlEscape(row.duration)}</td><td>${htmlEscape(row.amount)}</td></tr>`)
-        .join('')
+      const userGroups: Record<string, TimeEntry[]> = {}
+      filtered.forEach(e => {
+        const u = users.find(usr => usr.id === e.userId)
+        const name = u?.name || 'Unknown User'
+        if (!userGroups[name]) userGroups[name] = []
+        userGroups[name].push(e)
+      })
+
+      const htmlRows: string[] = []
+      
+      htmlRows.push(`
+        <tr style="background-color: #f2f2f2; font-weight: bold;">
+          <th align="left" style="border: 1px solid #e4eaee; padding: 4px;">User</th>
+          <th align="left" style="border: 1px solid #e4eaee; padding: 4px;">Description</th>
+          <th align="right" style="border: 1px solid #e4eaee; padding: 4px;">Time (h)</th>
+          <th align="right" style="border: 1px solid #e4eaee; padding: 4px;">Time (decimal)</th>
+          <th align="right" style="border: 1px solid #e4eaee; padding: 4px;">Amount (USD)</th>
+        </tr>
+      `)
+
+      const sortedUsers = Object.keys(userGroups).sort()
+      let grandTotalSecs = 0
+
+      sortedUsers.forEach(userName => {
+        const entries = userGroups[userName]
+        const userTotalSecs = entries.reduce((acc, e) => acc + (e.duration ?? 0), 0)
+        const userTotalMinutes = Math.round(userTotalSecs / 60)
+        grandTotalSecs += userTotalSecs
+        
+        htmlRows.push(`
+          <tr style="font-weight: bold;">
+            <td style="border: 1px solid #e4eaee; padding: 4px;">${htmlEscape(userName)}</td>
+            <td style="border: 1px solid #e4eaee; padding: 4px;"></td>
+            <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'\\@';">${htmlEscape(fmtH(userTotalSecs))}</td>
+            <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">${(userTotalMinutes / 60).toFixed(2)}</td>
+            <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">0.00</td>
+          </tr>
+        `)
+
+        entries.forEach(e => {
+          const dur = e.duration ?? 0
+          const entryMinutes = Math.round(dur / 60)
+          htmlRows.push(`
+            <tr>
+              <td style="border: 1px solid #e4eaee; padding: 4px;"></td>
+              <td style="border: 1px solid #e4eaee; padding: 4px;">${htmlEscape(e.description || '(no description)')}</td>
+              <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'\\@';">${htmlEscape(fmtH(dur))}</td>
+              <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">${(entryMinutes / 60).toFixed(2)}</td>
+              <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">0.00</td>
+            </tr>
+          `)
+        })
+      })
+
+      const grandTotalMinutes = Math.round(grandTotalSecs / 60)
+      const grandTotalH = fmtH(grandTotalSecs)
+      const grandTotalDecimal = (grandTotalMinutes / 60).toFixed(2)
+      const rangeLabel = `Total (${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')})`
+
+      htmlRows.push(`
+        <tr style="font-weight: bold;">
+          <td style="border: 1px solid #e4eaee; padding: 4px;">${htmlEscape(rangeLabel)}</td>
+          <td style="border: 1px solid #e4eaee; padding: 4px;"></td>
+          <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'\\@';">${htmlEscape(grandTotalH)}</td>
+          <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">${grandTotalDecimal}</td>
+          <td align="right" style="border: 1px solid #e4eaee; padding: 4px; mso-number-format:'0\\.00';">0.00</td>
+        </tr>
+      `)
+
       const html = `
-        <html>
-          <head><meta charset="utf-8" /></head>
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="utf-8" />
+            <!--[if gte mso 9]>
+            <xml>
+              <x:ExcelWorkbook>
+                <x:ExcelWorksheets>
+                  <x:ExcelWorksheet>
+                    <x:Name>Summary report</x:Name>
+                    <x:WorksheetOptions>
+                      <x:DisplayGridlines/>
+                    </x:WorksheetOptions>
+                  </x:ExcelWorksheet>
+                </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+          </head>
           <body>
-            <table>${metadataRows}</table>
-            <br />
-            <table border="1">
-              <thead><tr><th>Title</th><th>Entries</th><th>Duration</th><th>Amount</th></tr></thead>
-              <tbody>${dataRows}</tbody>
+            <table style="border-collapse: collapse;">
+              ${htmlRows.join('')}
             </table>
           </body>
         </html>
       `
-      downloadBlob(new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' }), `${fileBase}.xls`)
+      downloadBlob(new Blob([html], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8' }), `${fileBase}.xls`)
       return
     }
 
@@ -950,14 +1032,14 @@ export default function SummaryReportPage() {
           {/* Group by row + Table + Donut — all in one attached block */}
           <div className="mt-6 flex flex-col border-t border-[#e4eaee]">
             {/* Group by row */}
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-[#dde2e7] border-b border-[#e4eaee] flex-shrink-0">
-              <span className="text-[13px] text-[#555]">Group by :</span>
+            <div className="flex items-center gap-3 px-6 py-3 bg-[#dde2e7] border-b border-[#e4eaee] flex-shrink-0">
+              <span className="text-[12px] text-[#999] font-medium">Group by:</span>
               <SimpleDropdown value={groupBy} options={GROUP_OPTIONS} onChange={setGroupBy} />
               <SimpleDropdown value={subGroupBy} options={SUB_GROUP_OPTIONS} onChange={setSubGroupBy} />
             </div>
             {/* Table + Donut side by side */}
             <div className="flex items-start min-h-[300px]">
-              <div className="w-[60%] flex-shrink-0 border-r border-[#e4eaee] flex flex-col">
+              <div className="w-[75%] flex-shrink-0 border-r border-[#e4eaee] flex flex-col">
                 {loading ? (
                   <div className="p-4 flex flex-col gap-3">
                     {[...Array(6)].map((_, i) => (
@@ -987,7 +1069,7 @@ export default function SummaryReportPage() {
                   }} />
                 )}
               </div>
-              <div className="flex-1 flex items-center justify-center py-10 overflow-hidden">
+              <div className="flex-1 flex items-center justify-center py-10 overflow-hidden px-4">
                 {loading ? (
                   <Skeleton className="h-[200px] w-[200px] rounded-full" />
                 ) : (
