@@ -146,8 +146,8 @@ function MiniDatePicker({ selected, onChange }: { selected: Date; onChange: (d: 
           <button key={day.toISOString()} onClick={e => { e.stopPropagation(); onChange(day) }}
             className={cn('h-8 w-full text-[12px] rounded transition-colors',
               isSameDay(day, selected) ? 'bg-[#03a9f4] text-white font-bold' :
-              isToday(day) ? 'text-[#03a9f4] font-bold hover:bg-[#eaf4fb]' :
-              isSameMonth(day, month) ? 'text-[#333] hover:bg-[#f0f4f8]' : 'text-[#ccc] hover:bg-[#f0f4f8]'
+                isToday(day) ? 'text-[#03a9f4] font-bold hover:bg-[#eaf4fb]' :
+                  isSameMonth(day, month) ? 'text-[#333] hover:bg-[#f0f4f8]' : 'text-[#ccc] hover:bg-[#f0f4f8]'
             )}>
             {format(day, 'd')}
           </button>
@@ -681,7 +681,7 @@ export default function DetailedReportPage() {
         const userTotalSecs = entries.reduce((acc, e) => acc + (e.duration ?? 0), 0)
         const userTotalMinutes = Math.round(userTotalSecs / 60)
         grandTotalSecs += userTotalSecs
-        
+
         htmlRows.push(`
           <tr style="font-weight: bold;">
             <td style="border: 1px solid #e4eaee; padding: 4px;">${htmlEscape(userName)}</td>
@@ -807,7 +807,6 @@ export default function DetailedReportPage() {
                   Time Entry <SortIcon field="description" sortField={sortField} sortOrder={sortOrder} />
                 </div>
                 <div className="w-[80px] text-right flex-shrink-0 flex items-center justify-end px-2">Amount</div>
-                <div className="w-[40px] flex-shrink-0" />
                 <div className="w-[150px] text-right flex-shrink-0 px-2 flex items-center justify-end cursor-pointer hover:text-[#555]" onClick={() => handleSort('userName')}>
                   User <SortIcon field="userName" sortField={sortField} sortOrder={sortOrder} />
                 </div>
@@ -902,20 +901,9 @@ export default function DetailedReportPage() {
                               ) : null}
                             </div>
                           </div>
-                          <div className="flex-shrink-0 ml-auto">
-                            <TagPicker iconSize={20} selectedTagIds={entry.tagIds ?? []} onChange={canEdit ? tagIds => updateEntry(entry.id, { tagIds }) : () => { }} />
-                          </div>
                         </div>
 
                         <div className="w-[80px] flex-shrink-0 flex items-center justify-end px-2 text-[14px] text-[#aaa] tabular-nums">0.00</div>
-
-                        <div className="w-[40px] flex-shrink-0 flex items-center justify-center">
-                          <button onClick={() => canEdit && updateEntry(entry.id, { billable: !entry.billable })}
-                            className={cn('transition-colors', canEdit ? 'cursor-pointer' : 'cursor-default', entry.billable ? 'text-[#03a9f4]' : 'text-[#ccc]')}>
-                            <DollarSign style={{ width: 18, height: 18 }} />
-                          </button>
-                        </div>
-
                         <div className="w-[150px] flex-shrink-0 flex items-center justify-end px-2">
                           {canManageUsers && canEdit ? (
                             <DropdownMenu>
