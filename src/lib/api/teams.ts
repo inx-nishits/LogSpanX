@@ -30,6 +30,7 @@ export interface ApiTeamsResponse {
 
 export interface ApiGroup {
   _id: string
+  id?: string
   name: string
   leadId?: string | null
   memberIds: string[]

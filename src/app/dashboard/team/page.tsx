@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { useDataStore } from '@/lib/stores/data-store'
-import { apiRequest } from '@/lib/api/client'
 import { Search, ChevronDown, MoreVertical, Plus, Pencil, X, Check, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -204,43 +203,72 @@ function AccessDropdown({ group, rawUsers, onToggle, onSelectAll, readOnly = fal
   readOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
   const [search, setSearch] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    if (!open) return
+    const h = (e: MouseEvent) => {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
+      ) { setOpen(false); setSearch('') }
+    }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
-  }, [])
+  }, [open])
 
   const filtered = rawUsers.filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()))
-  const allSelected = filtered.length > 0 && filtered.every(u => group.memberIds.includes(u._id))
-  const groupMembers = rawUsers.filter(u => group.memberIds.includes(u._id))
+  const allSelected = filtered.length > 0 && filtered.every(u => group.memberIds.includes(u._id) || group.memberIds.includes(u.id ?? ''))
+  const groupMembers = rawUsers.filter(u => group.memberIds.includes(u._id) || group.memberIds.includes(u.id ?? ''))
 
-  if (readOnly) {
-    return groupMembers.length > 0 ? (
-      <div className="inline-flex items-center gap-1.5 bg-[#eaf4fb] text-[#5c7b91] text-[13px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] max-w-[400px]">
-        <span className="truncate">{groupMembers.map(u => u.name).join(', ')}</span>
-      </div>
-    ) : <span className="text-[#ccc] text-[12px]">—</span>
+  const handleOpen = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      // Open upward if too close to bottom of viewport
+      const spaceBelow = window.innerHeight - rect.bottom
+      const dropdownH = Math.min(groupMembers.length * 36 + 80, 320)
+      const top = spaceBelow < dropdownH ? rect.top - dropdownH - 4 : rect.bottom + 4
+      setPos({ top: top + window.scrollY, left: rect.left + window.scrollX })
+    }
+    setOpen(o => !o)
   }
 
+  const memberChip = groupMembers.length > 0 ? (
+    <div className="flex items-center gap-1.5 bg-[#eaf4fb] text-[#5c7b91] text-[12px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] max-w-[280px]">
+      <span className="truncate">{groupMembers.map(u => u.name).join(', ')}</span>
+    </div>
+  ) : <span className="text-[#bbb] text-[12px]">No members</span>
+
+  if (readOnly) return (
+    <div ref={triggerRef}>{memberChip}</div>
+  )
+
   return (
-    <div className="relative" ref={ref}>
-      {groupMembers.length > 0 ? (
-        <div onClick={() => setOpen(o => !o)}
-          className="inline-flex items-center gap-1.5 bg-[#eaf4fb] text-[#5c7b91] text-[12px] px-2.5 py-0.5 rounded-sm border border-[#d6e5ef] cursor-pointer hover:bg-[#d6edf8] transition-colors max-w-[400px]">
-          <span className="truncate">{groupMembers.map(u => u.name).join(', ')}</span>
-          <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
-        </div>
-      ) : (
-        <button onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[12px]">
-          <Plus className="h-3 w-3" /> Access
-        </button>
-      )}
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[260px] rounded-sm">
+    <div ref={triggerRef}>
+      <div
+        onClick={handleOpen}
+        className="inline-flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+      >
+        {groupMembers.length > 0 ? (
+          <div className="flex items-center gap-1.5 bg-[#eaf4fb] text-[#5c7b91] text-[12px] px-2.5 py-1 rounded-sm border border-[#d6e5ef] max-w-[280px]">
+            <span className="truncate">{groupMembers.map(u => u.name).join(', ')}</span>
+            <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
+          </div>
+        ) : (
+          <button className="flex items-center gap-1 text-[#03a9f4] hover:underline text-[12px] cursor-pointer">
+            <Plus className="h-3 w-3" /> Add members
+          </button>
+        )}
+      </div>
+      {open && typeof document !== 'undefined' && (
+        <div
+          ref={dropdownRef}
+          className="fixed bg-white border border-[#ddd] shadow-xl z-[9999] w-[260px] rounded-sm"
+          style={{ top: pos.top, left: pos.left }}
+        >
           <div className="flex items-center border-b border-[#eee] px-3 py-2">
             <Search className="h-3.5 w-3.5 text-[#bbb] shrink-0" />
             <input autoFocus placeholder="Search users…" value={search}
@@ -256,8 +284,11 @@ function AccessDropdown({ group, rawUsers, onToggle, onSelectAll, readOnly = fal
                 <span className="text-[12px] text-[#555] font-medium">Select all</span>
               </label>
             )}
+            {filtered.length === 0 && (
+              <div className="px-3 py-3 text-[12px] text-[#aaa]">No users found</div>
+            )}
             {filtered.map(u => {
-              const checked = group.memberIds.includes(u._id)
+              const checked = group.memberIds.includes(u._id) || group.memberIds.includes(u.id ?? '')
               return (
                 <label key={u._id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f0f4f8] cursor-pointer">
                   <input type="checkbox" checked={checked}
@@ -324,34 +355,62 @@ function GroupLeadPicker({ group, users, canEdit, onAssign }: {
   onAssign: (groupId: string, leadId: string | null) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
   const [search, setSearch] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    if (!open) return
+    const h = (e: MouseEvent) => {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
+      ) { setOpen(false); setSearch('') }
+    }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
-  }, [])
+  }, [open])
 
   const leadId = group.leadId ?? null
   const lead = users.find(u => u.id === leadId)
   const filtered = users.filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()))
 
+  const handleOpen = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX })
+    }
+    setOpen(o => !o)
+  }
+
   if (!canEdit) {
-    return lead
-      ? <span className="text-[12px] text-[#333]">{lead.name}</span>
-      : <span className="text-[#ccc] text-[12px]">—</span>
+    return (
+      <div ref={triggerRef}>
+        {lead
+          ? <span className="text-[12px] text-[#333] font-medium">{lead.name}</span>
+          : <span className="text-[#bbb] text-[12px]">—</span>
+        }
+      </div>
+    )
   }
 
   return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1 text-[12px] text-[#333] hover:text-[#03a9f4] transition-colors">
-        {lead ? lead.name : <span className="text-[#03a9f4]">+ Assign</span>}
+    <div ref={triggerRef}>
+      <button onClick={handleOpen}
+        className="flex items-center gap-1 text-[12px] hover:text-[#03a9f4] transition-colors cursor-pointer">
+        {lead
+          ? <span className="text-[#333] font-medium">{lead.name}</span>
+          : <span className="text-[#03a9f4]">+ Assign</span>
+        }
         <ChevronDown className="h-3 w-3 text-[#aaa]" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[220px] rounded-sm">
+        <div
+          ref={dropdownRef}
+          className="fixed bg-white border border-[#ddd] shadow-xl z-[9999] w-[220px] rounded-sm"
+          style={{ top: pos.top, left: pos.left }}
+        >
           <div className="flex items-center border-b border-[#eee] px-3 py-2">
             <Search className="h-3.5 w-3.5 text-[#bbb] shrink-0" />
             <input autoFocus placeholder="Search users…" value={search}
@@ -360,13 +419,16 @@ function GroupLeadPicker({ group, users, canEdit, onAssign }: {
           </div>
           <div className="max-h-[220px] overflow-y-auto py-1">
             {lead && (
-              <button onClick={() => { onAssign(group._id, null); setOpen(false) }}
+              <button onClick={() => { onAssign(group._id, null); setOpen(false); setSearch('') }}
                 className="w-full text-left px-3 py-1.5 text-[12px] text-red-400 hover:bg-red-50 cursor-pointer">
                 Remove lead
               </button>
             )}
+            {filtered.length === 0 && (
+              <div className="px-3 py-3 text-[12px] text-[#aaa]">No users found</div>
+            )}
             {filtered.map(u => (
-              <button key={u.id} onClick={() => { onAssign(group._id, u.id); setOpen(false) }}
+              <button key={u.id} onClick={() => { onAssign(group._id, u.id); setOpen(false); setSearch('') }}
                 className={cn('w-full text-left px-3 py-1.5 text-[12px] cursor-pointer flex items-center justify-between',
                   u.id === leadId ? 'bg-[#03a9f4] text-white' : 'text-[#333] hover:bg-[#f0f4f8]'
                 )}>
@@ -381,71 +443,18 @@ function GroupLeadPicker({ group, users, canEdit, onAssign }: {
   )
 }
 
-// ─── Group Dropdown ──────────────────────────────────────────────────────────
-
-function GroupDropdown({ member, allGroups, onToggle, trigger }: {
-  member: User
-  allGroups: ApiGroup[]
-  onToggle: (group: ApiGroup, checked: boolean) => void
-  trigger: React.ReactNode
-}) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
-
-  const filtered = allGroups.filter(g => !search || g.name.toLowerCase().includes(search.toLowerCase()))
-  const memberGroupIds = allGroups.filter(g => g.memberIds.includes(member.id)).map(g => g._id)
-
-  return (
-    <div className="relative" ref={ref}>
-      <div onClick={() => setOpen(o => !o)} className="cursor-pointer">{trigger}</div>
-      {open && (
-        <div className="absolute top-full right-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[260px] rounded-sm">
-          <div className="flex items-center border-b border-[#eee] px-3 py-2">
-            <Search className="h-3.5 w-3.5 text-[#bbb] flex-shrink-0" />
-            <input
-              autoFocus
-              placeholder="Add/Search groups"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="flex-1 ml-2 text-[12px] outline-none placeholder:text-[#bbb]"
-            />
-          </div>
-          <div className="max-h-[220px] overflow-y-auto py-1">
-            {filtered.length === 0 ? (
-              <div className="px-3 py-2 text-[12px] text-[#aaa]">No groups found</div>
-            ) : filtered.map(g => {
-              const checked = memberGroupIds.includes(g._id)
-              return (
-                <label key={g._id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f0f4f8] cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={e => { onToggle(g, e.target.checked); }}
-                    className="accent-[#03a9f4] w-[14px] h-[14px]"
-                  />
-                  <span className="text-[12px] text-[#333]">{g.name}</span>
-                </label>
-              )
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  )
+// Ensure every group has a guaranteed _id (backend may return `id` instead)
+function normalizeGroups(groups: ApiGroup[]): ApiGroup[] {
+  return groups
+    .map(g => ({ ...g, _id: g._id ?? g.id ?? '' }))
+    .filter(g => g._id) // drop any with no id at all
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function TeamPage() {
   const { user } = useAuthStore()
-  const { users, groups: storeGroups, createGroup: storeCreateGroup, updateGroup: storeUpdateGroup, deleteGroup: storeDeleteGroup } = useDataStore()
+  const { users, createGroup: storeCreateGroup, updateGroup: storeUpdateGroup, deleteGroup: storeDeleteGroup, groups: storeGroups } = useDataStore()
 
   const canInvite = user ? canInviteMembers(user.role) : false
   const canEditAdminFields = user ? canUpdateUserAdminFields(user.role) : false
@@ -478,51 +487,108 @@ export default function TeamPage() {
     } catch (err) { console.error(err) }
   }
 
-  // ── All groups for member dropdown ──
-  const [allGroups, setAllGroups] = useState<ApiGroup[]>([])
-  const [rawUsers, setRawUsers] = useState<RawUser[]>([])
+  // ── Single groups state shared across both tabs ──
+  const [groups, setGroups] = useState<ApiGroup[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
 
+  // Fetch groups once on mount — used by both Members and Groups tabs
   useEffect(() => {
-    apiRequest<unknown>('/users', { method: 'GET', token: useAuthStore.getState().token })
-      .then(res => {
-        const arr: RawUser[] = Array.isArray(res) ? res
-          : Array.isArray((res as any)?.data) ? (res as any).data
-            : Object.values(res as object).find(Array.isArray) ?? []
-        setRawUsers(arr)
-      })
-      .catch(() => setRawUsers([]))
+    setLoadingGroups(true)
+    getGroups()
+      .then(res => setGroups(normalizeGroups(Array.isArray(res) ? res : [])))
+      .catch(() => setGroups([]))
+      .finally(() => setLoadingGroups(false))
   }, [])
 
-  const isProjectLeadGroup = (g: ApiGroup) => g.name.toLowerCase().includes('project lead')
+  // Re-fetch when switching to Groups tab to get fresh data
+  useEffect(() => {
+    if (activeTab !== 'GROUPS') return
+    setLoadingGroups(true)
+    getGroups()
+      .then(res => setGroups(normalizeGroups(Array.isArray(res) ? res : [])))
+      .catch(() => {})
+      .finally(() => setLoadingGroups(false))
+  }, [activeTab])
+
+  // Use store users as rawUsers — already fetched on init, avoids a duplicate /users call
+  // Map to RawUser shape so AccessDropdown can match against _id
+  const rawUsers: RawUser[] = users.map(u => ({ _id: u.id, id: u.id, name: u.name, email: u.email, isActive: u.isActive, archived: u.archived }))
+
+  // Helper: normalize memberIds from a group (backend may return populated objects)
+  const normalizeMemberIds = (memberIds: string[]) =>
+    memberIds.map(m => {
+      if (typeof m === 'string') return m
+      const obj = m as { _id?: string; id?: string }
+      return obj._id ?? obj.id ?? ''
+    }).filter(Boolean)
+
+  // Helper: apply API response back to local groups state + data store
+  const applyGroupUpdate = (groupId: string, res: unknown) => {
+    const updated = (res as any)?._id ? res as ApiGroup
+      : (res as any)?.data?._id ? (res as any).data as ApiGroup
+      : null
+    
+    if (!updated) return
+    
+    const rawMemberIds = updated.memberIds ?? []
+    // Always normalize memberIds to plain strings
+    const memberIds = rawMemberIds.map((m: unknown) => {
+      if (typeof m === 'string') return m
+      const obj = m as { _id?: string; id?: string }
+      return obj._id ?? obj.id ?? ''
+    }).filter(Boolean)
+    
+    const normalizedGroup: ApiGroup = {
+      ...updated,
+      _id: updated._id ?? updated.id ?? groupId,
+      memberIds,
+      name: updated.name,
+      leadId: updated.leadId ?? null,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt
+    }
+    
+    setGroups(prev => prev.map(g => g._id === groupId ? normalizedGroup : g))
+    const storeGroup = storeGroups.find(g => g.id === groupId)
+    if (storeGroup) {
+      storeUpdateGroup(groupId, {
+        name: normalizedGroup.name,
+        memberIds: normalizedGroup.memberIds,
+        leadId: normalizedGroup.leadId
+      })
+    }
+  }
+
+  const isProjectLeadGroup = (g: ApiGroup) => g.name?.toLowerCase().includes('project lead') ?? false
 
   const handleGroupAccessToggle = async (group: ApiGroup, userId: string, checked: boolean) => {
     const newMemberIds = checked
       ? [...group.memberIds, userId]
       : group.memberIds.filter(id => id !== userId)
     try {
-      const calls: Promise<any>[] = [updateGroup(group._id, { memberIds: newMemberIds })]
-      if (checked && isProjectLeadGroup(group)) calls.push(updateUserRole(userId, 'group_lead'))
-      const [res] = await Promise.all(calls)
-      const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
-      const finalIds = updated?.memberIds ?? newMemberIds
-      setGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
-      storeUpdateGroup(group._id, { memberIds: finalIds })
-    } catch (err) { console.error(err) }
+      const res = await updateGroup(group._id, { memberIds: newMemberIds })
+      applyGroupUpdate(group._id, res)
+      
+      if (checked && isProjectLeadGroup(group)) {
+        await updateUserRole(userId, 'group_lead')
+      }
+    } catch (err) { 
+      console.error('Failed to update group access:', err instanceof Error ? err.message : String(err))
+    }
   }
 
-  const handleGroupAccessSelectAll = async (group: ApiGroup, allUsers: RawUser[], selectAll: boolean) => {
-    const newMemberIds = selectAll ? allUsers.map(u => u._id) : []
+  const handleGroupAccessSelectAll = async (group: ApiGroup, selectedUsers: RawUser[], selectAll: boolean) => {
+    const newMemberIds = selectAll ? selectedUsers.map(u => u._id) : []
     try {
-      const calls: Promise<any>[] = [updateGroup(group._id, { memberIds: newMemberIds })]
+      const res = await updateGroup(group._id, { memberIds: newMemberIds })
+      applyGroupUpdate(group._id, res)
+      
       if (selectAll && isProjectLeadGroup(group)) {
-        allUsers.forEach(u => calls.push(updateUserRole(u._id, 'group_lead')))
+        await Promise.all(selectedUsers.map(u => updateUserRole(u._id, 'group_lead')))
       }
-      const [res] = await Promise.all(calls)
-      const updated = (res as any)?._id ? res as ApiGroup : (res as any)?.data as ApiGroup
-      const finalIds = updated?.memberIds ?? newMemberIds
-      setGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
-      storeUpdateGroup(group._id, { memberIds: finalIds })
-    } catch (err) { console.error(err) }
+    } catch (err) { 
+      console.error('Failed to update group members:', err instanceof Error ? err.message : String(err))
+    }
   }
 
   const [roleOverrides, setRoleOverrides] = useState<Record<string, Role>>({})
@@ -551,55 +617,21 @@ export default function TeamPage() {
     await deleteUserRecord(member.id)
   }
 
-  useEffect(() => {
-    getGroups()
-      .then(res => setAllGroups(Array.isArray(res) ? res : []))
-      .catch(() => setAllGroups([]))
-  }, [])
-
-  const handleMemberGroupToggle = async (member: User, group: ApiGroup, checked: boolean) => {
-    const newMemberIds = checked
-      ? [...group.memberIds, member.id]
-      : group.memberIds.filter(id => id !== member.id)
-    try {
-      const res = await updateGroup(group._id, { memberIds: newMemberIds })
-      const updated = res as ApiGroup
-      const finalIds = updated?.memberIds ?? newMemberIds
-      setAllGroups(prev => prev.map(g => g._id === group._id ? { ...g, memberIds: finalIds } : g))
-      storeUpdateGroup(group._id, { memberIds: finalIds })
-    } catch (err) { console.error(err) }
-  }
-
   const handleAssignGroupLead = async (groupId: string, leadId: string | null) => {
     const group = groups.find(g => g._id === groupId)
     if (!group) return
     try {
-      // Normalize memberIds — backend may have returned populated objects; extract plain _id strings
-      const normalizedMemberIds = group.memberIds.map(m => {
-        if (typeof m === 'string') return m
-        const obj = m as { _id?: string; id?: string }
-        return obj._id ?? obj.id ?? ''
-      }).filter(Boolean)
-
-      // Find the user's _id from rawUsers (backend _id) matching the store's normalized id
       const resolvedLeadId = leadId
         ? (rawUsers.find(u => u._id === leadId || u.id === leadId)?._id ?? leadId)
-        : undefined
-
-      const body: { memberIds: string[]; leadId?: string } = { memberIds: normalizedMemberIds }
-      if (resolvedLeadId) body.leadId = resolvedLeadId
-
-      const res = await updateGroup(groupId, body)
-      const updated = res as ApiGroup
-      const finalLeadId = updated.leadId ?? resolvedLeadId
-      setGroups(prev => prev.map(g => g._id === groupId ? { ...g, leadId: finalLeadId } : g))
-      storeUpdateGroup(groupId, { leadId: finalLeadId })
-
+        : null
+      
+      const res = await updateGroup(groupId, { leadId: resolvedLeadId })
+      applyGroupUpdate(groupId, res)
+      
       if (resolvedLeadId) {
         try {
           await updateUserRole(resolvedLeadId, 'group_lead')
-          const { updateUserRecord } = useDataStore.getState()
-          await updateUserRecord(resolvedLeadId, { role: 'group_lead' })
+          await useDataStore.getState().updateUserRecord(resolvedLeadId, { role: 'group_lead' })
         } catch (roleErr) {
           console.error('Failed to update lead role:', roleErr instanceof Error ? roleErr.message : String(roleErr))
         }
@@ -610,27 +642,11 @@ export default function TeamPage() {
   }
 
   // ── Groups tab state ──
-  const [groups, setGroups] = useState<ApiGroup[]>([])
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
   const [groupSearch, setGroupSearch] = useState('')
   const [newGroupName, setNewGroupName] = useState('')
   const [editingGroup, setEditingGroup] = useState<ApiGroup | null>(null)
   const [editName, setEditName] = useState('')
-  const [loadingGroups, setLoadingGroups] = useState(false)
-
-  // Load groups from API when tab is active
-  useEffect(() => {
-    if (activeTab !== 'GROUPS') return
-    const timer = setTimeout(() => setLoadingGroups(true), 0)
-    getGroups()
-      .then(res => {
-        const arr = Array.isArray(res) ? res : []
-        setGroups(arr)
-      })
-      .catch(() => setGroups([]))
-      .finally(() => setLoadingGroups(false))
-    return () => clearTimeout(timer)
-  }, [activeTab])
 
   // ── Members filtering ──
   const filteredUsers = users.filter(u => {
@@ -641,7 +657,7 @@ export default function TeamPage() {
     if (statusFilter === 'Inactive' && isActive) return false
     if (roleFilter !== 'Role' && roleLabel(u.role).toLowerCase() !== roleFilter.toLowerCase()) return false
     if (groupFilter !== 'Group') {
-      const grp = storeGroups.find(g => g.name === groupFilter)
+      const grp = groups.find(g => g.name === groupFilter)
       if (!grp || !grp.memberIds.includes(u.id)) return false
     }
     return true
@@ -664,9 +680,12 @@ export default function TeamPage() {
     if (!newGroupName.trim()) return
     try {
       const res = await createGroup(newGroupName.trim())
-      // client.ts unwraps envelope — res is the group object directly
       const created = res as ApiGroup
-      if (created?._id) setGroups(prev => [...prev, created])
+      const normalized = normalizeGroups([created])[0]
+      if (normalized?._id) {
+        setGroups(prev => [...prev, normalized])
+        storeCreateGroup(newGroupName.trim(), [], undefined)
+      }
       setNewGroupName('')
     } catch (err) { console.error(err) }
   }
@@ -680,6 +699,7 @@ export default function TeamPage() {
     try {
       await deleteGroup(confirmDelete.id)
       setGroups(prev => prev.filter(g => g._id !== confirmDelete.id))
+      storeDeleteGroup(confirmDelete.id)
     } catch (err) { console.error(err) } finally {
       setConfirmDelete(null)
     }
@@ -688,21 +708,15 @@ export default function TeamPage() {
   const handleSaveEdit = async () => {
     if (!editingGroup || !editName.trim()) return
     try {
-      const normalizedMemberIds = editingGroup.memberIds
-        .map(m => {
-          if (typeof m === 'string') return m
-          const obj = m as { _id?: string; id?: string }
-          return obj._id ?? obj.id ?? ''
-        })
-        .filter(s => typeof s === 'string' && s.length === 24)
-      const res = await updateGroup(editingGroup._id, { name: editName.trim(), memberIds: normalizedMemberIds })
-      const updated = res as ApiGroup
-      setGroups(prev => prev.map(g => g._id === editingGroup._id ? updated : g))
+      const res = await updateGroup(editingGroup._id, { name: editName.trim() })
+      applyGroupUpdate(editingGroup._id, res)
       setEditingGroup(null)
-    } catch (err) { console.error(err) }
+    } catch (err) { 
+      console.error('Failed to update group name:', err instanceof Error ? err.message : String(err))
+    }
   }
 
-  const groupNames = ['Group', ...storeGroups.map(g => g.name)]
+  const groupNames = ['Group', ...groups.map(g => g.name)]
 
   return (
     <div className="min-h-full flex flex-col bg-[#f2f6f8] font-sans antialiased">
@@ -803,9 +817,6 @@ export default function TeamPage() {
                 </thead>
                 <tbody className="divide-y divide-[#f1f4f7]">
                   {filteredUsers.map(member => {
-                    const memberGroup = member.group
-                      ? allGroups.find(g => g.name === member.group) ?? { _id: '', name: member.group, memberIds: [] }
-                      : allGroups.find(g => g.memberIds.includes(member.id))
                     const isActive = member.id in activeOverrides ? activeOverrides[member.id] : (member.isActive !== false)
                     const canChangeRole = Boolean(user && canChangeAnyRole && canAssignUserRole(user, member, member.role))
                     return (
@@ -909,23 +920,19 @@ export default function TeamPage() {
                     <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest w-[25%]">
                       <div className="flex items-center gap-1">NAME <ChevronDown className="h-3 w-3" /></div>
                     </th>
-                    <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest w-[18%]">GROUP LEAD</th>
-                    <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest">ACCESS</th>
+                    <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest w-[25%]">GROUP LEAD</th>
+                    <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest">MEMBERS</th>
                     <th className="px-5 py-2 w-[80px]" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f1f4f7]">
                   {loadingGroups ? (
-                    <tr><td colSpan={3} className="px-5 py-8 text-center text-[14px] text-[#aaa]">Loading...</td></tr>
+                    <tr><td colSpan={4} className="px-5 py-8 text-center text-[14px] text-[#aaa]">Loading...</td></tr>
                   ) : filteredGroups.length === 0 ? (
-                    <tr><td colSpan={3} className="px-5 py-8 text-center text-[14px] text-[#aaa]">No groups found</td></tr>
+                    <tr><td colSpan={4} className="px-5 py-8 text-center text-[14px] text-[#aaa]">No groups found</td></tr>
                   ) : filteredGroups.map(group => {
-                    const members = users.filter(u => group.memberIds.includes(u.id))
-                    const MAX_SHOW = 5
-                    const _shown = members.slice(0, MAX_SHOW)
-                    const _extra = members.length - MAX_SHOW
+                    const lead = group.leadId ? users.find(u => u.id === group.leadId) : null
                     const isEditing = editingGroup?._id === group._id
-
                     return (
                       <tr key={group._id} className="hover:bg-[#f9fafb] transition-colors group text-[12px] h-[45px]">
                         <td className="px-5 py-3 text-[#333] text-[12px]">
@@ -957,7 +964,7 @@ export default function TeamPage() {
                             group={group}
                             rawUsers={rawUsers}
                             onToggle={(userId, checked) => handleGroupAccessToggle(group, userId, checked)}
-                            onSelectAll={(users, selectAll) => handleGroupAccessSelectAll(group, users, selectAll)}
+                            onSelectAll={(allUsers, sel) => handleGroupAccessSelectAll(group, allUsers, sel)}
                             readOnly={!canManageGroup}
                           />
                         </td>

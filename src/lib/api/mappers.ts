@@ -23,6 +23,8 @@ export interface ApiGroup {
   name: string
   leadId?: string | null
   memberIds?: string[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface ApiProject {
@@ -127,8 +129,6 @@ export function mapApiUser(user: ApiUser): User {
 }
 
 export function mapApiGroup(group: ApiGroup): Group {
-  const now = new Date()
-  // Normalize memberIds: API may return populated user objects instead of plain strings
   const memberIds = (group.memberIds ?? []).map(m => {
     if (typeof m === 'string') return m
     const obj = m as { id?: string; _id?: string }
@@ -139,8 +139,8 @@ export function mapApiGroup(group: ApiGroup): Group {
     name: group.name,
     leadId: group.leadId ?? undefined,
     memberIds,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: toDate(group.createdAt),
+    updatedAt: toDate(group.updatedAt),
   }
 }
 

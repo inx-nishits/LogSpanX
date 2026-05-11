@@ -761,9 +761,8 @@ export const useDataStore = create<DataStore>((set, get) => ({
         })
         .filter(s => typeof s === 'string' && s.length === 24)
     }
-    // Only include leadId when explicitly assigning — omit entirely when null/undefined
-    // to avoid MongoDB ObjectId validation rejecting null
-    if (updates.leadId) body.leadId = updates.leadId
+    // Include leadId when explicitly set — including null to allow removing a lead
+    if ('leadId' in updates) body.leadId = updates.leadId ?? null
 
     // Merge with existing name if not provided (backend PUT requires name)
     if (!body.name && existing?.name) body.name = existing.name
