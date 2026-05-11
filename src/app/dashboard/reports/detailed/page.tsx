@@ -392,16 +392,27 @@ export default function DetailedReportPage() {
     )
   }, [projects, currentUser])
 
+  const ledGroupMemberIds = useMemo(() => {
+    if (currentUser?.role !== 'group_lead') return new Set<string>()
+    return new Set(
+      groups
+        .filter(g => g.leadId === currentUser.id)
+        .flatMap(g => g.memberIds)
+    )
+  }, [groups, currentUser])
+
   const canEditEntry = (entry: TimeEntry) => {
     if (!currentUser) return false
     if (currentUser.role === 'owner') return true
     if (currentUser.role === 'admin') {
       const entryUser = users.find(u => u.id === entry.userId)
+      // wait, admin can't edit owner entries.
       return entryUser?.role !== 'owner'
     }
     if (currentUser.role === 'group_lead') {
       if (entry.userId === currentUser.id) return true
       if (entry.projectId && ledProjectIds.has(entry.projectId)) return true
+      if (ledGroupMemberIds.has(entry.userId)) return true
       return ledMemberIds.has(entry.userId)
     }
     return entry.userId === currentUser.id
@@ -879,7 +890,7 @@ export default function DetailedReportPage() {
                                   onSelect={(pid, tid) => updateEntry(entry.id, { projectId: pid, taskId: tid || undefined })}
                                   onClear={() => updateEntry(entry.id, { projectId: undefined, taskId: undefined })}
                                   customTrigger={proj ? (
-                                    <div className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
+                                    <div className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity cursor-pointer">
                                       <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
                                       <span className="text-[13px] truncate font-medium" style={{ color: proj.color }}>{proj.name}</span>
                                       {entryTask && <span className="text-[12px] text-[#999] flex-shrink-0 whitespace-nowrap">- {entryTask.name}</span>}
@@ -930,7 +941,7 @@ export default function DetailedReportPage() {
                             <DurCell dur={entry.duration ?? 0} onSave={s => {
                               const start = new Date(entry.startTime)
                               const endTime = new Date(start.getTime() + s * 1000)
-                              updateEntry(entry.id, { startTime: start, endTime })
+                              updateEntry(entry.id, { startTime: start, endTime, duration: s })
                             }} />
                           ) : (
                             <span className="text-[15px] font-bold text-[#333] tabular-nums w-[52px] inline-block text-center">
