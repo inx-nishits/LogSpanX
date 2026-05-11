@@ -39,8 +39,10 @@ export async function GET() {
   const profile = unwrapPayload(payload)
 
   if (!backendResponse.ok) {
-    const response = NextResponse.json(payload, { status: backendResponse.status })
-    if (backendResponse.status === 401 || backendResponse.status === 403) {
+    // Treat backend 5xx as unauthenticated so the client doesn't crash on boot
+    const status = backendResponse.status >= 500 ? 401 : backendResponse.status
+    const response = NextResponse.json({ user: null }, { status })
+    if (backendResponse.status === 401 || backendResponse.status === 403 || backendResponse.status >= 500) {
       clearAuthCookies(response)
     }
     return response

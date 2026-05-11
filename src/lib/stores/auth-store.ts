@@ -91,12 +91,11 @@ export const useAuthStore = create<AuthState>()(
       set(authenticatedState(payload.user, payload.token ?? undefined))
     } catch (error) {
       const status = error instanceof Error && 'status' in error ? (error as { status: number }).status : 0
-      if (status === 401 || status === 403) {
+      if (status === 401 || status === 403 || status >= 500) {
         set({ token: null, refreshToken: null, user: null, authStatus: 'unauthenticated', error: null })
         return
       }
 
-      console.error('Failed to initialize auth:', error instanceof Error ? error.message : String(error))
       set({
         token: null,
         refreshToken: null,

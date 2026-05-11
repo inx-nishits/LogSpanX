@@ -17,6 +17,7 @@ import {
   canDeleteGroup,
   canDeleteUser,
   canInviteMembers,
+  canManageGroups,
   canToggleUserActive,
   canUpdateUserAdminFields,
   canUpdateUserRole,
@@ -314,6 +315,72 @@ function RoleDropdown({ memberId, currentRole, actorRole, onRoleChange }: {
   )
 }
 
+// ─── Group Lead Picker ───────────────────────────────────────────────────────
+
+function GroupLeadPicker({ group, users, canEdit, onAssign }: {
+  group: ApiGroup
+  users: User[]
+  canEdit: boolean
+  onAssign: (groupId: string, leadId: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const leadId = group.leadId ?? null
+  const lead = users.find(u => u.id === leadId)
+  const filtered = users.filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase()))
+
+  if (!canEdit) {
+    return lead
+      ? <span className="text-[12px] text-[#333]">{lead.name}</span>
+      : <span className="text-[#ccc] text-[12px]">—</span>
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1 text-[12px] text-[#333] hover:text-[#03a9f4] transition-colors">
+        {lead ? lead.name : <span className="text-[#03a9f4]">+ Assign</span>}
+        <ChevronDown className="h-3 w-3 text-[#aaa]" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-[#ddd] shadow-lg z-50 w-[220px] rounded-sm">
+          <div className="flex items-center border-b border-[#eee] px-3 py-2">
+            <Search className="h-3.5 w-3.5 text-[#bbb] shrink-0" />
+            <input autoFocus placeholder="Search users…" value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="flex-1 ml-2 text-[12px] outline-none placeholder:text-[#bbb]" />
+          </div>
+          <div className="max-h-[220px] overflow-y-auto py-1">
+            {lead && (
+              <button onClick={() => { onAssign(group._id, null); setOpen(false) }}
+                className="w-full text-left px-3 py-1.5 text-[12px] text-red-400 hover:bg-red-50 cursor-pointer">
+                Remove lead
+              </button>
+            )}
+            {filtered.map(u => (
+              <button key={u.id} onClick={() => { onAssign(group._id, u.id); setOpen(false) }}
+                className={cn('w-full text-left px-3 py-1.5 text-[12px] cursor-pointer flex items-center justify-between',
+                  u.id === leadId ? 'bg-[#03a9f4] text-white' : 'text-[#333] hover:bg-[#f0f4f8]'
+                )}>
+                {u.name}
+                {u.id === leadId && <Check className="h-3 w-3" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Group Dropdown ──────────────────────────────────────────────────────────
 
 function GroupDropdown({ member, allGroups, onToggle, trigger }: {
@@ -386,6 +453,8 @@ export default function TeamPage() {
   const canRemoveUser = user ? canDeleteUser(user.role) : false
   const canDeleteGroupItem = user ? canDeleteGroup(user.role) : false
   const canChangeAnyRole = user ? canUpdateUserRole(user.role) : false
+  const canAssignGroupLead = user ? (user.role === 'owner' || user.role === 'admin') : false
+  const canManageGroup = user ? canManageGroups(user.role) : false
 
   const [activeTab, setActiveTab] = useState<'MEMBERS' | 'GROUPS' | 'REMINDERS'>('MEMBERS')
 
@@ -501,6 +570,45 @@ export default function TeamPage() {
     } catch (err) { console.error(err) }
   }
 
+  const handleAssignGroupLead = async (groupId: string, leadId: string | null) => {
+    const group = groups.find(g => g._id === groupId)
+    if (!group) return
+    try {
+      // Normalize memberIds — backend may have returned populated objects; extract plain _id strings
+      const normalizedMemberIds = group.memberIds.map(m => {
+        if (typeof m === 'string') return m
+        const obj = m as { _id?: string; id?: string }
+        return obj._id ?? obj.id ?? ''
+      }).filter(Boolean)
+
+      // Find the user's _id from rawUsers (backend _id) matching the store's normalized id
+      const resolvedLeadId = leadId
+        ? (rawUsers.find(u => u._id === leadId || u.id === leadId)?._id ?? leadId)
+        : undefined
+
+      const body: { memberIds: string[]; leadId?: string } = { memberIds: normalizedMemberIds }
+      if (resolvedLeadId) body.leadId = resolvedLeadId
+
+      const res = await updateGroup(groupId, body)
+      const updated = res as ApiGroup
+      const finalLeadId = updated.leadId ?? resolvedLeadId
+      setGroups(prev => prev.map(g => g._id === groupId ? { ...g, leadId: finalLeadId } : g))
+      storeUpdateGroup(groupId, { leadId: finalLeadId })
+
+      if (resolvedLeadId) {
+        try {
+          await updateUserRole(resolvedLeadId, 'group_lead')
+          const { updateUserRecord } = useDataStore.getState()
+          await updateUserRecord(resolvedLeadId, { role: 'group_lead' })
+        } catch (roleErr) {
+          console.error('Failed to update lead role:', roleErr instanceof Error ? roleErr.message : String(roleErr))
+        }
+      }
+    } catch (err) {
+      console.error('Failed to assign group lead:', err instanceof Error ? err.message : String(err))
+    }
+  }
+
   // ── Groups tab state ──
   const [groups, setGroups] = useState<ApiGroup[]>([])
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
@@ -580,7 +688,14 @@ export default function TeamPage() {
   const handleSaveEdit = async () => {
     if (!editingGroup || !editName.trim()) return
     try {
-      const res = await updateGroup(editingGroup._id, { name: editName.trim(), memberIds: editingGroup.memberIds })
+      const normalizedMemberIds = editingGroup.memberIds
+        .map(m => {
+          if (typeof m === 'string') return m
+          const obj = m as { _id?: string; id?: string }
+          return obj._id ?? obj.id ?? ''
+        })
+        .filter(s => typeof s === 'string' && s.length === 24)
+      const res = await updateGroup(editingGroup._id, { name: editName.trim(), memberIds: normalizedMemberIds })
       const updated = res as ApiGroup
       setGroups(prev => prev.map(g => g._id === editingGroup._id ? updated : g))
       setEditingGroup(null)
@@ -673,9 +788,6 @@ export default function TeamPage() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="text-left border-b border-[#e4eaee] bg-white">
-                    <th className="px-4 py-3 w-[40px]">
-                      <div className="w-[14px] h-[14px] border border-[#c6d2d9] rounded-sm bg-white" />
-                    </th>
                     <th className="px-4 py-2 text-[11px] font-normal text-[#666] uppercase tracking-wider w-[22%]">
                       <div className="flex items-center gap-1">NAME <ChevronDown className="h-3 w-3" /></div>
                     </th>
@@ -698,9 +810,6 @@ export default function TeamPage() {
                     const canChangeRole = Boolean(user && canChangeAnyRole && canAssignUserRole(user, member, member.role))
                     return (
                       <tr key={member.id} className="hover:bg-[#f9fafb] transition-colors group text-[12px] h-[40px]">
-                        <td className={cn('px-4 py-2', !isActive && 'opacity-50')}>
-                          <div className="w-[14px] h-[14px] border border-[#c6d2d9] rounded-sm bg-white" />
-                        </td>
                         <td className={cn('px-4 py-2 text-[#333] font-normal', !isActive && 'opacity-50')}>
                           <span className={cn(!isActive && 'line-through text-[#aaa]')}>{member.name}</span>
                         </td>
@@ -769,7 +878,7 @@ export default function TeamPage() {
                     onChange={e => setGroupSearch(e.target.value)}
                     className="flex-1 px-2 text-[12px] outline-none placeholder:text-[#bbb] bg-transparent" />
                 </div>
-                {canInvite && (
+                {canManageGroup && (
                   <div className="flex items-center gap-2">
                     <div className="border border-[#c6d2d9] rounded-sm h-[30px] flex items-center px-3 bg-white focus-within:border-[#03a9f4] w-[200px]">
                       <input placeholder="Add new group" value={newGroupName}
@@ -800,6 +909,7 @@ export default function TeamPage() {
                     <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest w-[25%]">
                       <div className="flex items-center gap-1">NAME <ChevronDown className="h-3 w-3" /></div>
                     </th>
+                    <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest w-[18%]">GROUP LEAD</th>
                     <th className="px-5 py-2 text-[11px] font-normal text-[#666] uppercase tracking-widest">ACCESS</th>
                     <th className="px-5 py-2 w-[80px]" />
                   </tr>
@@ -834,18 +944,26 @@ export default function TeamPage() {
                             </div>
                           ) : group.name}
                         </td>
+                        <td className="px-5 py-3 text-[12px]">
+                          <GroupLeadPicker
+                            group={group}
+                            users={users}
+                            canEdit={canAssignGroupLead}
+                            onAssign={handleAssignGroupLead}
+                          />
+                        </td>
                         <td className="px-5 py-2">
                           <AccessDropdown
                             group={group}
                             rawUsers={rawUsers}
                             onToggle={(userId, checked) => handleGroupAccessToggle(group, userId, checked)}
                             onSelectAll={(users, selectAll) => handleGroupAccessSelectAll(group, users, selectAll)}
-                            readOnly={!canInvite}
+                            readOnly={!canManageGroup}
                           />
                         </td>
                         <td className="px-5 py-2 text-right">
                           <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {canInvite && (
+                            {canManageGroup && (
                               <button onClick={() => { setEditingGroup(group); setEditName(group.name) }}
                                 className="text-[#ccc] hover:text-[#03a9f4] cursor-pointer transition-colors">
                                 <Pencil className="h-4 w-4" />

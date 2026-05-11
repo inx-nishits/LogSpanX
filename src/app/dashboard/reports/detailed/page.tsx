@@ -208,7 +208,7 @@ function DateCell({ date, onSave }: { date: Date | string; onSave: (d: Date) => 
   )
 }
 
-function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => void, defaultDate: Date }) {
+function InlineEntryBar({ onAdd }: { onAdd: (e: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>, defaultDate: Date }) {
   const { users } = useDataStore()
   const [desc, setDesc] = useState('')
   const [pid, setPid] = useState('')
@@ -406,9 +406,20 @@ export default function DetailedReportPage() {
     if (currentUser.role === 'owner') return true
     if (currentUser.role === 'admin') {
       const entryUser = users.find(u => u.id === entry.userId)
-      // wait, admin can't edit owner entries.
       return entryUser?.role !== 'owner'
     }
+    if (currentUser.role === 'group_lead') {
+      if (entry.userId === currentUser.id) return true
+      if (entry.projectId && ledProjectIds.has(entry.projectId)) return true
+      if (ledGroupMemberIds.has(entry.userId)) return true
+      return ledMemberIds.has(entry.userId)
+    }
+    return entry.userId === currentUser.id
+  }
+
+  const canDeleteEntry = (entry: TimeEntry) => {
+    if (!currentUser) return false
+    if (currentUser.role === 'owner' || currentUser.role === 'admin') return true
     if (currentUser.role === 'group_lead') {
       if (entry.userId === currentUser.id) return true
       if (entry.projectId && ledProjectIds.has(entry.projectId)) return true
@@ -643,11 +654,25 @@ export default function DetailedReportPage() {
     setFiltered(prev => [{ ...newEntry, id: Date.now().toString(), createdAt: new Date(), updatedAt: new Date() }, ...prev])
   }
 
+  const handleDeleteEntry = async (id: string) => {
+    const entry = filtered.find(e => e.id === id)
+    setFiltered(prev => prev.filter(e => e.id !== id))
+    try {
+      await deleteTimeEntry(id)
+    } catch {
+      if (entry) setFiltered(prev => [entry, ...prev.filter(e => e.id !== id)])
+    }
+  }
+
   const bulkDelete = () => {
-    if (window.confirm(`Delete ${selIds.size} entries?`)) {
-      const ids = Array.from(selIds)
-      deleteTimeEntries(ids)
-      setFiltered(prev => prev.filter(e => !ids.includes(e.id)))
+    const deletableIds = Array.from(selIds).filter(id => {
+      const entry = filtered.find(e => e.id === id)
+      return entry && canDeleteEntry(entry)
+    })
+    if (deletableIds.length === 0) return
+    if (window.confirm(`Delete ${deletableIds.length} entries?`)) {
+      deleteTimeEntries(deletableIds)
+      setFiltered(prev => prev.filter(e => !deletableIds.includes(e.id)))
       setSelIds(new Set())
     }
   }
@@ -766,17 +791,27 @@ export default function DetailedReportPage() {
             <button className="flex items-center gap-1.5 px-3 h-[32px] text-[14px] text-[#555] bg-white border border-[#d0d8de] rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm">
               Time audit <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
             </button>
-            <button onClick={() => setShowEntryBar(!showEntryBar)} className={cn("flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] border rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm transition-colors", showEntryBar ? "bg-[#f2f6f8] border-[#03a9f4] text-[#03a9f4]" : "bg-white border-[#d0d8de]")}>
-              Add time for others <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
-            </button>
+            {(currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
+              <button onClick={() => setShowEntryBar(!showEntryBar)} className={cn("flex items-center gap-1.5 px-3 h-[30px] text-[13px] text-[#555] border rounded-sm hover:border-[#aaa] cursor-pointer shadow-sm transition-colors", showEntryBar ? "bg-[#f2f6f8] border-[#03a9f4] text-[#03a9f4]" : "bg-white border-[#d0d8de]")}>
+                Add time for others <ChevronDown className="h-3.5 w-3.5 text-[#aaa]" />
+              </button>
+            )}
           </div>
         </div>
 
         <div className="mx-6 mb-8 bg-white border border-[#e4e8ec] shadow-sm rounded-sm flex flex-col">
           {/* Inline Manual Entry */}
-          {showEntryBar && <InlineEntryBar onAdd={(entry) => {
-            addTimeEntry(entry)
-            setFiltered(prev => [{ ...entry, id: Date.now().toString(), createdAt: new Date(), updatedAt: new Date() }, ...prev])
+          {showEntryBar && <InlineEntryBar onAdd={async (entry) => {
+            const tempId = `temp-${Date.now()}`
+            const tempEntry = { ...entry, id: tempId, createdAt: new Date(), updatedAt: new Date() }
+            setFiltered(prev => [tempEntry, ...prev])
+            try {
+              await addTimeEntry(entry)
+              // Remove the temp entry — the real one will appear on next fetch
+              setFiltered(prev => prev.filter(e => e.id !== tempId))
+            } catch {
+              setFiltered(prev => prev.filter(e => e.id !== tempId))
+            }
           }} defaultDate={dateRange.from} />}
 
           {/* Stats bar */}
@@ -966,7 +1001,7 @@ export default function DetailedReportPage() {
                         </div>
 
                         <div className="w-[100px] flex-shrink-0 flex items-center justify-end pr-4 gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {canEdit && (
+                          {(canEdit || canDeleteEntry(entry)) && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button className="text-[#ccc] hover:text-[#666] cursor-pointer p-1">
@@ -974,8 +1009,8 @@ export default function DetailedReportPage() {
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-[140px] shadow-xl bg-white border border-gray-100 rounded-sm">
-                                <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { deleteTimeEntry(entry.id); setFiltered(prev => prev.filter(e => e.id !== entry.id)) }} className="py-2.5 text-[14px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>
+                                {canEdit && <DropdownMenuItem onClick={() => onDup(entry)} className="py-2.5 text-[14px] cursor-pointer">Duplicate</DropdownMenuItem>}
+                                {canDeleteEntry(entry) && <DropdownMenuItem onClick={() => handleDeleteEntry(entry.id)} className="py-2.5 text-[14px] text-red-500 cursor-pointer hover:bg-red-50">Delete</DropdownMenuItem>}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}

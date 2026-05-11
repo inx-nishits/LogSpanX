@@ -130,11 +130,16 @@ function DatePicker({ selected, onChange }: { selected: Date; onChange: (d: Date
 }
 
 function DateCell({ date, onSave }: { date: Date | string; onSave: (d: Date) => void }) {
-  const d = new Date(date)
+  const [displayDate, setDisplayDate] = useState(() => new Date(date))
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const triggerRef = useRef<HTMLDivElement>(null)
   const portalRef = useRef<HTMLDivElement>(null)
+
+  // Sync display when the prop changes (after optimistic update)
+  useEffect(() => {
+    setDisplayDate(new Date(date))
+  }, [date])
 
   useEffect(() => {
     if (!open) return
@@ -168,7 +173,7 @@ function DateCell({ date, onSave }: { date: Date | string; onSave: (d: Date) => 
       >
         <Calendar className={cn("h-3.5 w-3.5 transition-colors", open ? "text-[#03a9f4]" : "text-[#aaa] group-hover/date:text-[#03a9f4]")} />
         <span className={cn("text-[12px] whitespace-nowrap transition-colors", open ? "text-[#333]" : "text-[#999] group-hover/date:text-[#333]")}>
-          {format(d, 'MMM d, yyyy')}
+          {format(displayDate, 'MMM d, yyyy')}
         </span>
       </div>
       {open && typeof document !== 'undefined' && createPortal(
@@ -176,7 +181,7 @@ function DateCell({ date, onSave }: { date: Date | string; onSave: (d: Date) => 
           ref={portalRef}
           style={{ position: 'absolute', top: pos.top, left: pos.left, zIndex: 9999 }}
         >
-          <DatePicker selected={d} onChange={newDate => {
+          <DatePicker selected={displayDate} onChange={newDate => {
             onSave(newDate)
             setOpen(false)
           }} />
@@ -277,7 +282,12 @@ export function TimeEntryList({ userId, refreshKey }: { userId: string; refreshK
     try {
       const synced = await updateTimeEntry(id, updates, existing)
       if (synced) {
-        setEntries(prev => prev.map(e => e.id === id ? { ...e, ...synced } : e))
+        // Replace the entry with the server response and re-sort so day grouping updates
+        setEntries(prev =>
+          prev
+            .map(e => e.id === id ? { ...e, ...synced } : e)
+            .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+        )
       }
     } catch (err) {
       // Rollback on failure
@@ -516,6 +526,7 @@ export function TimeEntryList({ userId, refreshKey }: { userId: string; refreshK
                                 newDate.setHours(old.getHours())
                                 newDate.setMinutes(old.getMinutes())
                                 newDate.setSeconds(old.getSeconds())
+                                newDate.setMilliseconds(old.getMilliseconds())
                                 const newEndTime = entry.endTime
                                   ? new Date(newDate.getTime() + (entry.duration ?? 0) * 1000)
                                   : undefined

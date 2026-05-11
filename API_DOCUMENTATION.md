@@ -1,1960 +1,1152 @@
-# Trackify API Documentation
+# Logspanx API Documentation
 
-**Project:** Trackify - Time Tracking & Productivity Management  
-**Version:** 0.1.0  
-**Base URL:** `https://api.trackify.com/v1`  
-**Authentication:** Bearer Token (JWT)
+## Overview
+
+This document provides comprehensive API documentation for the Logspanx time tracking application backend. The API is built with NestJS and follows RESTful conventions.
+
+### Base URL
+```
+http://localhost:8000
+```
+
+### Authentication
+All endpoints except public shared reports require JWT authentication. Include the token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+Refresh tokens are handled via HTTP-only cookies. Use the `/auth/refresh` endpoint to obtain new access tokens.
+
+### Response Format
+All responses follow a consistent structure:
+```json
+{
+  "success": true,
+  "message": "Optional message",
+  "data": "Response data or null"
+}
+```
+
+### Roles and Permissions
+The application uses role-based access control with the following hierarchy:
+- **OWNER**: Full access to all resources
+- **ADMIN**: Administrative access, can manage users and resources
+- **GROUP_LEAD**: Can manage projects, teams, and group members
+- **MEMBER**: Basic user access for time tracking and personal data
 
 ---
 
-## 📊 API Summary
+## Table of Contents
 
-| Category | Endpoint Count |
-|----------|----------------|
-| Authentication | 4 |
-| Time Entries | 9 |
-| Projects | 6 |
-| Users | 5 |
-| Tasks | 5 |
-| Tags | 4 |
-| Clients | 4 |
-| Reports | 4 |
-| Team & Workspace | 6 |
-| **Total APIs** | **47** |
+- [App](#app)
+- [Authentication](#authentication)
+- [Clients](#clients)
+- [Groups](#groups)
+- [Projects](#projects)
+- [Reports](#reports)
+- [Shared Reports](#shared-reports)
+- [Public Shared Reports](#public-shared-reports)
+- [Tags](#tags)
+- [Tasks](#tasks)
+- [Teams](#teams)
+- [Time Entries](#time-entries)
+- [Users](#users)
 
 ---
 
-# 1. AUTHENTICATION (4 APIs)
+## App
 
-## 1.1 User Login
+### GET /
 
-**Endpoint:** `POST /auth/login`
+Get application health check.
 
-**Description:** Authenticate user and receive JWT token
+**Response:**
+```json
+{
+  "success": true,
+  "data": "Logspanx API is running"
+}
+```
+
+---
+
+## Authentication
+
+### POST /auth/signup
+
+Register a new user account.
 
 **Request Body:**
 ```json
 {
-  "email": "user@example.com",
+  "name": "John Doe",
+  "email": "john.doe@example.com",
   "password": "securePassword123"
 }
 ```
 
-**Response (200 OK):**
+**Response:**
 ```json
 {
   "success": true,
+  "message": "User registered successfully",
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2E5ZjA3ZjFmMjQ0ZjEwMDAwMDAwMDAiLCJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwicm9sZSI6Im1lbWJlcjoiLCJpYXQiOjE2ODQ4MzYwMDAsImV4cCI6MTY4NDgzOTYwMH0.signature",
     "user": {
-      "id": "user_123",
-      "email": "user@example.com",
+      "id": "67a9f07f1f244f1000000000",
+      "email": "john.doe@example.com",
       "name": "John Doe",
       "role": "member",
-      "workspaceId": "workspace_1",
-      "avatar": "https://example.com/avatar.jpg"
-    },
-    "workspace": {
-      "id": "workspace_1",
-      "name": "My Company"
-    }
-  },
-  "timestamp": "2026-04-22T10:30:00Z"
-}
-```
-
-**Error Response (401 Unauthorized):**
-```json
-{
-  "success": false,
-  "error": "Invalid email or password",
-  "code": "AUTH_INVALID_CREDENTIALS",
-  "timestamp": "2026-04-22T10:30:00Z"
-}
-```
-
----
-
-## 1.2 User Signup
-
-**Endpoint:** `POST /auth/signup`
-
-**Description:** Create new user account
-
-**Request Body:**
-```json
-{
-  "email": "newuser@example.com",
-  "password": "securePassword123",
-  "name": "Jane Doe",
-  "workspaceName": "Jane's Company"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": "user_456",
-      "email": "newuser@example.com",
-      "name": "Jane Doe",
-      "role": "owner",
-      "workspaceId": "workspace_2",
       "avatar": null
-    },
-    "workspace": {
-      "id": "workspace_2",
-      "name": "Jane's Company"
     }
-  },
-  "timestamp": "2026-04-22T10:35:00Z"
-}
-```
-
-**Error Response (409 Conflict):**
-```json
-{
-  "success": false,
-  "error": "Email already registered",
-  "code": "AUTH_EMAIL_EXISTS",
-  "timestamp": "2026-04-22T10:35:00Z"
-}
-```
-
----
-
-## 1.3 Forgot Password
-
-**Endpoint:** `POST /auth/forgot-password`
-
-**Description:** Send password reset link to email
-
-**Request Body:**
-```json
-{
-  "email": "user@example.com"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Password reset link sent to your email",
-  "timestamp": "2026-04-22T10:40:00Z"
-}
-```
-
----
-
-## 1.4 Reset Password
-
-**Endpoint:** `POST /auth/reset-password`
-
-**Description:** Reset password using token from email
-
-**Request Body:**
-```json
-{
-  "token": "reset_token_from_email",
-  "newPassword": "newSecurePassword123"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Password reset successfully",
-  "timestamp": "2026-04-22T10:45:00Z"
-}
-```
-
----
-
-# 2. TIME ENTRIES (9 APIs)
-
-## 2.1 Create Time Entry
-
-**Endpoint:** `POST /time-entries`
-
-**Description:** Create a new time entry
-
-**Request Body:**
-```json
-{
-  "description": "Frontend component development",
-  "projectId": "project_1",
-  "taskId": "task_5",
-  "tagIds": ["tag_1", "tag_2"],
-  "billable": true,
-  "userId": "user_123",
-  "workspaceId": "workspace_1",
-  "startTime": "2026-04-22T09:00:00Z",
-  "endTime": "2026-04-22T10:30:00Z",
-  "duration": 5400,
-  "clientId": "client_1"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "entry_789",
-    "description": "Frontend component development",
-    "projectId": "project_1",
-    "taskId": "task_5",
-    "tagIds": ["tag_1", "tag_2"],
-    "billable": true,
-    "userId": "user_123",
-    "workspaceId": "workspace_1",
-    "startTime": "2026-04-22T09:00:00Z",
-    "endTime": "2026-04-22T10:30:00Z",
-    "duration": 5400,
-    "clientId": "client_1",
-    "createdAt": "2026-04-22T10:30:00Z",
-    "updatedAt": "2026-04-22T10:30:00Z"
-  },
-  "timestamp": "2026-04-22T10:30:00Z"
-}
-```
-
----
-
-## 2.2 Get All Time Entries
-
-**Endpoint:** `GET /time-entries?workspaceId=workspace_1&startDate=2026-04-01&endDate=2026-04-30`
-
-**Description:** Retrieve all time entries with optional filtering
-
-**Query Parameters:**
-- `workspaceId` (required): Workspace ID
-- `startDate` (optional): ISO date format (e.g., 2026-04-01)
-- `endDate` (optional): ISO date format (e.g., 2026-04-30)
-- `userId` (optional): Filter by user
-- `projectId` (optional): Filter by project
-- `billable` (optional): true/false
-- `page` (optional): Page number (default: 1)
-- `limit` (optional): Items per page (default: 50)
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "entries": [
-      {
-        "id": "entry_789",
-        "description": "Frontend component development",
-        "projectId": "project_1",
-        "taskId": "task_5",
-        "tagIds": ["tag_1", "tag_2"],
-        "billable": true,
-        "userId": "user_123",
-        "workspaceId": "workspace_1",
-        "startTime": "2026-04-22T09:00:00Z",
-        "endTime": "2026-04-22T10:30:00Z",
-        "duration": 5400,
-        "clientId": "client_1",
-        "createdAt": "2026-04-22T10:30:00Z",
-        "updatedAt": "2026-04-22T10:30:00Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 50,
-      "total": 150,
-      "hasMore": true
-    }
-  },
-  "timestamp": "2026-04-22T10:35:00Z"
-}
-```
-
----
-
-## 2.3 Get Time Entry by ID
-
-**Endpoint:** `GET /time-entries/{id}`
-
-**Description:** Retrieve a specific time entry
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "entry_789",
-    "description": "Frontend component development",
-    "projectId": "project_1",
-    "taskId": "task_5",
-    "tagIds": ["tag_1", "tag_2"],
-    "billable": true,
-    "userId": "user_123",
-    "workspaceId": "workspace_1",
-    "startTime": "2026-04-22T09:00:00Z",
-    "endTime": "2026-04-22T10:30:00Z",
-    "duration": 5400,
-    "clientId": "client_1",
-    "createdAt": "2026-04-22T10:30:00Z",
-    "updatedAt": "2026-04-22T10:30:00Z"
-  },
-  "timestamp": "2026-04-22T10:35:00Z"
-}
-```
-
----
-
-## 2.4 Update Time Entry
-
-**Endpoint:** `PUT /time-entries/{id}`
-
-**Description:** Update an existing time entry
-
-**Request Body:**
-```json
-{
-  "description": "Updated description",
-  "projectId": "project_2",
-  "billable": false,
-  "duration": 3600,
-  "endTime": "2026-04-22T11:00:00Z"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "entry_789",
-    "description": "Updated description",
-    "projectId": "project_2",
-    "taskId": "task_5",
-    "tagIds": ["tag_1", "tag_2"],
-    "billable": false,
-    "userId": "user_123",
-    "workspaceId": "workspace_1",
-    "startTime": "2026-04-22T09:00:00Z",
-    "endTime": "2026-04-22T11:00:00Z",
-    "duration": 3600,
-    "clientId": "client_1",
-    "createdAt": "2026-04-22T10:30:00Z",
-    "updatedAt": "2026-04-22T10:40:00Z"
-  },
-  "timestamp": "2026-04-22T10:40:00Z"
-}
-```
-
----
-
-## 2.5 Delete Time Entry
-
-**Endpoint:** `DELETE /time-entries/{id}`
-
-**Description:** Delete a time entry
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Time entry deleted successfully",
-  "data": {
-    "id": "entry_789"
-  },
-  "timestamp": "2026-04-22T10:45:00Z"
-}
-```
-
----
-
-## 2.6 Bulk Delete Time Entries
-
-**Endpoint:** `DELETE /time-entries`
-
-**Description:** Delete multiple time entries at once
-
-**Request Body:**
-```json
-{
-  "ids": ["entry_789", "entry_790", "entry_791"]
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "3 time entries deleted successfully",
-  "data": {
-    "deletedIds": ["entry_789", "entry_790", "entry_791"],
-    "deletedCount": 3
-  },
-  "timestamp": "2026-04-22T10:50:00Z"
-}
-```
-
----
-
-## 2.7 Get Time Entries by User
-
-**Endpoint:** `GET /time-entries/user/{userId}?workspaceId=workspace_1`
-
-**Description:** Get all time entries for a specific user
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "userId": "user_123",
-    "entries": [
-      {
-        "id": "entry_789",
-        "description": "Frontend component development",
-        "projectId": "project_1",
-        "duration": 5400,
-        "startTime": "2026-04-22T09:00:00Z",
-        "billable": true,
-        "createdAt": "2026-04-22T10:30:00Z"
-      }
-    ],
-    "total": 45,
-    "totalHours": 180.5
-  },
-  "timestamp": "2026-04-22T10:55:00Z"
-}
-```
-
----
-
-## 2.8 Get Time Entries by Project
-
-**Endpoint:** `GET /time-entries/project/{projectId}?workspaceId=workspace_1`
-
-**Description:** Get all time entries for a specific project
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "projectId": "project_1",
-    "projectName": "StaffBot Dedicated",
-    "entries": [
-      {
-        "id": "entry_789",
-        "description": "Frontend component development",
-        "userId": "user_123",
-        "userName": "John Doe",
-        "duration": 5400,
-        "billable": true,
-        "startTime": "2026-04-22T09:00:00Z"
-      }
-    ],
-    "total": 28,
-    "totalHours": 112.3
-  },
-  "timestamp": "2026-04-22T11:00:00Z"
-}
-```
-
----
-
-## 2.9 Undo Delete Time Entry
-
-**Endpoint:** `POST /time-entries/undo-delete`
-
-**Description:** Restore last deleted time entry
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Time entry restored successfully",
-  "data": {
-    "entries": [
-      {
-        "id": "entry_789",
-        "description": "Frontend component development",
-        "projectId": "project_1",
-        "duration": 5400,
-        "billable": true
-      }
-    ],
-    "count": 1
-  },
-  "timestamp": "2026-04-22T11:05:00Z"
-}
-```
-
----
-
-# 3. PROJECTS (6 APIs)
-
-## 3.1 Create Project
-
-**Endpoint:** `POST /projects`
-
-**Description:** Create a new project
-
-**Request Body:**
-```json
-{
-  "name": "StaffBot Dedicated",
-  "color": "#FF6B6B",
-  "clientId": "client_1",
-  "leadId": "user_456",
-  "billable": true,
-  "hourlyRate": 75.00,
-  "members": [
-    {
-      "userId": "user_123",
-      "role": "member",
-      "hourlyRate": 50.00
-    },
-    {
-      "userId": "user_456",
-      "role": "manager",
-      "hourlyRate": 75.00
-    }
-  ],
-  "archived": false,
-  "workspaceId": "workspace_1"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "project_1",
-    "name": "StaffBot Dedicated",
-    "color": "#FF6B6B",
-    "clientId": "client_1",
-    "leadId": "user_456",
-    "billable": true,
-    "hourlyRate": 75.00,
-    "members": [
-      {
-        "userId": "user_123",
-        "role": "member",
-        "hourlyRate": 50.00
-      },
-      {
-        "userId": "user_456",
-        "role": "manager",
-        "hourlyRate": 75.00
-      }
-    ],
-    "archived": false,
-    "workspaceId": "workspace_1",
-    "createdAt": "2026-04-22T11:10:00Z",
-    "updatedAt": "2026-04-22T11:10:00Z"
-  },
-  "timestamp": "2026-04-22T11:10:00Z"
-}
-```
-
----
-
-## 3.2 Get All Projects
-
-**Endpoint:** `GET /projects?workspaceId=workspace_1&includeArchived=false`
-
-**Description:** Retrieve all projects
-
-**Query Parameters:**
-- `workspaceId` (required): Workspace ID
-- `includeArchived` (optional): Include archived projects (default: false)
-- `leadId` (optional): Filter by project lead
-- `page` (optional): Page number
-- `limit` (optional): Items per page
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "projects": [
-      {
-        "id": "project_1",
-        "name": "StaffBot Dedicated",
-        "color": "#FF6B6B",
-        "clientId": "client_1",
-        "leadId": "user_456",
-        "billable": true,
-        "hourlyRate": 75.00,
-        "memberCount": 2,
-        "archived": false,
-        "createdAt": "2026-04-22T11:10:00Z"
-      }
-    ],
-    "pagination": {
-      "total": 14,
-      "page": 1,
-      "limit": 50
-    }
-  },
-  "timestamp": "2026-04-22T11:15:00Z"
-}
-```
-
----
-
-## 3.3 Get Project by ID
-
-**Endpoint:** `GET /projects/{id}`
-
-**Description:** Retrieve a specific project with full details
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "project_1",
-    "name": "StaffBot Dedicated",
-    "color": "#FF6B6B",
-    "clientId": "client_1",
-    "client": {
-      "id": "client_1",
-      "name": "StaffBot Inc"
-    },
-    "leadId": "user_456",
-    "lead": {
-      "id": "user_456",
-      "name": "Jaydeep Vegad",
-      "email": "jaydeep@example.com"
-    },
-    "billable": true,
-    "hourlyRate": 75.00,
-    "members": [
-      {
-        "userId": "user_123",
-        "role": "member",
-        "hourlyRate": 50.00,
-        "user": {
-          "id": "user_123",
-          "name": "John Doe"
-        }
-      }
-    ],
-    "archived": false,
-    "workspaceId": "workspace_1",
-    "createdAt": "2026-04-22T11:10:00Z",
-    "updatedAt": "2026-04-22T11:10:00Z"
-  },
-  "timestamp": "2026-04-22T11:20:00Z"
-}
-```
-
----
-
-## 3.4 Update Project
-
-**Endpoint:** `PUT /projects/{id}`
-
-**Description:** Update an existing project
-
-**Request Body:**
-```json
-{
-  "name": "StaffBot Dedicated - Phase 2",
-  "color": "#4ECDC4",
-  "hourlyRate": 85.00,
-  "archived": false
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "project_1",
-    "name": "StaffBot Dedicated - Phase 2",
-    "color": "#4ECDC4",
-    "clientId": "client_1",
-    "leadId": "user_456",
-    "billable": true,
-    "hourlyRate": 85.00,
-    "members": [],
-    "archived": false,
-    "workspaceId": "workspace_1",
-    "createdAt": "2026-04-22T11:10:00Z",
-    "updatedAt": "2026-04-22T11:25:00Z"
-  },
-  "timestamp": "2026-04-22T11:25:00Z"
-}
-```
-
----
-
-## 3.5 Delete Project
-
-**Endpoint:** `DELETE /projects/{id}`
-
-**Description:** Delete a project (archive or soft delete)
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Project deleted successfully",
-  "data": {
-    "id": "project_1",
-    "archived": true
-  },
-  "timestamp": "2026-04-22T11:30:00Z"
-}
-```
-
----
-
-## 3.6 Add Project Member
-
-**Endpoint:** `POST /projects/{id}/members`
-
-**Description:** Add a member to a project
-
-**Request Body:**
-```json
-{
-  "userId": "user_789",
-  "role": "member",
-  "hourlyRate": 55.00
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "project_1",
-    "members": [
-      {
-        "userId": "user_123",
-        "role": "member",
-        "hourlyRate": 50.00
-      },
-      {
-        "userId": "user_789",
-        "role": "member",
-        "hourlyRate": 55.00
-      }
-    ],
-    "memberCount": 2
-  },
-  "timestamp": "2026-04-22T11:35:00Z"
-}
-```
-
----
-
-# 4. USERS (5 APIs)
-
-## 4.1 Get All Users
-
-**Endpoint:** `GET /users?workspaceId=workspace_1`
-
-**Description:** Retrieve all users in workspace
-
-**Query Parameters:**
-- `workspaceId` (required): Workspace ID
-- `role` (optional): Filter by role (owner, admin, member, viewer)
-- `page` (optional): Page number
-- `limit` (optional): Items per page
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "users": [
-      {
-        "id": "user_123",
-        "email": "john@example.com",
-        "name": "John Doe",
-        "role": "member",
-        "avatar": "https://example.com/avatars/john.jpg",
-        "workspaceId": "workspace_1",
-        "joinedAt": "2026-01-15T10:00:00Z"
-      },
-      {
-        "id": "user_456",
-        "email": "jaydeep@example.com",
-        "name": "Jaydeep Vegad",
-        "role": "admin",
-        "avatar": "https://example.com/avatars/jaydeep.jpg",
-        "workspaceId": "workspace_1",
-        "joinedAt": "2026-01-10T09:00:00Z"
-      }
-    ],
-    "pagination": {
-      "total": 8,
-      "page": 1,
-      "limit": 50
-    }
-  },
-  "timestamp": "2026-04-22T11:40:00Z"
-}
-```
-
----
-
-## 4.2 Get User by ID
-
-**Endpoint:** `GET /users/{id}`
-
-**Description:** Retrieve user profile
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user_123",
-    "email": "john@example.com",
-    "name": "John Doe",
-    "avatar": "https://example.com/avatars/john.jpg",
-    "role": "member",
-    "workspaceId": "workspace_1",
-    "joinedAt": "2026-01-15T10:00:00Z",
-    "lastActive": "2026-04-22T11:00:00Z",
-    "preferences": {
-      "timezone": "UTC",
-      "dateFormat": "YYYY-MM-DD",
-      "timeFormat": "24h"
-    }
-  },
-  "timestamp": "2026-04-22T11:45:00Z"
-}
-```
-
----
-
-## 4.3 Update User Profile
-
-**Endpoint:** `PUT /users/{id}`
-
-**Description:** Update user profile information
-
-**Request Body:**
-```json
-{
-  "name": "John Doe Updated",
-  "avatar": "https://example.com/avatars/john-new.jpg",
-  "preferences": {
-    "timezone": "EST",
-    "dateFormat": "MM/DD/YYYY",
-    "timeFormat": "12h"
   }
 }
 ```
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user_123",
-    "email": "john@example.com",
-    "name": "John Doe Updated",
-    "avatar": "https://example.com/avatars/john-new.jpg",
-    "role": "member",
-    "workspaceId": "workspace_1",
-    "preferences": {
-      "timezone": "EST",
-      "dateFormat": "MM/DD/YYYY",
-      "timeFormat": "12h"
-    },
-    "updatedAt": "2026-04-22T11:50:00Z"
-  },
-  "timestamp": "2026-04-22T11:50:00Z"
-}
-```
+### POST /auth/login
 
----
-
-## 4.4 Get User's Time Statistics
-
-**Endpoint:** `GET /users/{id}/statistics?startDate=2026-04-01&endDate=2026-04-30`
-
-**Description:** Get time tracking statistics for a user
-
-**Query Parameters:**
-- `startDate` (required): Start date (ISO format)
-- `endDate` (required): End date (ISO format)
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "userId": "user_123",
-    "userName": "John Doe",
-    "period": {
-      "start": "2026-04-01",
-      "end": "2026-04-30"
-    },
-    "statistics": {
-      "totalHours": 160.5,
-      "billableHours": 140.25,
-      "nonBillableHours": 20.25,
-      "numberOfEntries": 45,
-      "activeProjects": 3,
-      "averageHoursPerDay": 8.02
-    }
-  },
-  "timestamp": "2026-04-22T11:55:00Z"
-}
-```
-
----
-
-## 4.5 Change User Password
-
-**Endpoint:** `PUT /users/{id}/password`
-
-**Description:** Change user password
+Authenticate user and receive access token.
 
 **Request Body:**
 ```json
 {
-  "currentPassword": "oldPassword123",
-  "newPassword": "newPassword456"
+  "email": "john.doe@example.com",
+  "password": "securePassword123"
 }
 ```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Password changed successfully",
-  "timestamp": "2026-04-22T12:00:00Z"
-}
-```
-
----
-
-# 5. TASKS (5 APIs)
-
-## 5.1 Create Task
-
-**Endpoint:** `POST /tasks`
-
-**Description:** Create a new task
-
-**Request Body:**
-```json
-{
-  "name": "Frontend Refactor",
-  "projectId": "project_1",
-  "workspaceId": "workspace_1",
-  "completed": false,
-  "description": "Refactor React components",
-  "dueDate": "2026-05-15T18:00:00Z",
-  "assigneeId": "user_123"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "task_1",
-    "name": "Frontend Refactor",
-    "projectId": "project_1",
-    "workspaceId": "workspace_1",
-    "completed": false,
-    "description": "Refactor React components",
-    "dueDate": "2026-05-15T18:00:00Z",
-    "assigneeId": "user_123",
-    "createdAt": "2026-04-22T12:05:00Z",
-    "updatedAt": "2026-04-22T12:05:00Z"
-  },
-  "timestamp": "2026-04-22T12:05:00Z"
-}
-```
-
----
-
-## 5.2 Get Tasks by Project
-
-**Endpoint:** `GET /tasks/project/{projectId}?workspaceId=workspace_1`
-
-**Description:** Retrieve all tasks for a project
-
-**Query Parameters:**
-- `workspaceId` (required): Workspace ID
-- `completed` (optional): Filter by completion status
-- `assigneeId` (optional): Filter by assignee
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "projectId": "project_1",
-    "projectName": "StaffBot Dedicated",
-    "tasks": [
-      {
-        "id": "task_1",
-        "name": "Frontend Refactor",
-        "completed": false,
-        "dueDate": "2026-05-15T18:00:00Z",
-        "assigneeId": "user_123",
-        "assigneeName": "John Doe",
-        "createdAt": "2026-04-22T12:05:00Z"
-      },
-      {
-        "id": "task_2",
-        "name": "API Integration",
-        "completed": true,
-        "dueDate": "2026-04-20T18:00:00Z",
-        "assigneeId": "user_456",
-        "assigneeName": "Jaydeep Vegad",
-        "createdAt": "2026-04-15T10:00:00Z"
-      }
-    ],
-    "total": 2,
-    "completed": 1,
-    "pending": 1
-  },
-  "timestamp": "2026-04-22T12:10:00Z"
-}
-```
-
----
-
-## 5.3 Get Task by ID
-
-**Endpoint:** `GET /tasks/{id}`
-
-**Description:** Retrieve a specific task
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "task_1",
-    "name": "Frontend Refactor",
-    "projectId": "project_1",
-    "workspaceId": "workspace_1",
-    "completed": false,
-    "description": "Refactor React components",
-    "dueDate": "2026-05-15T18:00:00Z",
-    "assigneeId": "user_123",
-    "assignee": {
-      "id": "user_123",
-      "name": "John Doe",
-      "email": "john@example.com"
-    },
-    "createdAt": "2026-04-22T12:05:00Z",
-    "updatedAt": "2026-04-22T12:05:00Z"
-  },
-  "timestamp": "2026-04-22T12:15:00Z"
-}
-```
-
----
-
-## 5.4 Update Task
-
-**Endpoint:** `PUT /tasks/{id}`
-
-**Description:** Update a task
-
-**Request Body:**
-```json
-{
-  "name": "Frontend Refactor - Phase 2",
-  "completed": true,
-  "dueDate": "2026-05-20T18:00:00Z",
-  "assigneeId": "user_789"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "task_1",
-    "name": "Frontend Refactor - Phase 2",
-    "projectId": "project_1",
-    "completed": true,
-    "dueDate": "2026-05-20T18:00:00Z",
-    "assigneeId": "user_789",
-    "updatedAt": "2026-04-22T12:20:00Z"
-  },
-  "timestamp": "2026-04-22T12:20:00Z"
-}
-```
-
----
-
-## 5.5 Delete Task
-
-**Endpoint:** `DELETE /tasks/{id}`
-
-**Description:** Delete a task
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Task deleted successfully",
-  "data": {
-    "id": "task_1"
-  },
-  "timestamp": "2026-04-22T12:25:00Z"
-}
-```
-
----
-
-# 6. TAGS (4 APIs)
-
-## 6.1 Create Tag
-
-**Endpoint:** `POST /tags`
-
-**Description:** Create a new tag
-
-**Request Body:**
-```json
-{
-  "name": "Bug",
-  "workspaceId": "workspace_1",
-  "archived": false
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "tag_1",
-    "name": "Bug",
-    "workspaceId": "workspace_1",
-    "archived": false,
-    "createdAt": "2026-04-22T12:30:00Z",
-    "updatedAt": "2026-04-22T12:30:00Z"
-  },
-  "timestamp": "2026-04-22T12:30:00Z"
-}
-```
-
----
-
-## 6.2 Get All Tags
-
-**Endpoint:** `GET /tags?workspaceId=workspace_1&includeArchived=false`
-
-**Description:** Retrieve all tags
-
-**Query Parameters:**
-- `workspaceId` (required): Workspace ID
-- `includeArchived` (optional): Include archived tags (default: false)
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "tags": [
-      {
-        "id": "tag_1",
-        "name": "Bug",
-        "archived": false,
-        "createdAt": "2026-04-22T12:30:00Z"
-      },
-      {
-        "id": "tag_2",
-        "name": "Feature",
-        "archived": false,
-        "createdAt": "2026-04-20T10:00:00Z"
-      },
-      {
-        "id": "tag_3",
-        "name": "Review",
-        "archived": false,
-        "createdAt": "2026-04-18T14:30:00Z"
-      }
-    ],
-    "total": 8
-  },
-  "timestamp": "2026-04-22T12:35:00Z"
-}
-```
-
----
-
-## 6.3 Update Tag
-
-**Endpoint:** `PUT /tags/{id}`
-
-**Description:** Update a tag
-
-**Request Body:**
-```json
-{
-  "name": "Critical Bug",
-  "archived": false
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "tag_1",
-    "name": "Critical Bug",
-    "workspaceId": "workspace_1",
-    "archived": false,
-    "updatedAt": "2026-04-22T12:40:00Z"
-  },
-  "timestamp": "2026-04-22T12:40:00Z"
-}
-```
-
----
-
-## 6.4 Delete Tag
-
-**Endpoint:** `DELETE /tags/{id}`
-
-**Description:** Delete a tag
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Tag deleted successfully",
-  "data": {
-    "id": "tag_1"
-  },
-  "timestamp": "2026-04-22T12:45:00Z"
-}
-```
-
----
-
-# 7. CLIENTS (4 APIs)
-
-## 7.1 Create Client
-
-**Endpoint:** `POST /clients`
-
-**Description:** Create a new client
-
-**Request Body:**
-```json
-{
-  "name": "StaffBot Inc",
-  "email": "contact@staffbot.com",
-  "phone": "+1-800-555-0123",
-  "address": "123 Business St, New York, NY 10001",
-  "workspaceId": "workspace_1"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "client_1",
-    "name": "StaffBot Inc",
-    "email": "contact@staffbot.com",
-    "phone": "+1-800-555-0123",
-    "address": "123 Business St, New York, NY 10001",
-    "workspaceId": "workspace_1",
-    "createdAt": "2026-04-22T12:50:00Z",
-    "updatedAt": "2026-04-22T12:50:00Z"
-  },
-  "timestamp": "2026-04-22T12:50:00Z"
-}
-```
-
----
-
-## 7.2 Get All Clients
-
-**Endpoint:** `GET /clients?workspaceId=workspace_1`
-
-**Description:** Retrieve all clients
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "clients": [
-      {
-        "id": "client_1",
-        "name": "StaffBot Inc",
-        "email": "contact@staffbot.com",
-        "phone": "+1-800-555-0123",
-        "projectCount": 3,
-        "createdAt": "2026-04-22T12:50:00Z"
-      },
-      {
-        "id": "client_2",
-        "name": "Tech Solutions Ltd",
-        "email": "info@techsolutions.com",
-        "phone": "+44-20-7946-0958",
-        "projectCount": 1,
-        "createdAt": "2026-04-15T09:00:00Z"
-      }
-    ],
-    "total": 5
-  },
-  "timestamp": "2026-04-22T12:55:00Z"
-}
-```
-
----
-
-## 7.3 Update Client
-
-**Endpoint:** `PUT /clients/{id}`
-
-**Description:** Update client information
-
-**Request Body:**
-```json
-{
-  "name": "StaffBot Inc - Updated",
-  "email": "newemail@staffbot.com",
-  "phone": "+1-800-555-0124"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "client_1",
-    "name": "StaffBot Inc - Updated",
-    "email": "newemail@staffbot.com",
-    "phone": "+1-800-555-0124",
-    "address": "123 Business St, New York, NY 10001",
-    "updatedAt": "2026-04-22T13:00:00Z"
-  },
-  "timestamp": "2026-04-22T13:00:00Z"
-}
-```
-
----
-
-## 7.4 Delete Client
-
-**Endpoint:** `DELETE /clients/{id}`
-
-**Description:** Delete a client
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Client deleted successfully",
-  "data": {
-    "id": "client_1"
-  },
-  "timestamp": "2026-04-22T13:05:00Z"
-}
-```
-
----
-
-# 8. REPORTS (4 APIs)
-
-## 8.1 Get Summary Report
-
-**Endpoint:** `GET /reports/summary?workspaceId=workspace_1&startDate=2026-04-01&endDate=2026-04-30`
-
-**Description:** Get time tracking summary with grouping options
-
-**Query Parameters:**
-- `workspaceId` (required): Workspace ID
-- `startDate` (required): Start date
-- `endDate` (required): End date
-- `groupBy` (optional): 'user', 'project', 'lead', 'tag', 'date' (default: 'user')
-- `projectId` (optional): Filter by project
-- `userId` (optional): Filter by user
-- `billable` (optional): true/false
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "period": {
-      "start": "2026-04-01",
-      "end": "2026-04-30"
-    },
-    "summary": {
-      "totalHours": 640.5,
-      "billableHours": 560.25,
-      "nonBillableHours": 80.25,
-      "totalEntries": 180,
-      "workingDays": 22,
-      "averageHoursPerDay": 29.11
-    },
-    "groupedData": [
-      {
-        "id": "user_123",
-        "name": "John Doe",
-        "totalHours": 160.5,
-        "billableHours": 140.25,
-        "nonBillableHours": 20.25,
-        "entries": 45
-      },
-      {
-        "id": "user_456",
-        "name": "Jaydeep Vegad",
-        "totalHours": 156.75,
-        "billableHours": 156.75,
-        "nonBillableHours": 0,
-        "entries": 42
-      }
-    ]
-  },
-  "timestamp": "2026-04-22T13:10:00Z"
-}
-```
-
----
-
-## 8.2 Get Detailed Report
-
-**Endpoint:** `GET /reports/detailed?workspaceId=workspace_1&startDate=2026-04-01&endDate=2026-04-30`
-
-**Description:** Get detailed list of all time entries with filters
-
-**Query Parameters:**
-- `workspaceId` (required): Workspace ID
-- `startDate` (required): Start date
-- `endDate` (required): End date
-- `userId` (optional): Filter by user
-- `projectId` (optional): Filter by project
-- `billable` (optional): true/false
-- `page` (optional): Page number
-- `limit` (optional): Items per page
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "period": {
-      "start": "2026-04-01",
-      "end": "2026-04-30"
-    },
-    "summary": {
-      "totalEntries": 180,
-      "totalHours": 640.5
-    },
-    "entries": [
-      {
-        "id": "entry_789",
-        "date": "2026-04-22",
-        "userName": "John Doe",
-        "projectName": "StaffBot Dedicated",
-        "description": "Frontend component development",
-        "duration": 5400,
-        "billable": true,
-        "startTime": "2026-04-22T09:00:00Z",
-        "endTime": "2026-04-22T10:30:00Z"
-      }
-    ],
-    "pagination": {
-      "total": 180,
-      "page": 1,
-      "limit": 50
-    }
-  },
-  "timestamp": "2026-04-22T13:15:00Z"
-}
-```
-
----
-
-## 8.3 Get Weekly Report
-
-**Endpoint:** `GET /reports/weekly?workspaceId=workspace_1&week=2026-04-22`
-
-**Description:** Get weekly time tracking summary
-
-**Query Parameters:**
-- `workspaceId` (required): Workspace ID
-- `week` (required): Week date (ISBN week format)
-- `groupBy` (optional): 'user', 'project' (default: 'user')
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "week": {
-      "start": "2026-04-20",
-      "end": "2026-04-26"
-    },
-    "summary": {
-      "totalHours": 160.5,
-      "billableHours": 140.25,
-      "nonBillableHours": 20.25
-    },
-    "dailyData": [
-      {
-        "date": "2026-04-22",
-        "dayName": "Wednesday",
-        "hours": 8.5,
-        "entries": 4
-      },
-      {
-        "date": "2026-04-23",
-        "dayName": "Thursday",
-        "hours": 8.25,
-        "entries": 3
-      }
-    ],
-    "userData": [
-      {
-        "userId": "user_123",
-        "userName": "John Doe",
-        "totalHours": 40.5,
-        "dailyBreakdown": [8.5, 8.25, 8.0, 8.0, 7.75, 0, 0]
-      }
-    ]
-  },
-  "timestamp": "2026-04-22T13:20:00Z"
-}
-```
-
----
-
-## 8.4 Get Shared Reports
-
-**Endpoint:** `GET /reports/shared?workspaceId=workspace_1`
-
-**Description:** Get list of shared reports
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "reports": [
-      {
-        "id": "report_1",
-        "name": "April Team Report",
-        "type": "summary",
-        "period": {
-          "start": "2026-04-01",
-          "end": "2026-04-30"
-        },
-        "sharedBy": {
-          "id": "user_456",
-          "name": "Jaydeep Vegad"
-        },
-        "sharedAt": "2026-04-22T10:00:00Z",
-        "expiresAt": "2026-05-22T10:00:00Z",
-        "shareLink": "https://reports.logspanx.com/shared/abc123def456"
-      }
-    ],
-    "total": 3
-  },
-  "timestamp": "2026-04-22T13:25:00Z"
-}
-```
-
----
-
-# 9. TEAM & WORKSPACE (6 APIs)
-
-## 9.1 Invite Team Member
-
-**Endpoint:** `POST /workspace/invite-member`
-
-**Description:** Send invite to new team member
-
-**Request Body:**
-```json
-{
-  "email": "newmember@example.com",
-  "role": "member",
-  "workspaceId": "workspace_1"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Invitation sent successfully",
-  "data": {
-    "inviteId": "invite_123",
-    "email": "newmember@example.com",
-    "role": "member",
-    "inviteLink": "https://app.logspanx.com/join/invite_123",
-    "expiresAt": "2026-04-29T13:30:00Z"
-  },
-  "timestamp": "2026-04-22T13:30:00Z"
-}
-```
-
----
-
-## 9.2 Get Team Members
-
-**Endpoint:** `GET /workspace/members?workspaceId=workspace_1`
-
-**Description:** Get all team members
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "members": [
-      {
-        "id": "user_123",
-        "email": "john@example.com",
-        "name": "John Doe",
-        "role": "member",
-        "status": "active",
-        "joinedAt": "2026-01-15T10:00:00Z",
-        "lastActive": "2026-04-22T11:00:00Z"
-      },
-      {
-        "id": "user_456",
-        "email": "jaydeep@example.com",
-        "name": "Jaydeep Vegad",
-        "role": "admin",
-        "status": "active",
-        "joinedAt": "2026-01-10T09:00:00Z",
-        "lastActive": "2026-04-22T12:30:00Z"
-      }
-    ],
-    "total": 8,
-    "pendingInvites": 2
-  },
-  "timestamp": "2026-04-22T13:35:00Z"
-}
-```
-
----
-
-## 9.3 Update Member Role
-
-**Endpoint:** `PUT /workspace/members/{userId}`
-
-**Description:** Change member role
-
-**Request Body:**
-```json
-{
-  "role": "admin"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user_123",
-    "email": "john@example.com",
-    "name": "John Doe",
-    "role": "admin",
-    "updatedAt": "2026-04-22T13:40:00Z"
-  },
-  "timestamp": "2026-04-22T13:40:00Z"
-}
-```
-
----
-
-## 9.4 Remove Team Member
-
-**Endpoint:** `DELETE /workspace/members/{userId}`
-
-**Description:** Remove member from workspace
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Member removed successfully",
-  "data": {
-    "userId": "user_123"
-  },
-  "timestamp": "2026-04-22T13:45:00Z"
-}
-```
-
----
-
-## 9.5 Get Workspace Settings
-
-**Endpoint:** `GET /workspace/settings?workspaceId=workspace_1`
-
-**Description:** Get workspace configuration
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "workspaceId": "workspace_1",
-    "name": "My Company",
-    "settings": {
-      "dateFormat": "YYYY-MM-DD",
-      "timeFormat": "24h",
-      "weekStart": "monday",
-      "currency": "USD",
-      "timezone": "UTC",
-      "defaultHourlyRate": 50.00,
-      "roundingMethod": "nearest_minute"
-    },
-    "updatedAt": "2026-04-20T10:00:00Z"
-  },
-  "timestamp": "2026-04-22T13:50:00Z"
-}
-```
-
----
-
-## 9.6 Update Workspace Settings
-
-**Endpoint:** `PUT /workspace/settings`
-
-**Description:** Update workspace configuration
-
-**Request Body:**
-```json
-{
-  "workspaceId": "workspace_1",
-  "name": "My Updated Company",
-  "settings": {
-    "dateFormat": "MM/DD/YYYY",
-    "timeFormat": "12h",
-    "weekStart": "sunday",
-    "timezone": "EST",
-    "currency": "USD"
-  }
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "workspaceId": "workspace_1",
-    "name": "My Updated Company",
-    "settings": {
-      "dateFormat": "MM/DD/YYYY",
-      "timeFormat": "12h",
-      "weekStart": "sunday",
-      "currency": "USD",
-      "timezone": "EST",
-      "defaultHourlyRate": 50.00,
-      "roundingMethod": "nearest_minute"
-    },
-    "updatedAt": "2026-04-22T13:55:00Z"
-  },
-  "timestamp": "2026-04-22T13:55:00Z"
-}
-```
-
----
-
-# 10. NOTIFICATIONS (3 APIs)
-
-## 10.1 Get Notifications
-
-**Endpoint:** `GET /notifications?userId=user_123&unreadOnly=false`
-
-**Description:** Retrieve user notifications
-
-**Query Parameters:**
-- `userId` (required): User ID
-- `unreadOnly` (optional): Show unread only (default: false)
-- `limit` (optional): Items per page (default: 20)
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "notifications": [
-      {
-        "id": "notif_001",
-        "title": "Time Entry Approved",
-        "message": "Your time entry for 'Frontend Work' was approved",
-        "type": "success",
-        "read": false,
-        "createdAt": "2026-04-22T13:00:00Z",
-        "actionUrl": "/dashboard/tracker/entry_789"
-      },
-      {
-        "id": "notif_002",
-        "title": "Team Member Invited",
-        "message": "Jane Doe was invited to the project",
-        "type": "info",
-        "read": true,
-        "createdAt": "2026-04-21T10:00:00Z"
-      }
-    ],
-    "unreadCount": 3,
-    "total": 25
-  },
-  "timestamp": "2026-04-22T14:00:00Z"
-}
-```
-
----
-
-## 10.2 Mark Notification as Read
-
-**Endpoint:** `PUT /notifications/{id}`
-
-**Description:** Mark notification as read
-
-**Request Body:**
-```json
-{
-  "read": true
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "notif_001",
-    "read": true
-  },
-  "timestamp": "2026-04-22T14:05:00Z"
-}
-```
-
----
-
-## 10.3 Mark All Notifications as Read
-
-**Endpoint:** `PUT /notifications/mark-all-read`
-
-**Description:** Mark all user notifications as read
-
-**Request Body:**
-```json
-{
-  "userId": "user_123"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "All notifications marked as read",
-  "data": {
-    "markedCount": 5
-  },
-  "timestamp": "2026-04-22T14:10:00Z"
-}
-```
-
----
-
-# Response Format Standards
-
-## Success Response Template
-```json
-{
-  "success": true,
-  "data": {},
-  "timestamp": "2026-04-22T14:15:00Z"
-}
-```
-
-## Error Response Template
-```json
-{
-  "success": false,
-  "error": "Error description",
-  "code": "ERROR_CODE",
-  "details": {},
-  "timestamp": "2026-04-22T14:15:00Z"
-}
-```
-
-## Common HTTP Status Codes
-
-| Code | Meaning |
-|------|---------|
-| 200 | OK - Request successful |
-| 201 | Created - Resource created |
-| 400 | Bad Request - Invalid input |
-| 401 | Unauthorized - Auth required |
-| 403 | Forbidden - Access denied |
-| 404 | Not Found - Resource not found |
-| 409 | Conflict - Resource already exists |
-| 422 | Unprocessable Entity - Validation error |
-| 500 | Internal Server Error |
-
----
-
-# Authentication
-
-All endpoints (except `/auth/login`, `/auth/signup`, `/auth/forgot-password`) require:
-
-**Header:**
-```
-Authorization: Bearer <JWT_TOKEN>
-```
-
----
-
-# Pagination
-
-Paginated endpoints follow this format:
-
-**Query Parameters:**
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 50, max: 100)
 
 **Response:**
 ```json
 {
   "success": true,
   "data": {
-    "items": [],
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2E5ZjA3ZjFmMjQ0ZjEwMDAwMDAwMDAiLCJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwicm9sZSI6Im1lbWJlcjoiLCJpYXQiOjE2ODQ4MzYwMDAsImV4cCI6MTY4NDgzOTYwMH0.signature",
+    "user": {
+      "id": "67a9f07f1f244f1000000000",
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "role": "member",
+      "avatar": null
+    }
+  }
+}
+```
+
+### POST /auth/logout
+
+Logout user and invalidate refresh token.
+
+**Request Body (optional):**
+```json
+{
+  "refreshToken": "refresh_token_here"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Logged out successfully",
+  "data": null
+}
+```
+
+### POST /auth/refresh
+
+Refresh access token using refresh token.
+
+**Request Body (optional):**
+```json
+{
+  "refreshToken": "refresh_token_here"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2E5ZjA3ZjFmMjQ0ZjEwMDAwMDAwMDAiLCJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwicm9sZSI6Im1lbWJlcjoiLCJpYXQiOjE2ODQ4MzYwMDAsImV4cCI6MTY4NDgzOTYwMH0.signature",
+    "user": {
+      "id": "67a9f07f1f244f1000000000",
+      "email": "john.doe@example.com",
+      "name": "John Doe",
+      "role": "member",
+      "avatar": null
+    }
+  }
+}
+```
+
+### POST /auth/accept-invite
+
+Accept user invitation and create account.
+
+**Request Body:**
+```json
+{
+  "token": "invitation_token_here",
+  "name": "Jane Smith",
+  "password": "newSecurePassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Account created successfully",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2E5ZjA3ZjFmMjQ0ZjEwMDAwMDAwMDAiLCJlbWFpbCI6ImphbmUuc21pdGhAZXhhbXBsZS5jb20iLCJyb2xlIjoibWVtYmVyIiwiaWF0IjoxNjg0ODM2MDAwLCJleHAiOjE2ODQ4Mzk2MDB9.signature",
+    "user": {
+      "id": "67a9f07f1f244f1000000001",
+      "email": "jane.smith@example.com",
+      "name": "Jane Smith",
+      "role": "member",
+      "avatar": null
+    }
+  }
+}
+```
+
+### POST /auth/forgot-password
+
+Request password reset link.
+
+**Request Body:**
+```json
+{
+  "email": "john.doe@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Reset link sent",
+  "data": null
+}
+```
+
+### POST /auth/reset-password
+
+Reset password using reset token.
+
+**Request Body:**
+```json
+{
+  "token": "reset_token_here",
+  "newPassword": "newSecurePassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Password updated",
+  "data": null
+}
+```
+
+### GET /auth/me
+
+Get current user profile information.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "67a9f07f1f244f1000000000",
+    "email": "john.doe@example.com",
+    "name": "John Doe",
+    "role": "member",
+    "avatar": "https://example.com/avatar.jpg",
+    "timezone": "America/New_York",
+    "isActive": true,
+    "billableRate": 50,
+    "group": "Development Team",
+    "archived": false,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-20T14:45:00.000Z"
+  }
+}
+```
+
+### PUT /auth/me
+
+Update current user profile.
+
+**Request Body:**
+```json
+{
+  "name": "John Smith",
+  "avatar": "https://example.com/new-avatar.jpg",
+  "timezone": "Europe/London"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Profile updated",
+  "data": {
+    "id": "67a9f07f1f244f1000000000",
+    "email": "john.doe@example.com",
+    "name": "John Smith",
+    "role": "member",
+    "avatar": "https://example.com/new-avatar.jpg",
+    "timezone": "Europe/London",
+    "isActive": true,
+    "billableRate": 50,
+    "group": "Development Team",
+    "archived": false,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-20T15:00:00.000Z"
+  }
+}
+```
+
+### PUT /auth/me/password
+
+Change current user password.
+
+**Request Body:**
+```json
+{
+  "currentPassword": "oldPassword123",
+  "newPassword": "newSecurePassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Password changed",
+  "data": null
+}
+```
+
+---
+
+## Clients
+
+### GET /clients
+
+Get all clients with pagination.
+
+**Query Parameters:**
+- `page` (number, default: 1)
+- `limit` (number, default: 20)
+- `isActive` (boolean, optional)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "clients": [
+      {
+        "id": "67a9f07f1f244f1000000002",
+        "name": "Acme Corporation",
+        "email": "contact@acme.com",
+        "phone": "+1-555-0123",
+        "address": "123 Business St, City, State 12345",
+        "isActive": true,
+        "createdAt": "2024-01-10T09:00:00.000Z",
+        "updatedAt": "2024-01-10T09:00:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1
+  }
+}
+```
+
+### POST /clients
+
+Create a new client.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "Tech Solutions Inc",
+  "email": "hello@techsolutions.com",
+  "phone": "+1-555-0456",
+  "address": "456 Tech Ave, Silicon Valley, CA 94043"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Client created",
+  "data": {
+    "id": "67a9f07f1f244f1000000003",
+    "name": "Tech Solutions Inc",
+    "email": "hello@techsolutions.com",
+    "phone": "+1-555-0456",
+    "address": "456 Tech Ave, Silicon Valley, CA 94043",
+    "isActive": true,
+    "createdAt": "2024-01-22T11:30:00.000Z",
+    "updatedAt": "2024-01-22T11:30:00.000Z"
+  }
+}
+```
+
+### PUT /clients/:id
+
+Update an existing client.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "Tech Solutions LLC",
+  "email": "contact@techsolutions.com",
+  "phone": "+1-555-0456",
+  "address": "456 Tech Avenue, Silicon Valley, CA 94043"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "67a9f07f1f244f1000000003",
+    "name": "Tech Solutions LLC",
+    "email": "contact@techsolutions.com",
+    "phone": "+1-555-0456",
+    "address": "456 Tech Avenue, Silicon Valley, CA 94043",
+    "isActive": true,
+    "createdAt": "2024-01-22T11:30:00.000Z",
+    "updatedAt": "2024-01-22T12:00:00.000Z"
+  }
+}
+```
+
+### DELETE /clients/:id
+
+Delete a client.
+
+**Required Roles:** owner, admin, group_lead
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+---
+
+## Groups
+
+### GET /groups
+
+Get all groups.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "67a9f07f1f244f1000000004",
+      "name": "Development Team",
+      "leadId": "67a9f07f1f244f1000000000",
+      "memberIds": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001"],
+      "createdAt": "2024-01-05T08:00:00.000Z",
+      "updatedAt": "2024-01-05T08:00:00.000Z"
+    }
+  ]
+}
+```
+
+### GET /groups/:id
+
+Get a specific group by ID.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "67a9f07f1f244f1000000004",
+    "name": "Development Team",
+    "leadId": "67a9f07f1f244f1000000000",
+    "memberIds": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001"],
+    "createdAt": "2024-01-05T08:00:00.000Z",
+    "updatedAt": "2024-01-05T08:00:00.000Z"
+  }
+}
+```
+
+### POST /groups
+
+Create a new group.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "Design Team",
+  "leadId": "67a9f07f1f244f1000000001",
+  "memberIds": ["67a9f07f1f244f1000000001", "67a9f07f1f244f1000000005"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Group created",
+  "data": {
+    "id": "67a9f07f1f244f1000000006",
+    "name": "Design Team",
+    "leadId": "67a9f07f1f244f1000000001",
+    "memberIds": ["67a9f07f1f244f1000000001", "67a9f07f1f244f1000000005"],
+    "createdAt": "2024-01-25T10:15:00.000Z",
+    "updatedAt": "2024-01-25T10:15:00.000Z"
+  }
+}
+```
+
+### PUT /groups/:id
+
+Update an existing group.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "Frontend Development Team",
+  "leadId": "67a9f07f1f244f1000000000",
+  "memberIds": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001", "67a9f07f1f244f1000000005"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Group updated",
+  "data": {
+    "id": "67a9f07f1f244f1000000004",
+    "name": "Frontend Development Team",
+    "leadId": "67a9f07f1f244f1000000000",
+    "memberIds": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001", "67a9f07f1f244f1000000005"],
+    "createdAt": "2024-01-05T08:00:00.000Z",
+    "updatedAt": "2024-01-25T11:00:00.000Z"
+  }
+}
+```
+
+### DELETE /groups/:id
+
+Delete a group.
+
+**Required Roles:** owner, admin
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Group deleted",
+  "data": null
+}
+```
+
+---
+
+## Projects
+
+### POST /projects
+
+Create a new project.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "E-commerce Platform",
+  "color": "#3B82F6",
+  "leadId": "67a9f07f1f244f1000000000",
+  "clientName": "Retail Corp",
+  "billable": true,
+  "members": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Project created",
+  "data": {
+    "id": "67a9f07f1f244f1000000007",
+    "name": "E-commerce Platform",
+    "color": "#3B82F6",
+    "leadId": "67a9f07f1f244f1000000000",
+    "clientName": "Retail Corp",
+    "billable": true,
+    "archived": false,
+    "members": [
+      {
+        "userId": "67a9f07f1f244f1000000000",
+        "role": "lead",
+        "hourlyRate": 75
+      },
+      {
+        "userId": "67a9f07f1f244f1000000001",
+        "role": "member",
+        "hourlyRate": 50
+      }
+    ],
+    "createdAt": "2024-01-20T13:45:00.000Z",
+    "updatedAt": "2024-01-20T13:45:00.000Z"
+  }
+}
+```
+
+### GET /projects
+
+Get all projects with pagination.
+
+**Query Parameters:**
+- `page` (number, default: 1)
+- `limit` (number, default: 20)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Projects retrieved successfully",
+  "data": {
+    "projects": [
+      {
+        "id": "67a9f07f1f244f1000000007",
+        "name": "E-commerce Platform",
+        "color": "#3B82F6",
+        "leadId": "67a9f07f1f244f1000000000",
+        "clientName": "Retail Corp",
+        "billable": true,
+        "archived": false,
+        "members": [
+          {
+            "userId": "67a9f07f1f244f1000000000",
+            "role": "lead",
+            "hourlyRate": 75
+          }
+        ],
+        "createdAt": "2024-01-20T13:45:00.000Z",
+        "updatedAt": "2024-01-20T13:45:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1
+  }
+}
+```
+
+### GET /projects/:id
+
+Get a specific project with tasks.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "67a9f07f1f244f1000000007",
+    "name": "E-commerce Platform",
+    "color": "#3B82F6",
+    "leadId": "67a9f07f1f244f1000000000",
+    "clientName": "Retail Corp",
+    "billable": true,
+    "archived": false,
+    "members": [
+      {
+        "userId": "67a9f07f1f244f1000000000",
+        "role": "lead",
+        "hourlyRate": 75
+      }
+    ],
+    "tasks": [
+      {
+        "id": "67a9f07f1f244f1000000008",
+        "name": "Implement user authentication",
+        "completed": false,
+        "assignees": ["67a9f07f1f244f1000000000"],
+        "createdAt": "2024-01-21T09:30:00.000Z",
+        "updatedAt": "2024-01-21T09:30:00.000Z"
+      }
+    ],
+    "createdAt": "2024-01-20T13:45:00.000Z",
+    "updatedAt": "2024-01-20T13:45:00.000Z"
+  }
+}
+```
+
+### GET /projects/:id/members
+
+Get project members.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Project members retrieved successfully",
+  "data": [
+    {
+      "id": "67a9f07f1f244f1000000000",
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "role": "lead",
+      "hourlyRate": 75,
+      "avatar": null
+    }
+  ]
+}
+```
+
+### PATCH /projects/:id
+
+Update a project.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "Advanced E-commerce Platform",
+  "color": "#10B981",
+  "clientName": "Retail Corporation",
+  "billable": true,
+  "archived": false,
+  "members": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Project updated successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000007",
+    "name": "Advanced E-commerce Platform",
+    "color": "#10B981",
+    "leadId": "67a9f07f1f244f1000000000",
+    "clientName": "Retail Corporation",
+    "billable": true,
+    "archived": false,
+    "members": [
+      {
+        "userId": "67a9f07f1f244f1000000000",
+        "role": "lead",
+        "hourlyRate": 75
+      },
+      {
+        "userId": "67a9f07f1f244f1000000001",
+        "role": "member",
+        "hourlyRate": 50
+      }
+    ],
+    "createdAt": "2024-01-20T13:45:00.000Z",
+    "updatedAt": "2024-01-22T16:20:00.000Z"
+  }
+}
+```
+
+### PUT /projects/bulk
+
+Bulk update multiple projects.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "ids": ["67a9f07f1f244f1000000007", "67a9f07f1f244f1000000009"],
+  "updates": {
+    "archived": true
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Projects updated",
+  "data": [
+    {
+      "id": "67a9f07f1f244f1000000007",
+      "name": "Advanced E-commerce Platform",
+      "archived": true,
+      "updatedAt": "2024-01-25T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+### DELETE /projects/:id
+
+Delete a project.
+
+**Required Roles:** owner, admin, group_lead
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Project deleted",
+  "data": null
+}
+```
+
+### PATCH /projects/:id/archive
+
+Archive or unarchive a project.
+
+**Required Roles:** owner, admin, group_lead
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Project archived successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000007",
+    "name": "Advanced E-commerce Platform",
+    "archived": true,
+    "updatedAt": "2024-01-25T10:30:00.000Z"
+  }
+}
+```
+
+### PATCH /projects/:id/lead
+
+Update project lead.
+
+**Required Roles:** owner, admin
+
+**Request Body:**
+```json
+{
+  "leadUserId": "67a9f07f1f244f1000000001"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Project lead updated",
+  "data": {
+    "id": "67a9f07f1f244f1000000007",
+    "name": "Advanced E-commerce Platform",
+    "leadId": "67a9f07f1f244f1000000001",
+    "updatedAt": "2024-01-25T11:15:00.000Z"
+  }
+}
+```
+
+### POST /projects/:id/members
+
+Add a member to project.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "userId": "67a9f07f1f244f1000000005",
+  "role": "member",
+  "hourlyRate": 45
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Member assigned",
+  "data": {
+    "id": "67a9f07f1f244f1000000007",
+    "name": "Advanced E-commerce Platform",
+    "members": [
+      {
+        "userId": "67a9f07f1f244f1000000000",
+        "role": "lead",
+        "hourlyRate": 75
+      },
+      {
+        "userId": "67a9f07f1f244f1000000005",
+        "role": "member",
+        "hourlyRate": 45
+      }
+    ],
+    "updatedAt": "2024-01-25T12:00:00.000Z"
+  }
+}
+```
+
+### DELETE /projects/:id/members/:userId
+
+Remove a member from project.
+
+**Required Roles:** owner, admin, group_lead
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Member unassigned",
+  "data": {
+    "id": "67a9f07f1f244f1000000007",
+    "name": "Advanced E-commerce Platform",
+    "members": [
+      {
+        "userId": "67a9f07f1f244f1000000000",
+        "role": "lead",
+        "hourlyRate": 75
+      }
+    ],
+    "updatedAt": "2024-01-25T12:30:00.000Z"
+  }
+}
+```
+
+---
+
+## Reports
+
+### GET /reports/summary
+
+Generate summary report.
+
+**Query Parameters:**
+- `startDate` (string, optional) - ISO date string
+- `endDate` (string, optional) - ISO date string
+- `projectId` (string, optional)
+- `userId` (string, optional)
+- `billable` (boolean, optional)
+- `tagId` (string, optional)
+- `teamId` (string, optional)
+- `description` (string, optional)
+- `page` (number, default: 1)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Summary report generated successfully",
+  "data": {
+    "totalHours": 42.5,
+    "billableHours": 38.0,
+    "totalProjects": 3,
+    "totalUsers": 5,
+    "averageHourlyRate": 62.5,
+    "totalRevenue": 2375.00,
+    "entries": [
+      {
+        "date": "2024-01-22",
+        "hours": 8.5,
+        "billableHours": 8.0,
+        "revenue": 500.00
+      }
+    ],
     "pagination": {
       "page": 1,
-      "limit": 50,
-      "total": 250,
-      "pages": 5,
-      "hasMore": true
+      "limit": 20,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+### GET /reports/weekly
+
+Generate weekly report.
+
+**Query Parameters:**
+- `startDate` (string, optional)
+- `endDate` (string, optional)
+- `projectId` (string, optional)
+- `userId` (string, optional)
+- `billable` (boolean, optional)
+- `tagId` (string, optional)
+- `teamId` (string, optional)
+- `description` (string, optional)
+- `page` (number, default: 1)
+- `groupBy` (string, optional) - "project" or "user"
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Weekly report generated successfully",
+  "data": {
+    "weeks": [
+      {
+        "week": "2024-W04",
+        "startDate": "2024-01-22",
+        "endDate": "2024-01-28",
+        "totalHours": 40.0,
+        "billableHours": 35.0,
+        "projects": [
+          {
+            "projectId": "67a9f07f1f244f1000000007",
+            "projectName": "E-commerce Platform",
+            "hours": 25.0,
+            "billableHours": 25.0
+          }
+        ]
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+### GET /reports/by-project
+
+Generate report grouped by project.
+
+**Query Parameters:** Same as summary report
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Project report generated successfully",
+  "data": {
+    "projects": [
+      {
+        "projectId": "67a9f07f1f244f1000000007",
+        "projectName": "E-commerce Platform",
+        "color": "#3B82F6",
+        "totalHours": 25.0,
+        "billableHours": 25.0,
+        "revenue": 1875.00,
+        "users": [
+          {
+            "userId": "67a9f07f1f244f1000000000",
+            "userName": "John Doe",
+            "hours": 15.0
+          }
+        ]
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+### GET /reports/by-user
+
+Generate report grouped by user.
+
+**Query Parameters:** Same as summary report
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User report generated successfully",
+  "data": {
+    "users": [
+      {
+        "userId": "67a9f07f1f244f1000000000",
+        "userName": "John Doe",
+        "totalHours": 42.5,
+        "billableHours": 38.0,
+        "revenue": 2375.00,
+        "projects": [
+          {
+            "projectId": "67a9f07f1f244f1000000007",
+            "projectName": "E-commerce Platform",
+            "hours": 25.0
+          }
+        ]
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+### GET /reports/by-tag
+
+Generate report grouped by tag.
+
+**Query Parameters:** Same as summary report
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Tag report generated successfully",
+  "data": {
+    "tags": [
+      {
+        "tagId": "67a9f07f1f244f1000000010",
+        "tagName": "Frontend",
+        "color": "#EF4444",
+        "totalHours": 18.5,
+        "billableHours": 18.5,
+        "revenue": 1156.25,
+        "entries": [
+          {
+            "date": "2024-01-22",
+            "hours": 8.5,
+            "description": "Implement responsive design"
+          }
+        ]
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "totalPages": 1
     }
   }
 }
@@ -1962,21 +1154,1055 @@ Paginated endpoints follow this format:
 
 ---
 
-# Rate Limiting
+## Shared Reports
 
-- **General Limit:** 1000 requests per hour
-- **Auth Endpoints:** 10 requests per minute
-- **Upload Endpoints:** 100 requests per hour
+### POST /shared-reports
 
-**Response Header:**
+Create a shared report.
+
+**Request Body:**
+```json
+{
+  "name": "Weekly Team Report",
+  "isPublic": true,
+  "reportType": "weekly",
+  "filters": {
+    "startDate": "2024-01-15",
+    "endDate": "2024-01-21",
+    "projectId": "67a9f07f1f244f1000000007"
+  }
+}
 ```
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1713800400
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Shared report created successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000011",
+    "name": "Weekly Team Report",
+    "token": "abc123def456ghi789jkl",
+    "isPublic": true,
+    "reportType": "weekly",
+    "filters": {
+      "startDate": "2024-01-15",
+      "endDate": "2024-01-21",
+      "projectId": "67a9f07f1f244f1000000007"
+    },
+    "createdBy": "67a9f07f1f244f1000000000",
+    "createdAt": "2024-01-22T14:30:00.000Z",
+    "updatedAt": "2024-01-22T14:30:00.000Z"
+  }
+}
+```
+
+### GET /shared-reports
+
+Get all shared reports for current user.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Shared reports retrieved successfully",
+  "data": [
+    {
+      "id": "67a9f07f1f244f1000000011",
+      "name": "Weekly Team Report",
+      "token": "abc123def456ghi789jkl",
+      "isPublic": true,
+      "reportType": "weekly",
+      "filters": {
+        "startDate": "2024-01-15",
+        "endDate": "2024-01-21"
+      },
+      "createdBy": "67a9f07f1f244f1000000000",
+      "createdAt": "2024-01-22T14:30:00.000Z",
+      "updatedAt": "2024-01-22T14:30:00.000Z"
+    }
+  ]
+}
+```
+
+### DELETE /shared-reports/:id
+
+Delete a shared report.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Shared report deleted successfully",
+  "data": {}
+}
 ```
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** April 22, 2026  
-**Total APIs:** 50
+## Public Shared Reports
+
+### GET /shared/:token
+
+Get public shared report data.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Shared report retrieved successfully",
+  "data": {
+    "report": {
+      "type": "weekly",
+      "title": "Weekly Team Report",
+      "generatedAt": "2024-01-22T15:00:00.000Z",
+      "data": {
+        "weeks": [
+          {
+            "week": "2024-W03",
+            "startDate": "2024-01-15",
+            "endDate": "2024-01-21",
+            "totalHours": 38.5,
+            "billableHours": 35.0
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+---
+
+## Tags
+
+### POST /tags
+
+Create a new tag.
+
+**Request Body:**
+```json
+{
+  "name": "Backend",
+  "color": "#8B5CF6"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Tag created successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000012",
+    "name": "Backend",
+    "color": "#8B5CF6",
+    "archived": false,
+    "createdBy": "67a9f07f1f244f1000000000",
+    "createdAt": "2024-01-18T10:45:00.000Z",
+    "updatedAt": "2024-01-18T10:45:00.000Z"
+  }
+}
+```
+
+### GET /tags
+
+Get all tags with pagination.
+
+**Query Parameters:**
+- `page` (number, default: 1)
+- `limit` (number, default: 20)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Tags retrieved successfully",
+  "data": {
+    "tags": [
+      {
+        "id": "67a9f07f1f244f1000000010",
+        "tagName": "Frontend",
+        "color": "#EF4444",
+        "archived": false,
+        "createdBy": "67a9f07f1f244f1000000000",
+        "createdAt": "2024-01-15T09:20:00.000Z",
+        "updatedAt": "2024-01-15T09:20:00.000Z"
+      },
+      {
+        "id": "67a9f07f1f244f1000000012",
+        "tagName": "Backend",
+        "color": "#8B5CF6",
+        "archived": false,
+        "createdBy": "67a9f07f1f244f1000000000",
+        "createdAt": "2024-01-18T10:45:00.000Z",
+        "updatedAt": "2024-01-18T10:45:00.000Z"
+      }
+    ],
+    "total": 2,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1
+  }
+}
+```
+
+### PATCH /tags/:id
+
+Update a tag.
+
+**Request Body:**
+```json
+{
+  "name": "Backend Development",
+  "color": "#7C3AED",
+  "archived": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Tag updated successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000012",
+    "name": "Backend Development",
+    "color": "#7C3AED",
+    "archived": false,
+    "createdBy": "67a9f07f1f244f1000000000",
+    "createdAt": "2024-01-18T10:45:00.000Z",
+    "updatedAt": "2024-01-22T16:10:00.000Z"
+  }
+}
+```
+
+### DELETE /tags/:id
+
+Delete a tag.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+---
+
+## Tasks
+
+### GET /projects/:projectId/tasks
+
+Get all tasks for a project.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "67a9f07f1f244f1000000008",
+      "name": "Implement user authentication",
+      "completed": false,
+      "assignees": ["67a9f07f1f244f1000000000"],
+      "createdAt": "2024-01-21T09:30:00.000Z",
+      "updatedAt": "2024-01-21T09:30:00.000Z"
+    },
+    {
+      "id": "67a9f07f1f244f1000000013",
+      "name": "Design database schema",
+      "completed": true,
+      "assignees": ["67a9f07f1f244f1000000001"],
+      "createdAt": "2024-01-21T11:15:00.000Z",
+      "updatedAt": "2024-01-22T14:20:00.000Z"
+    }
+  ]
+}
+```
+
+### POST /projects/:projectId/tasks
+
+Create a new task.
+
+**Required Roles:** owner, admin, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "Setup CI/CD pipeline",
+  "completed": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "67a9f07f1f244f1000000014",
+    "name": "Setup CI/CD pipeline",
+    "completed": false,
+    "assignees": [],
+    "createdAt": "2024-01-23T08:45:00.000Z",
+    "updatedAt": "2024-01-23T08:45:00.000Z"
+  }
+}
+```
+
+### PATCH /tasks/:id
+
+Update a task.
+
+**Request Body:**
+```json
+{
+  "name": "Setup CI/CD pipeline with automated testing",
+  "completed": true
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "67a9f07f1f244f1000000014",
+    "name": "Setup CI/CD pipeline with automated testing",
+    "completed": true,
+    "assignees": ["67a9f07f1f244f1000000000"],
+    "createdAt": "2024-01-23T08:45:00.000Z",
+    "updatedAt": "2024-01-23T16:30:00.000Z"
+  }
+}
+```
+
+### PATCH /tasks/:id/assignees
+
+Update task assignees.
+
+**Request Body:**
+```json
+{
+  "assignees": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Assignees updated",
+  "data": {
+    "id": "67a9f07f1f244f1000000014",
+    "name": "Setup CI/CD pipeline with automated testing",
+    "completed": true,
+    "assignees": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001"],
+    "createdAt": "2024-01-23T08:45:00.000Z",
+    "updatedAt": "2024-01-23T17:00:00.000Z"
+  }
+}
+```
+
+### DELETE /tasks/:id
+
+Delete a task.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+---
+
+## Teams
+
+### GET /teams
+
+Get all teams with pagination.
+
+**Query Parameters:**
+- `page` (number, default: 1)
+- `limit` (number, default: 20)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Teams retrieved successfully",
+  "data": {
+    "teams": [
+      {
+        "id": "67a9f07f1f244f1000000015",
+        "name": "Development Team",
+        "members": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001"],
+        "createdBy": "67a9f07f1f244f1000000000",
+        "createdAt": "2024-01-10T08:30:00.000Z",
+        "updatedAt": "2024-01-10T08:30:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1
+  }
+}
+```
+
+### GET /teams/:id
+
+Get a specific team by ID.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Team retrieved successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000015",
+    "name": "Development Team",
+    "members": ["67a9f07f1f244f1000000000", "67a9f07f1f244f1000000001"],
+    "createdBy": "67a9f07f1f244f1000000000",
+    "createdAt": "2024-01-10T08:30:00.000Z",
+    "updatedAt": "2024-01-10T08:30:00.000Z"
+  }
+}
+```
+
+### GET /teams/:id/members
+
+Get team members.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Team members retrieved successfully",
+  "data": [
+    {
+      "id": "67a9f07f1f244f1000000000",
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "role": "member",
+      "avatar": null
+    },
+    {
+      "id": "67a9f07f1f244f1000000001",
+      "name": "Jane Smith",
+      "email": "jane.smith@example.com",
+      "role": "member",
+      "avatar": "https://example.com/avatar2.jpg"
+    }
+  ]
+}
+```
+
+### POST /teams
+
+Create a new team.
+
+**Required Roles:** owner, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "Design Team",
+  "members": ["67a9f07f1f244f1000000005", "67a9f07f1f244f1000000006"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Team created successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000016",
+    "name": "Design Team",
+    "members": ["67a9f07f1f244f1000000005", "67a9f07f1f244f1000000006"],
+    "createdBy": "67a9f07f1f244f1000000000",
+    "createdAt": "2024-01-24T09:15:00.000Z",
+    "updatedAt": "2024-01-24T09:15:00.000Z"
+  }
+}
+```
+
+### PATCH /teams/:id
+
+Update a team.
+
+**Required Roles:** owner, group_lead
+
+**Request Body:**
+```json
+{
+  "name": "UI/UX Design Team",
+  "members": ["67a9f07f1f244f1000000005", "67a9f07f1f244f1000000006", "67a9f07f1f244f1000000007"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Team updated successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000016",
+    "name": "UI/UX Design Team",
+    "members": ["67a9f07f1f244f1000000005", "67a9f07f1f244f1000000006", "67a9f07f1f244f1000000007"],
+    "createdBy": "67a9f07f1f244f1000000000",
+    "createdAt": "2024-01-24T09:15:00.000Z",
+    "updatedAt": "2024-01-24T14:45:00.000Z"
+  }
+}
+```
+
+### DELETE /teams/:id
+
+Delete a team.
+
+**Required Roles:** owner
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Team deleted successfully",
+  "data": {}
+}
+```
+
+### POST /teams/:id/members
+
+Add a member to team.
+
+**Required Roles:** owner, group_lead
+
+**Request Body:**
+```json
+{
+  "userId": "67a9f07f1f244f1000000008"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Member added to team successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000016",
+    "name": "UI/UX Design Team",
+    "members": ["67a9f07f1f244f1000000005", "67a9f07f1f244f1000000006", "67a9f07f1f244f1000000007", "67a9f07f1f244f1000000008"],
+    "updatedAt": "2024-01-24T15:30:00.000Z"
+  }
+}
+```
+
+### DELETE /teams/:id/members/:userId
+
+Remove a member from team.
+
+**Required Roles:** owner, group_lead
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Member removed from team successfully",
+  "data": {}
+}
+```
+
+---
+
+## Time Entries
+
+### POST /time-entries
+
+Create a new time entry.
+
+**Request Body:**
+```json
+{
+  "projectId": "67a9f07f1f244f1000000007",
+  "taskId": "67a9f07f1f244f1000000008",
+  "description": "Working on user authentication module",
+  "startTime": "2024-01-22T09:00:00.000Z",
+  "endTime": "2024-01-22T12:30:00.000Z",
+  "billable": true,
+  "tagIds": ["67a9f07f1f244f1000000012"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Time entry created successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000017",
+    "userId": "67a9f07f1f244f1000000000",
+    "projectId": "67a9f07f1f244f1000000007",
+    "taskId": "67a9f07f1f244f1000000008",
+    "description": "Working on user authentication module",
+    "startTime": "2024-01-22T09:00:00.000Z",
+    "endTime": "2024-01-22T12:30:00.000Z",
+    "duration": 3.5,
+    "billable": true,
+    "tagIds": ["67a9f07f1f244f1000000012"],
+    "createdAt": "2024-01-22T12:35:00.000Z",
+    "updatedAt": "2024-01-22T12:35:00.000Z"
+  }
+}
+```
+
+### GET /time-entries
+
+Get all time entries with filtering and pagination.
+
+**Query Parameters:**
+- `startDate` (string, optional)
+- `endDate` (string, optional)
+- `projectId` (string, optional)
+- `userId` (string, optional)
+- `billable` (boolean, optional)
+- `tagId` (string, optional)
+- `isRunning` (boolean, optional)
+- `page` (number, default: 1)
+- `limit` (number, default: 20)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Time entries retrieved successfully",
+  "data": {
+    "entries": [
+      {
+        "id": "67a9f07f1f244f1000000017",
+        "userId": "67a9f07f1f244f1000000000",
+        "projectId": "67a9f07f1f244f1000000007",
+        "taskId": "67a9f07f1f244f1000000008",
+        "description": "Working on user authentication module",
+        "startTime": "2024-01-22T09:00:00.000Z",
+        "endTime": "2024-01-22T12:30:00.000Z",
+        "duration": 3.5,
+        "billable": true,
+        "tagIds": ["67a9f07f1f244f1000000012"],
+        "createdAt": "2024-01-22T12:35:00.000Z",
+        "updatedAt": "2024-01-22T12:35:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1
+  }
+}
+```
+
+### GET /time-entries/running
+
+Get the currently running time entry.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Running entry retrieved successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000018",
+    "userId": "67a9f07f1f244f1000000000",
+    "projectId": "67a9f07f1f244f1000000007",
+    "description": "Code review and testing",
+    "startTime": "2024-01-23T14:15:00.000Z",
+    "endTime": null,
+    "duration": null,
+    "billable": true,
+    "isRunning": true,
+    "createdAt": "2024-01-23T14:15:00.000Z",
+    "updatedAt": "2024-01-23T14:15:00.000Z"
+  }
+}
+```
+
+### POST /time-entries/start
+
+Start a new timer.
+
+**Request Body:**
+```json
+{
+  "projectId": "67a9f07f1f244f1000000007",
+  "description": "Implementing payment integration"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Timer started successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000019",
+    "userId": "67a9f07f1f244f1000000000",
+    "projectId": "67a9f07f1f244f1000000007",
+    "description": "Implementing payment integration",
+    "startTime": "2024-01-23T16:45:00.000Z",
+    "endTime": null,
+    "duration": null,
+    "billable": true,
+    "isRunning": true,
+    "createdAt": "2024-01-23T16:45:00.000Z",
+    "updatedAt": "2024-01-23T16:45:00.000Z"
+  }
+}
+```
+
+### PATCH /time-entries/stop
+
+Stop the currently running timer.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Timer stopped successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000019",
+    "userId": "67a9f07f1f244f1000000000",
+    "projectId": "67a9f07f1f244f1000000007",
+    "description": "Implementing payment integration",
+    "startTime": "2024-01-23T16:45:00.000Z",
+    "endTime": "2024-01-23T18:20:00.000Z",
+    "duration": 1.58,
+    "billable": true,
+    "isRunning": false,
+    "createdAt": "2024-01-23T16:45:00.000Z",
+    "updatedAt": "2024-01-23T18:20:00.000Z"
+  }
+}
+```
+
+### GET /time-entries/:id
+
+Get a specific time entry by ID.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Time entry retrieved successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000017",
+    "userId": "67a9f07f1f244f1000000000",
+    "projectId": "67a9f07f1f244f1000000007",
+    "taskId": "67a9f07f1f244f1000000008",
+    "description": "Working on user authentication module",
+    "startTime": "2024-01-22T09:00:00.000Z",
+    "endTime": "2024-01-22T12:30:00.000Z",
+    "duration": 3.5,
+    "billable": true,
+    "tagIds": ["67a9f07f1f244f1000000012"],
+    "createdAt": "2024-01-22T12:35:00.000Z",
+    "updatedAt": "2024-01-22T12:35:00.000Z"
+  }
+}
+```
+
+### PATCH /time-entries/:id
+
+Update a time entry.
+
+**Request Body:**
+```json
+{
+  "description": "Working on user authentication and authorization module",
+  "endTime": "2024-01-22T13:15:00.000Z",
+  "billable": true,
+  "tagIds": ["67a9f07f1f244f1000000012", "67a9f07f1f244f1000000010"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Time entry updated successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000017",
+    "userId": "67a9f07f1f244f1000000000",
+    "projectId": "67a9f07f1f244f1000000007",
+    "taskId": "67a9f07f1f244f1000000008",
+    "description": "Working on user authentication and authorization module",
+    "startTime": "2024-01-22T09:00:00.000Z",
+    "endTime": "2024-01-22T13:15:00.000Z",
+    "duration": 4.25,
+    "billable": true,
+    "tagIds": ["67a9f07f1f244f1000000012", "67a9f07f1f244f1000000010"],
+    "createdAt": "2024-01-22T12:35:00.000Z",
+    "updatedAt": "2024-01-22T13:20:00.000Z"
+  }
+}
+```
+
+### DELETE /time-entries/bulk
+
+Bulk delete time entries.
+
+**Request Body:**
+```json
+{
+  "ids": ["67a9f07f1f244f1000000017", "67a9f07f1f244f1000000020"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Time entries deleted successfully",
+  "data": {}
+}
+```
+
+### DELETE /time-entries/:id
+
+Delete a time entry.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Time entry deleted successfully",
+  "data": {}
+}
+```
+
+---
+
+## Users
+
+### GET /users
+
+Get all users with pagination.
+
+**Query Parameters:**
+- `page` (number, default: 1)
+- `limit` (number, default: 20)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": {
+    "users": [
+      {
+        "id": "67a9f07f1f244f1000000000",
+        "email": "john.doe@example.com",
+        "name": "John Doe",
+        "role": "member",
+        "avatar": null,
+        "timezone": "America/New_York",
+        "isActive": true,
+        "billableRate": 50,
+        "group": "Development Team",
+        "archived": false,
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "updatedAt": "2024-01-20T14:45:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1
+  }
+}
+```
+
+### GET /users/:id
+
+Get a specific user by ID.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User retrieved successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000000",
+    "email": "john.doe@example.com",
+    "name": "John Doe",
+    "role": "member",
+    "avatar": null,
+    "timezone": "America/New_York",
+    "isActive": true,
+    "billableRate": 50,
+    "group": "Development Team",
+    "archived": false,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-20T14:45:00.000Z"
+  }
+}
+```
+
+### PATCH /users/:id/role
+
+Update user role.
+
+**Request Body:**
+```json
+{
+  "role": "group_lead"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User role updated successfully",
+  "data": {
+    "id": "67a9f07f1f244f1000000000",
+    "email": "john.doe@example.com",
+    "name": "John Doe",
+    "role": "group_lead",
+    "avatar": null,
+    "timezone": "America/New_York",
+    "isActive": true,
+    "billableRate": 50,
+    "group": "Development Team",
+    "archived": false,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-25T09:30:00.000Z"
+  }
+}
+```
+
+### POST /users/invite
+
+Invite users to join the organization.
+
+**Request Body:**
+```json
+{
+  "emails": ["new.user@example.com", "another.user@example.com"],
+  "role": "member"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Invited 2 user(s), skipped 0 already registered",
+  "data": {
+    "invited": [
+      {
+        "email": "new.user@example.com",
+        "role": "member",
+        "token": "inv123token456"
+      },
+      {
+        "email": "another.user@example.com",
+        "role": "member",
+        "token": "inv789token012"
+      }
+    ],
+    "skipped": []
+  }
+}
+```
+
+### PUT /users/:id
+
+Update user information.
+
+**Request Body:**
+```json
+{
+  "billableRate": 65,
+  "group": "Senior Development Team",
+  "archived": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User updated",
+  "data": {
+    "id": "67a9f07f1f244f1000000000",
+    "email": "john.doe@example.com",
+    "name": "John Doe",
+    "role": "group_lead",
+    "avatar": null,
+    "timezone": "America/New_York",
+    "isActive": true,
+    "billableRate": 65,
+    "group": "Senior Development Team",
+    "archived": false,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-25T10:15:00.000Z"
+  }
+}
+```
+
+### PATCH /users/:id/status
+
+Toggle user active status.
+
+**Request Body:**
+```json
+{
+  "isActive": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User status updated",
+  "data": {
+    "id": "67a9f07f1f244f1000000000",
+    "email": "john.doe@example.com",
+    "name": "John Doe",
+    "role": "group_lead",
+    "avatar": null,
+    "timezone": "America/New_York",
+    "isActive": false,
+    "billableRate": 65,
+    "group": "Senior Development Team",
+    "archived": false,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-25T10:30:00.000Z"
+  }
+}
+```
+
+### DELETE /users/:id
+
+Delete a user.
+
+**Required Roles:** owner
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User removed",
+  "data": null
+}
+```
+
+---
+
+*This documentation was generated for Logspanx API v1.0. For support or questions, please contact the development team.*

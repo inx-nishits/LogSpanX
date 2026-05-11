@@ -988,15 +988,6 @@ export default function SummaryReportPage() {
       onApply={handleApply}
     >
 
-      {/* Clear filters */}
-      {(appliedFilters.team.length > 0 || appliedFilters.lead.length > 0 || appliedFilters.project.length > 0 || appliedFilters.task.length > 0 || appliedFilters.tag.length > 0 || appliedFilters.status.length > 0 || appliedFilters.desc) && (
-        <div className="flex justify-end px-4 py-1 bg-white border-b border-[#e4eaee]">
-          <button onClick={() => setAppliedFilters({ team: [], lead: [], project: [], task: [], tag: [], status: [], desc: '' })} className="text-[15px] text-[#03a9f4] hover:underline cursor-pointer">
-            Clear filters
-          </button>
-        </div>
-      )}
-
       {/* ── Scrollable content ── */}
       <div className="flex-1 overflow-y-auto bg-[#f2f6f8] min-h-0">
         <div className="m-6">

@@ -195,10 +195,13 @@ export async function apiRequest<T>(
 
     if (!response.ok) {
       const message = getMessage(payload, `Request failed with status ${response.status}`)
-      // Show permission denied modal for 403 errors
       if (response.status === 403) {
-        const { usePermissionStore } = await import('@/lib/stores/permission-store')
-        usePermissionStore.getState().show()
+        const { useAuthStore } = await import('@/lib/stores/auth-store')
+        const role = useAuthStore.getState().user?.role
+        if (role !== 'owner' && role !== 'admin') {
+          const { usePermissionStore } = await import('@/lib/stores/permission-store')
+          usePermissionStore.getState().show()
+        }
       }
       throw new ApiError(message, response.status, payload)
     }

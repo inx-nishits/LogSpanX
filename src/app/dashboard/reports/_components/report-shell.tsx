@@ -113,6 +113,20 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
   const [timeReportOpen, setTimeReportOpen] = useState(false)
   const timeReportRef = useRef<HTMLDivElement>(null)
 
+  const hasActiveFilters = selTeam.length > 0 || selLead.length > 0 || selProject.length > 0 ||
+    selTask.length > 0 || selTag.length > 0 || selStatus.length > 0 || !!selDesc
+
+  const handleClearFilters = () => {
+    setSelTeam([])
+    setSelLead([])
+    setSelProject([])
+    setSelTask([])
+    setSelTag([])
+    setSelStatus([])
+    setSelDesc('')
+    onApply?.({ team: [], lead: [], project: [], tasks: [], tags: [], status: [], description: '' })
+  }
+
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (timeReportRef.current && !timeReportRef.current.contains(e.target as Node)) setTimeReportOpen(false)
@@ -213,6 +227,18 @@ export function ReportShell({ dateRange, onRangeChange, showFilters = true, init
             className="ml-auto px-5 h-[30px] text-[12px] font-bold uppercase tracking-wide text-white bg-[#03a9f4] hover:bg-[#0288d1] rounded-sm cursor-pointer whitespace-nowrap"
           >
             APPLY FILTER
+          </button>
+        </div>
+      )}
+
+      {/* Clear filters row */}
+      {showFilters && hasActiveFilters && (
+        <div className="flex justify-end px-6 pb-2 -mt-2">
+          <button
+            onClick={handleClearFilters}
+            className="text-[13px] text-[#03a9f4] hover:underline cursor-pointer"
+          >
+            Clear filters
           </button>
         </div>
       )}

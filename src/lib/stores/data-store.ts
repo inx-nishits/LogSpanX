@@ -365,17 +365,11 @@ export const useDataStore = create<DataStore>((set, get) => ({
   },
 
   deleteTimeEntry: async (id) => {
-    try {
-      const token = useAuthStore.getState().token
-      await apiRequest(`/time-entries/${id}`, { method: 'DELETE', token })
-      set((state) => ({
-        timeEntries: state.timeEntries.filter((entry) => entry.id !== id),
-      }))
-    } catch (err) {
-      console.error('Delete failed:', err instanceof Error ? err.message : String(err))
-      const message = err instanceof Error ? err.message : 'An error occurred'
-      if (typeof window !== 'undefined') window.alert(message)
-    }
+    const token = useAuthStore.getState().token
+    await apiRequest(`/time-entries/${id}`, { method: 'DELETE', token })
+    set((state) => ({
+      timeEntries: state.timeEntries.filter((entry) => entry.id !== id),
+    }))
   },
 
   deleteTimeEntries: async (ids) => {
@@ -753,14 +747,31 @@ export const useDataStore = create<DataStore>((set, get) => ({
 
   updateGroup: async (id, updates) => {
     const token = useAuthStore.getState().token
+    const existing = get().groups.find(g => g.id === id)
+
+    const body: Record<string, unknown> = {}
+    if (updates.name !== undefined) body.name = updates.name
+    if (updates.memberIds !== undefined) {
+      // Normalize: strip any non-string values (populated objects) to plain id strings
+      body.memberIds = updates.memberIds
+        .map(m => {
+          if (typeof m === 'string') return m
+          const obj = m as { _id?: string; id?: string }
+          return obj._id ?? obj.id ?? ''
+        })
+        .filter(s => typeof s === 'string' && s.length === 24)
+    }
+    // Only include leadId when explicitly assigning — omit entirely when null/undefined
+    // to avoid MongoDB ObjectId validation rejecting null
+    if (updates.leadId) body.leadId = updates.leadId
+
+    // Merge with existing name if not provided (backend PUT requires name)
+    if (!body.name && existing?.name) body.name = existing.name
+
     const payload = await apiRequest<ApiGroup>(`/groups/${id}`, {
       method: 'PUT',
       token,
-      body: JSON.stringify({
-        name: updates.name,
-        memberIds: updates.memberIds,
-        leadId: updates.leadId,
-      }),
+      body: JSON.stringify(body),
     })
 
     set((state) => ({
